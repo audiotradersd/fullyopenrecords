@@ -2,6 +2,7 @@
 
 import { Headphones, Mic2 } from "lucide-react";
 import { Button } from "../ui/button";
+import { useAuth } from "./AuthProvider";
 
 type AccountType = "listener" | "artist";
 
@@ -28,6 +29,13 @@ const cards = [
 ];
 
 export default function AccountTypeSelector({ selected, onSelect }: Props) {
+  const { openAuth } = useAuth();
+
+  function handleSelect(type: AccountType) {
+    onSelect(type);
+    openAuth("register", type);
+  }
+
   return (
     <section className="py-8">
       <div className="grid gap-6 md:grid-cols-2">
@@ -51,7 +59,7 @@ export default function AccountTypeSelector({ selected, onSelect }: Props) {
               <h2 className="mt-6 text-3xl font-semibold text-white">{card.title}</h2>
               <p className="mt-4 max-w-md text-base leading-7 text-fog">{card.description}</p>
               <div className="mt-auto pt-8">
-                <Button onClick={() => onSelect(card.type)}>{card.button}</Button>
+                <Button onClick={() => handleSelect(card.type)}>{card.button}</Button>
               </div>
             </div>
           );

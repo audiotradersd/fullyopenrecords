@@ -4,7 +4,6 @@ import { Heart, Headphones, Mic2, Radio, Save, Image as ImageIcon } from "lucide
 import { Button } from "../ui/button";
 import { useAuth } from "./AuthProvider";
 import ArtistBenefits from "./ArtistBenefits";
-import JoinArtistButton from "./JoinArtistButton";
 
 type AccountType = "listener" | "artist";
 
@@ -33,7 +32,7 @@ export default function BenefitsPanel({ selected }: { selected: AccountType }) {
                 Create your artist page, upload tracks, and put your music in front of listeners through the Fully Open catalogue and curated radio consideration.
               </p>
               <div className="mt-8">
-                <JoinArtistButton>Join as Artist</JoinArtistButton>
+                <Button onClick={() => openAuth("register", "artist")}>Join as Artist</Button>
               </div>
             </div>
             <ArtistBenefits />

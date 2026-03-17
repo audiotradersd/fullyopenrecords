@@ -1,0 +1,14 @@
+node_modules
+.next
+.turbo
+.wrangler
+dist
+build
+.DS_Store
+coverage
+pnpm-lock.yaml
+.env
+.env.local
+apps/web/.vercel
+apps/cms/.vercel
+

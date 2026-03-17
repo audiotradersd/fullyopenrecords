@@ -1,0 +1,23 @@
+name = "fully-open-records-api"
+main = "src/index.ts"
+compatibility_date = "2026-03-10"
+account_id = "a7e83f710a86d2c2975ad9d5704e3a96"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "fully-open-records-db"
+database_id = "43433791-04c7-497d-88c3-6f32edce8f59"
+
+[[r2_buckets]]
+binding = "MEDIA_BUCKET"
+bucket_name = "fully-open-records-media"
+
+[vars]
+SITE_URL = "https://fullyopenrecords.com"
+ADMIN_EMAIL = "sbdownes@gmail.com"
+RADIO_STREAM_URL = "https://hello.citrus3.com:8262/stream"
+RADIO_METADATA_URL = "https://hello.citrus3.com:8262/status-json.xsl"
+RADIO_EMBED_URL = "https://hello.citrus3.com:2020/public/fullyopenradio"
+
+[triggers]
+crons = ["*/1 * * * *"]

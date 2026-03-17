@@ -1,0 +1,30 @@
+{
+  "name": "fully-open-records",
+  "private": true,
+  "packageManager": "pnpm@9.15.0",
+  "scripts": {
+    "dev:web": "corepack pnpm --filter web dev",
+    "dev:cms": "corepack pnpm --filter cms dev",
+    "dev:api": "corepack pnpm --filter api-worker dev",
+    "build": "corepack pnpm -r build",
+    "lint": "corepack pnpm -r lint",
+    "typecheck": "corepack pnpm -r typecheck",
+    "migrate": "corepack pnpm --filter @fully-open-records/db migrate",
+    "seed": "corepack pnpm --filter @fully-open-records/db seed",
+    "deploy": "corepack pnpm build && corepack pnpm --filter api-worker deploy"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.22.0",
+    "@types/node": "^22.13.10",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "autoprefixer": "^10.4.20",
+    "drizzle-kit": "^0.31.0",
+    "eslint": "^9.22.0",
+    "prettier": "^3.5.3",
+    "tailwindcss": "^3.4.17",
+    "tsx": "^4.19.3",
+    "turbo": "^2.4.4",
+    "typescript": "^5.8.2"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "jsx": "preserve",
+    "baseUrl": ".",
+    "paths": {
+      "@fully-open-records/db": ["packages/db/src/schema.ts"],
+      "@fully-open-records/db/*": ["packages/db/src/*"],
+      "@fully-open-records/api": ["packages/api/src/contracts.ts"],
+      "@fully-open-records/api/*": ["packages/api/src/*"],
+      "@fully-open-records/ui": ["packages/ui/src/index.ts"],
+      "@fully-open-records/ui/*": ["packages/ui/src/*"]
+    }
+  }
+}

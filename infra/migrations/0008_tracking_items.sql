@@ -1,0 +1,11 @@
+CREATE TABLE IF NOT EXISTS tracking_items (
+  id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+  number INTEGER NOT NULL,
+  details TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'backlog',
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS tracking_items_number_idx
+  ON tracking_items(number);

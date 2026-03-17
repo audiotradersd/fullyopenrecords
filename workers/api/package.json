@@ -1,0 +1,26 @@
+{
+  "name": "api-worker",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "build": "wrangler deploy --dry-run",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint src --ext .ts",
+    "deploy": "wrangler deploy"
+  },
+  "dependencies": {
+    "@fully-open-records/api": "workspace:*",
+    "@fully-open-records/db": "workspace:*",
+    "@hono/zod-validator": "^0.7.6",
+    "drizzle-orm": "^0.40.0",
+    "hono": "^4.7.5",
+    "jose": "^5.10.0",
+    "stripe": "^17.7.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250303.0",
+    "wrangler": "^3.114.2"
+  }
+}

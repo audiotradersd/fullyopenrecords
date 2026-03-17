@@ -1,0 +1,10 @@
+CREATE TABLE radio_history (
+  id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+  artist_name TEXT NOT NULL,
+  title TEXT NOT NULL,
+  song_id INTEGER,
+  cover_image TEXT,
+  source TEXT NOT NULL DEFAULT 'citrus3',
+  played_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (song_id) REFERENCES songs(id) ON DELETE SET NULL
+);

@@ -2,7 +2,6 @@
 
 import { Heart, Headphones, Mic2, Radio, Save, Image as ImageIcon } from "lucide-react";
 import { Button } from "../ui/button";
-import { useAuth } from "./AuthProvider";
 import ArtistBenefits from "./ArtistBenefits";
 
 type AccountType = "listener" | "artist";
@@ -15,8 +14,7 @@ const listenerBenefits = [
   { icon: Save, label: "Save releases and playlists" }
 ];
 
-export default function BenefitsPanel({ selected }: { selected: AccountType }) {
-  const { openAuth } = useAuth();
+export default function BenefitsPanel({ selected, onJoin }: { selected: AccountType; onJoin?: (type: AccountType) => void }) {
 
   return (
     <section className="py-8">
@@ -32,7 +30,7 @@ export default function BenefitsPanel({ selected }: { selected: AccountType }) {
                 Create your artist page, upload tracks, and put your music in front of listeners through the Fully Open catalogue and curated radio consideration.
               </p>
               <div className="mt-8">
-                <Button onClick={() => openAuth("register", "artist")}>Join as Artist</Button>
+                <Button onClick={() => onJoin?.("artist")}>Join as Artist</Button>
               </div>
             </div>
             <ArtistBenefits />
@@ -48,7 +46,7 @@ export default function BenefitsPanel({ selected }: { selected: AccountType }) {
                 Join to keep track of favourite songs, follow artists you discover on the station, and build your own thread through the Fully Open catalogue.
               </p>
               <div className="mt-8">
-                <Button onClick={() => openAuth("register", "listener")}>Join as Listener</Button>
+                <Button onClick={() => onJoin?.("listener")}>Join as Listener</Button>
               </div>
             </div>
             <div>

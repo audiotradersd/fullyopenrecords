@@ -5,7 +5,6 @@ import PhilosophyQuote from "../../components/about/PhilosophyQuote";
 import PillarsGrid from "../../components/about/PillarsGrid";
 import StoryTimeline from "../../components/about/StoryTimeline";
 
-export const runtime = "edge";
 
 export default function AboutPage() {
   return (

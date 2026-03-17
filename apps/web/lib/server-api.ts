@@ -11,7 +11,7 @@ export function getApiBaseUrl() {
 }
 
 export async function getSessionToken() {
-  return cookies().get(WEB_SESSION_COOKIE)?.value;
+  return (await cookies()).get(WEB_SESSION_COOKIE)?.value;
 }
 
 export async function apiProxy(

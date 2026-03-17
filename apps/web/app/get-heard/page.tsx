@@ -91,7 +91,6 @@ const radioTracks = [
   }
 ];
 
-export const runtime = "edge";
 
 export default async function GetHeardPage() {
   const stoneArtist = await getArtist("stone")

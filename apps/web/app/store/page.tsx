@@ -2,7 +2,6 @@ import { Section } from "@fully-open-records/ui";
 import { ProductCard } from "../../components/Cards";
 import { getProducts } from "../../lib/api";
 
-export const runtime = "edge";
 
 export default async function StorePage() {
   const products = await getProducts();

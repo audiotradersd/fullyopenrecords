@@ -1,8 +1,12 @@
 {
-  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "$schema": "node_modules/wrangler/config-schema.json",
   "name": "fully-open-records-web",
-  "pages_build_output_dir": ".vercel/output/static",
   "compatibility_date": "2026-03-10",
-  "compatibility_flags": ["nodejs_compat"]
+  "compatibility_flags": ["nodejs_compat"],
+  "main": ".open-next/worker.js",
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "NEXT_ASSETS"
+  }
 }
 

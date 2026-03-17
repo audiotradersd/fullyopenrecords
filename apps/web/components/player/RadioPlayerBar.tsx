@@ -63,7 +63,7 @@ function GraphicEq({
 }: {
   active: boolean;
   analyzerReady: boolean;
-  containerRef: RefObject<HTMLDivElement>;
+  containerRef: RefObject<HTMLDivElement | null>;
 }) {
   return (
     <div className="hidden min-w-[360px] flex-1 justify-center md:flex lg:min-w-[520px]" aria-hidden="true">

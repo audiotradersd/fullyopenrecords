@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { apiProxy, getSessionToken } from "../../../../../lib/server-api";
 
-export const runtime = "edge";
 
 export async function POST(request: Request) {
   const token = await getSessionToken();

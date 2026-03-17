@@ -1,9 +1,9 @@
 import { notFound, redirect } from "next/navigation";
 import { normalizeArtistSlug } from "../../lib/artistProfiles";
 
-export const runtime = "edge";
 
-export default async function RootArtistPage({ params }: { params: { slug: string } }) {
+export default async function RootArtistPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
   const reserved = new Set([
     "about",
     "account",
@@ -21,8 +21,8 @@ export default async function RootArtistPage({ params }: { params: { slug: strin
     "api"
   ]);
 
-  if (reserved.has(params.slug)) {
+  if (reserved.has(slug)) {
     notFound();
   }
-  redirect(`/artist/${normalizeArtistSlug(params.slug)}`);
+  redirect(`/artist/${normalizeArtistSlug(slug)}`);
 }

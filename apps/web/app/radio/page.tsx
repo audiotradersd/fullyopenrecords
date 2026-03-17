@@ -3,7 +3,6 @@ import { RadioPlayer } from "../../components/RadioPlayer";
 import RecentPlays from "../../components/radio/RecentPlays";
 import { getRadio, getRadioHistory } from "../../lib/api";
 
-export const runtime = "edge";
 
 export default async function RadioPage() {
   const [radio, history] = await Promise.all([getRadio(), getRadioHistory()]);

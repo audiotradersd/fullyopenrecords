@@ -1,13 +1,13 @@
 import SignupPageContent from "../../components/auth/SignupPageContent";
 
-export const runtime = "edge";
 
-export default function SignupPage({
+export default async function SignupPage({
   searchParams
 }: {
-  searchParams?: { type?: string };
+  searchParams?: Promise<{ type?: string }>;
 }) {
-  const initialType = searchParams?.type === "artist" ? "artist" : "listener";
+  const resolvedParams = await searchParams;
+  const initialType = resolvedParams?.type === "artist" ? "artist" : "listener";
 
   return <SignupPageContent initialType={initialType} />;
 }

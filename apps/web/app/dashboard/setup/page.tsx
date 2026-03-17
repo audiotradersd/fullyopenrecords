@@ -3,7 +3,6 @@ import type { Route } from "next";
 import Container from "../../../components/layout/Container";
 import { Button } from "../../../components/ui/button";
 
-export const runtime = "edge";
 
 export default function DashboardSetupPage() {
   return (

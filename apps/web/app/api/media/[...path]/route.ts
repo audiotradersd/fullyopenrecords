@@ -1,12 +1,12 @@
 import { getApiBaseUrl } from "../../../../lib/server-api";
 
-export const runtime = "edge";
 
 export async function GET(
   request: Request,
-  { params }: { params: { path: string[] } }
+  { params }: { params: Promise<{ path: string[] }> }
 ) {
-  const target = `${getApiBaseUrl()}/media/${params.path.join("/")}`;
+  const { path } = await params;
+  const target = `${getApiBaseUrl()}/media/${path.join("/")}`;
   const response = await fetch(target, {
     headers: {
       ...(request.headers.get("range") ? { Range: request.headers.get("range") as string } : {})
@@ -25,9 +25,10 @@ export async function GET(
 
 export async function HEAD(
   request: Request,
-  { params }: { params: { path: string[] } }
+  { params }: { params: Promise<{ path: string[] }> }
 ) {
-  const target = `${getApiBaseUrl()}/media/${params.path.join("/")}`;
+  const { path } = await params;
+  const target = `${getApiBaseUrl()}/media/${path.join("/")}`;
   const response = await fetch(target, {
     method: "HEAD",
     headers: {

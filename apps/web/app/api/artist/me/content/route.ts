@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { apiProxy, getSessionToken } from "../../../../../lib/server-api";
 
-export const runtime = "edge";
 
 async function toJsonResponse(response: Response) {
   const text = await response.text();

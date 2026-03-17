@@ -1,19 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useState, use } from "react";
 import { Button, Section } from "@fully-open-records/ui";
 import { useEffect } from "react";
 
-export const runtime = "edge";
 
-export default function ProductPage({ params }: { params: { slug: string } }) {
+export default function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = use(params);
   const [product, setProduct] = useState<Record<string, any> | null>(null);
 
   useEffect(() => {
-    fetch(`${process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8787"}/products/${params.slug}`)
+    fetch(`${process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8787"}/products/${slug}`)
       .then((response) => response.json())
       .then(setProduct);
-  }, [params.slug]);
+  }, [slug]);
 
   async function handleCheckout() {
     if (!product) return;

@@ -11,7 +11,6 @@ import {
 } from "../../lib/artistProfiles";
 import { mergeArtistPageContent } from "../../lib/artistPageContent";
 
-export const runtime = "edge";
 
 const tracklistTitles = [
   "Intermingle",

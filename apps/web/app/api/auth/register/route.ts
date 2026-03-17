@@ -2,7 +2,6 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { apiProxy, WEB_SESSION_COOKIE, WEB_SESSION_MAX_AGE_SECONDS } from "../../../../lib/server-api";
 
-export const runtime = "edge";
 
 export async function POST(request: Request) {
   const body = await request.json();
@@ -28,7 +27,7 @@ export async function POST(request: Request) {
 
   const sessionToken = typeof payload.sessionToken === "string" ? payload.sessionToken : "";
 
-  cookies().set(WEB_SESSION_COOKIE, sessionToken, {
+  (await cookies()).set(WEB_SESSION_COOKIE, sessionToken, {
     httpOnly: true,
     sameSite: "strict",
     secure: true,

@@ -16,7 +16,7 @@ export default function JoinArtistButton({
   variant = "default"
 }: JoinArtistButtonProps) {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, openAuth } = useAuth();
 
   function handleClick() {
     if (user) {
@@ -24,7 +24,7 @@ export default function JoinArtistButton({
       return;
     }
 
-    router.push("/signup?type=artist");
+    openAuth("register", "artist");
   }
 
   return (

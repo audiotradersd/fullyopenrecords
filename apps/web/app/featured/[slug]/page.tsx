@@ -7,17 +7,17 @@ import {
   mergeArtistRecordForFeaturedPage
 } from "../../../lib/artistProfiles";
 
-export const runtime = "edge";
 
-export default async function FeaturedArtistPage({ params }: { params: { slug: string } }) {
-  const editorialProfile = getEditorialArtistProfile(params.slug);
-  const artist = await getArtist(params.slug)
+export default async function FeaturedArtistPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const editorialProfile = getEditorialArtistProfile(slug);
+  const artist = await getArtist(slug)
     .then((entry) => mergeArtistRecordForFeaturedPage(entry))
-    .catch(() => buildArtistFallback(params.slug));
+    .catch(() => buildArtistFallback(slug));
 
   if (!artist && !editorialProfile) {
     notFound();
   }
 
-  return <ArtistPageContent artist={artist ?? buildArtistFallback(params.slug)!} />;
+  return <ArtistPageContent artist={artist ?? buildArtistFallback(slug)!} />;
 }

@@ -8,7 +8,6 @@ import { getArtist, getArtistContent, getRadio } from "../lib/api";
 import { buildArtistFallback, mergeArtistRecordWithLivePreference } from "../lib/artistProfiles";
 import { mergeArtistPageContent } from "../lib/artistPageContent";
 
-export const runtime = "edge";
 
 function parseTrack(raw: unknown, fallbackArtist?: string) {
   const value = typeof raw === "string" ? raw : String(raw ?? "");

@@ -1,7 +1,6 @@
 import { Section } from "@fully-open-records/ui";
 import { getFaq } from "../../lib/api";
 
-export const runtime = "edge";
 
 export default async function FAQPage() {
   const faq = await getFaq();

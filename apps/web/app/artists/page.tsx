@@ -6,7 +6,6 @@ import { mergeArtistPageContent } from "../../lib/artistPageContent";
 import { buildFeaturedArtistList, featuredArtistSlugs } from "../../lib/artistProfiles";
 import { featuredArtistHero } from "../../lib/featuredArtistHero";
 
-export const runtime = "edge";
 
 export default async function ArtistsPage() {
   const [artists, heroArtistData, heroArtistContent] = await Promise.all([

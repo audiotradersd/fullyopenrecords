@@ -8,12 +8,12 @@ import {
 } from "../../../lib/artistProfiles";
 import { mergeArtistPageContent } from "../../../lib/artistPageContent";
 
-export const runtime = "edge";
 
-export default async function ArtistPage({ params }: { params: { slug: string } }) {
-  const canonicalSlug = normalizeArtistSlug(params.slug);
+export default async function ArtistPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const canonicalSlug = normalizeArtistSlug(slug);
 
-  if (canonicalSlug && canonicalSlug !== params.slug) {
+  if (canonicalSlug && canonicalSlug !== slug) {
     redirect(`/artist/${canonicalSlug}`);
   }
 

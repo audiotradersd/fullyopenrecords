@@ -3,6 +3,7 @@
 import { Heart, Headphones, Mic2, Radio, Save, Image as ImageIcon } from "lucide-react";
 import { Button } from "../ui/button";
 import ArtistBenefits from "./ArtistBenefits";
+import JoinArtistButton from "./JoinArtistButton";
 
 type AccountType = "listener" | "artist";
 
@@ -30,7 +31,7 @@ export default function BenefitsPanel({ selected, onJoin }: { selected: AccountT
                 Create your artist page, upload tracks, and put your music in front of listeners through the Fully Open catalogue and curated radio consideration.
               </p>
               <div className="mt-8">
-                <Button onClick={() => onJoin?.("artist")}>Join as Artist</Button>
+                <JoinArtistButton>Join as Artist</JoinArtistButton>
               </div>
             </div>
             <ArtistBenefits />

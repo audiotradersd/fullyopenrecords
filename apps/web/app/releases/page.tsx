@@ -98,7 +98,7 @@ export default async function ReleasesPage() {
     jackIssuesAlbum?.coverArt ||
     mergedContent.heroImage ||
     mergedContent.profileImage ||
-    "https://api.fullyopenrecords.com/media/artists/stone/profile/heroImage/1773336610660-ChatGPT-Image-Mar-12-2026-01_55_52-PM.png";
+    "https://fully-open-records-api.sbdownes.workers.dev/media/artists/stone/profile/heroImage/1773336610660-ChatGPT-Image-Mar-12-2026-01_55_52-PM.png";
 
   return (
     <main className="pb-24 pt-12">
@@ -239,14 +239,14 @@ export default async function ReleasesPage() {
           <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
             {[
               ...otherReleases,
-              {
-                artist: "Stone!?",
-                title: "Intermingle",
-                image: heroImage,
-                audioUrl:
-                  "https://api.fullyopenrecords.com/media/artists/stone/songs/audio/1773339566072-01---Intermingle---Jack-Issues.mp3"
-              }
-            ].map((release) => (
+                {
+                  artist: "Stone!?",
+                  title: "Intermingle",
+                  image: heroImage,
+                  audioUrl:
+                    "https://fully-open-records-api.sbdownes.workers.dev/media/artists/stone/songs/audio/1773339566072-01---Intermingle---Jack-Issues.mp3"
+                }
+              ].map((release) => (
               <div
                 key={`${release.artist}-${release.title}`}
                 className="group rounded-xl border border-white/10 bg-white/5 p-3 backdrop-blur-md transition duration-200 hover:scale-[1.03] hover:border-pink/40"

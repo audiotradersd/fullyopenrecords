@@ -413,7 +413,7 @@ export default function ArtistDashboard() {
 
       const payload = await response.json();
       if (response.ok) {
-        setMessage("Track saved.");
+        setMessage(payload.warning ?? "Track saved.");
         setShowCreateTrackModal(false);
         await loadData();
       } else {
@@ -467,6 +467,7 @@ export default function ArtistDashboard() {
       setUploadPercent(0);
 
       const albumMap = new Map<string, number>();
+      let inactiveUploads = 0;
 
       for (let index = 0; index < files.length; index += 1) {
         const file = files[index];
@@ -516,12 +517,20 @@ export default function ArtistDashboard() {
         if (!response.ok) {
           throw new Error(payload.error ?? `Track upload failed for "${parsed.title}".`);
         }
+
+        if (typeof payload.warning === "string" && payload.warning.length > 0) {
+          inactiveUploads += 1;
+        }
       }
 
       setUploading(null);
       setUploadPercent(0);
       setShowBulkTrackModal(false);
-      setMessage(`Uploaded ${files.length} tracks.`);
+      setMessage(
+        inactiveUploads > 0
+          ? `Uploaded ${files.length} tracks. ${inactiveUploads} were saved as inactive because free plans can only have 5 active tracks.`
+          : `Uploaded ${files.length} tracks.`
+      );
       await loadData();
     } catch (error) {
       setUploading(null);
@@ -588,7 +597,7 @@ export default function ArtistDashboard() {
     });
 
     const payload = await response.json();
-    setMessage(response.ok ? successMessage : payload.error ?? "Track update failed.");
+    setMessage(response.ok ? payload.warning ?? successMessage : payload.error ?? "Track update failed.");
     if (response.ok) {
       await loadData();
     }
@@ -1166,7 +1175,7 @@ export default function ArtistDashboard() {
 
         <div className="grid gap-4 md:grid-cols-4">
           <Card className="p-5">
-            <p className="text-fog">Tracks</p>
+            <p className="text-fog">Active Tracks</p>
             <p className="mt-2 text-2xl text-white">
               {dashboard?.usage.songs ?? 0}/{dashboard?.limits.songs ?? 5}
             </p>
@@ -1415,7 +1424,7 @@ export default function ArtistDashboard() {
               <div>
                 <h2 className="text-2xl font-semibold text-white">Track Library</h2>
                 <p className="mt-2 text-sm text-fog">
-                  Manage your uploaded tracks, control whether they are visible on your artist page, and assign them to albums.
+                  Manage your uploaded tracks, control which ones are active on your artist page, and assign them to albums.
                 </p>
               </div>
               <div className="flex flex-wrap gap-3">
@@ -1430,9 +1439,9 @@ export default function ArtistDashboard() {
 
             {dashboard?.artist.plan !== "premium" ? (
               <div className="mt-6 rounded-2xl border border-pink/30 bg-pink/10 p-4">
-                <p className="text-sm font-semibold text-white">Free plan streaming limit</p>
+                <p className="text-sm font-semibold text-white">Free plan active-track limit</p>
                 <p className="mt-2 text-sm leading-7 text-fog">
-                  All enabled tracks can appear on your public artist page, but only the first 5 enabled tracks are streamable on the free plan.
+                  You can upload as many tracks as you want, but only 5 can be active on your public artist page at one time. Extra tracks stay visible, but they are not playable until activated.
                 </p>
               </div>
             ) : null}
@@ -1505,7 +1514,7 @@ export default function ArtistDashboard() {
                                   : "border border-white/10 bg-white/[0.04] text-fog"
                               }`}
                             >
-                              {song.enabled ? "Enabled" : "Disabled"}
+                              {song.enabled ? "Active" : "Inactive"}
                             </span>
                             {song.radioSelected ? (
                               <span className="rounded-full border border-pink/30 bg-pink/15 px-3 py-1 text-xs uppercase tracking-[0.18em] text-white">
@@ -1520,9 +1529,9 @@ export default function ArtistDashboard() {
                         <Button
                           type="button"
                           variant="outline"
-                          onClick={() => void updateTrack(song.id, { enabled: !song.enabled }, song.enabled ? "Track disabled." : "Track enabled.")}
+                          onClick={() => void updateTrack(song.id, { enabled: !song.enabled }, song.enabled ? "Track deactivated." : "Track activated.")}
                         >
-                          {song.enabled ? "Disable" : "Enable"}
+                          {song.enabled ? "Deactivate" : "Activate"}
                         </Button>
                         <Button
                           type="button"

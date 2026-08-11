@@ -24,7 +24,7 @@ const releases = [
     title: "Intermingle",
     hue: 0,
     audioUrl:
-      "https://api.fullyopenrecords.com/media/artists/stone/songs/audio/1773339566072-01---Intermingle---Jack-Issues.mp3",
+      "https://fully-open-records-api.sbdownes.workers.dev/media/artists/stone/songs/audio/1773339566072-01---Intermingle---Jack-Issues.mp3",
     image: ""
   }
 ];

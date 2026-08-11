@@ -4,7 +4,9 @@ export const WEB_SESSION_COOKIE = "for_web_session";
 export const WEB_SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 7;
 
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? process.env.API_BASE_URL ?? "https://api.fullyopenrecords.com";
+  process.env.NEXT_PUBLIC_API_URL ??
+  process.env.API_BASE_URL ??
+  "https://fully-open-records-api.sbdownes.workers.dev";
 
 export function getApiBaseUrl() {
   return API_BASE_URL;

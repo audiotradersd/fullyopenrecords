@@ -39,13 +39,6 @@ export default async function ArtistsPage() {
       .flatMap((album) => album.tracks)
       .find((track) => track.title === featuredArtistHero.featuredTrackTitle) ??
     null;
-  const releaseTrack =
-    heroContent.tracks.find((track) => track.title === featuredArtistHero.releaseTrackTitle) ??
-    heroContent.albums
-      .flatMap((album) => album.tracks)
-      .find((track) => track.title === featuredArtistHero.releaseTrackTitle) ??
-    null;
-
   const heroImage =
     heroContent.heroImage ||
     (typeof heroArtist.image === "string" ? heroArtist.image : "");
@@ -79,8 +72,6 @@ export default async function ArtistsPage() {
           description={featuredArtistHero.description}
           editorialNote={featuredArtistHero.editorialNote}
           featuredTrack={featuredTrack}
-          releaseTrack={releaseTrack}
-          releaseTitle={featuredArtistHero.releaseTitle}
         />
       </div>
       <div className="mt-12 grid gap-6 md:grid-cols-3">

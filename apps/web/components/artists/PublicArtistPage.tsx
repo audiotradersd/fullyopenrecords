@@ -50,13 +50,17 @@ export default function PublicArtistPage({
     ? artist.genres.filter((entry): entry is string => typeof entry === "string")
     : [];
   const location = typeof artist.location === "string" ? artist.location : "";
-  const bio = typeof artist.bio === "string" ? artist.bio : content.shortBio ?? "";
+  const bio = typeof artist.bio === "string" ? artist.bio : "";
+  const displayedBio = bio || content.shortBio || "";
   const heroImage = content.heroImage || (typeof artist.image === "string" ? artist.image : "");
   const profileImage = content.profileImage || (typeof artist.image === "string" ? artist.image : "");
   const socialLinks = getSocialLinks(artist);
   const artistUrl = `https://fullyopenrecords.com/artist/${slug}`;
   const plan = typeof artist.plan === "string" ? artist.plan : "free";
   const visibleTracks = content.tracks;
+  const hasInactiveTracks =
+    visibleTracks.some((track) => track.enabled === false) ||
+    content.albums.some((album) => album.tracks.some((track) => track.enabled === false));
 
   return (
     <main>
@@ -117,7 +121,7 @@ export default function PublicArtistPage({
             <div className="rounded-xl border border-white/10 bg-white/5 p-8 backdrop-blur-md">
               <p className="font-meta text-xs uppercase tracking-[0.24em] text-pink">Bio</p>
               <p className="mt-5 max-w-3xl text-base leading-8 text-fog md:text-lg">
-                {content.shortBio || bio}
+                {displayedBio}
               </p>
             </div>
           </div>
@@ -157,7 +161,7 @@ export default function PublicArtistPage({
                                     <p className="text-sm text-white">{track.title}</p>
                                     {track.duration ? <p className="text-xs text-fog">{track.duration}</p> : null}
                                   </div>
-                                  {track.audioUrl ? (
+                                  {track.audioUrl && track.enabled !== false ? (
                                     <StreamButton
                                       audioUrl={track.audioUrl}
                                       label="Play"
@@ -188,13 +192,13 @@ export default function PublicArtistPage({
               </div>
               <div className="mt-6 space-y-3">
                 {visibleTracks.length ? (
-                  visibleTracks.map((track, index) => (
+                  visibleTracks.map((track) => (
                     <div
                       key={`${track.title}-${track.releaseDate}`}
                       className="grid gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-4 md:grid-cols-[auto_minmax(0,1fr)_120px_72px]"
                     >
                       <div>
-                        {track.audioUrl && (plan !== "free" || index < 5) ? (
+                        {track.audioUrl && track.enabled !== false ? (
                           <StreamButton
                             audioUrl={track.audioUrl}
                             label="Play"
@@ -219,8 +223,8 @@ export default function PublicArtistPage({
                   <p className="text-fog">No standalone tracks added yet.</p>
                 )}
               </div>
-              {plan === "free" && content.tracks.length > 5 ? (
-                <p className="mt-4 text-sm text-fog">Free artist pages show all enabled tracks, but only the first 5 are playable.</p>
+              {plan === "free" && hasInactiveTracks ? (
+                <p className="mt-4 text-sm text-fog">Free artist pages can have 5 active playable tracks. Extra uploaded tracks still appear here, but they are not playable until activated.</p>
               ) : null}
             </section>
           </div>

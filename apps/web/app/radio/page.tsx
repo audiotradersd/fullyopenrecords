@@ -11,7 +11,7 @@ export default async function RadioPage() {
     <Section className="max-w-5xl">
       <h1 className="font-display text-5xl">Radio</h1>
       <p className="mt-4 text-fog">
-        Live stream player with custom track history stored in D1 from the Citrus metadata feed.
+        Playing 24/7 indie tracks from around the globe.
       </p>
       <div className="mt-8">
         <RadioPlayer

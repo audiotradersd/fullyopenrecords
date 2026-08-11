@@ -1,7 +1,10 @@
 export async function apiFetch<T>(
   input: string,
   init?: RequestInit,
-  baseUrl = process.env.NEXT_PUBLIC_API_URL ?? process.env.API_BASE_URL ?? ""
+  baseUrl =
+    process.env.NEXT_PUBLIC_API_URL ??
+    process.env.API_BASE_URL ??
+    "https://fully-open-records-api.sbdownes.workers.dev"
 ): Promise<T> {
   const response = await fetch(`${baseUrl}${input}`, {
     ...init,
@@ -18,4 +21,3 @@ export async function apiFetch<T>(
 
   return response.json() as Promise<T>;
 }
-

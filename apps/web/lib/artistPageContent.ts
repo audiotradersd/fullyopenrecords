@@ -3,7 +3,7 @@ type AlbumContent = {
   releaseDate?: string | null;
   description?: string | null;
   coverArt?: string | null;
-  tracks: Array<{ title: string; audioUrl?: string | null; duration?: string | null }>;
+  tracks: Array<{ title: string; audioUrl?: string | null; duration?: string | null; enabled?: boolean | null }>;
 };
 
 type TrackContent = {
@@ -12,6 +12,7 @@ type TrackContent = {
   releaseDate?: string | null;
   duration?: string | null;
   description?: string | null;
+  enabled?: boolean | null;
 };
 
 type PressContent = {
@@ -60,66 +61,12 @@ const editorialArtistPageContent: Record<string, ArtistPageContentModel> = {
   stone: {
     heroImage: "/artists/stone.webp",
     profileImage: "/artists/stone.webp",
-    shortBio:
-      "Stone!? is an industrial and experimental rock band from Brighton, UK known for dark atmospheres and electrifying live performances.",
-    albums: [
-      {
-        title: "Signal Fade EP",
-        releaseDate: "2024-03-22",
-        description: "A heavy, groove-forward EP built from industrial texture, broken electronics, and late-night club pressure.",
-        coverArt: "/artists/stone.webp",
-        tracks: [
-          { title: "Signal Fade" },
-          { title: "Broken Circuits" },
-          { title: "Echo Chamber" }
-        ]
-      }
-    ],
-    tracks: [
-      { title: "Jack Issues", audioUrl: "/api/media/tracks/stone/warm-medium.mp3", duration: "3:41" },
-      { title: "Body Electric", duration: "2:55" },
-      { title: "Shadow Paradox", duration: "2:54" }
-    ],
-    press: [
-      {
-        title: "Interview with Stone!?",
-        publication: "Brighton Music Blog",
-        date: "2023-06-15",
-        excerpt: "A look at how Stone!? build dense riffs, dark atmospheres, and live energy into industrial rock."
-      }
-    ],
-    gigs: [
-      {
-        title: "Fully Open Records Showcase",
-        venue: "The Hope & Ruin",
-        city: "Brighton, UK",
-        eventDate: "2026-10-12"
-      },
-      {
-        title: "Stone!? Live",
-        venue: "The Dome",
-        city: "London, UK",
-        eventDate: "2026-10-27"
-      },
-      {
-        title: "Stone!? EU Session",
-        venue: "Urban Spree",
-        city: "Berlin, DE",
-        eventDate: "2026-11-11"
-      }
-    ],
-    photos: [
-      { imageUrl: "/artists/stone.webp", alt: "Stone!? promo image" },
-      { imageUrl: "/artists/stone.webp", alt: "Stone!? live portrait" },
-      { imageUrl: "/artists/stone.webp", alt: "Stone!? studio shot" }
-    ],
-    videos: [
-      {
-        title: "Stone!? — Signal Fade (Live Session)",
-        thumbnailUrl: "/artists/stone.webp",
-        description: "Live session footage from the Fully Open Records orbit."
-      }
-    ]
+    albums: [],
+    tracks: [],
+    press: [],
+    gigs: [],
+    photos: [],
+    videos: []
   }
 };
 
@@ -152,10 +99,11 @@ export function mergeArtistPageContent(
           description: typeof album.description === "string" ? album.description : null,
           coverArt: typeof album.coverArt === "string" ? album.coverArt : null,
           tracks: songs
-            .filter((song) => Number(song.albumId ?? 0) === Number(album.id ?? 0) && song.enabled !== false)
+            .filter((song) => Number(song.albumId ?? 0) === Number(album.id ?? 0))
             .map((song) => ({
               title: String(song.title ?? ""),
-              audioUrl: typeof song.audioUrl === "string" ? song.audioUrl : null
+              audioUrl: typeof song.audioUrl === "string" ? song.audioUrl : null,
+              enabled: song.enabled !== false
             }))
         }))
       : [];
@@ -163,12 +111,13 @@ export function mergeArtistPageContent(
   const liveTracks =
     songs.length > 0
       ? songs
-          .filter((song) => !song.albumId && song.enabled !== false)
+          .filter((song) => !song.albumId)
           .map((song) => ({
             title: String(song.title ?? ""),
             audioUrl: typeof song.audioUrl === "string" ? song.audioUrl : null,
             releaseDate: typeof song.createdAt === "string" ? song.createdAt : null,
-            description: typeof song.description === "string" ? song.description : null
+            description: typeof song.description === "string" ? song.description : null,
+            enabled: song.enabled !== false
           }))
       : [];
 
@@ -183,9 +132,10 @@ export function mergeArtistPageContent(
       editorial?.profileImage ||
       (typeof artist.image === "string" ? artist.image : null),
     shortBio:
+      (typeof artist.bio === "string" && artist.bio) ||
       (typeof artist.shortDescription === "string" && artist.shortDescription) ||
       editorial?.shortBio ||
-      (typeof artist.bio === "string" ? artist.bio : null),
+      null,
     albums: liveAlbums.length > 0 ? liveAlbums : editorial?.albums ?? [],
     tracks: liveTracks.length > 0 ? liveTracks : editorial?.tracks ?? [],
     press:

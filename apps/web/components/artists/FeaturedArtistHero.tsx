@@ -20,8 +20,6 @@ type FeaturedArtistHeroProps = {
   description: string;
   editorialNote: string;
   featuredTrack: HeroTrack | null;
-  releaseTrack: HeroTrack | null;
-  releaseTitle: string;
 };
 
 export default function FeaturedArtistHero({
@@ -30,9 +28,7 @@ export default function FeaturedArtistHero({
   genres,
   description,
   editorialNote,
-  featuredTrack,
-  releaseTrack,
-  releaseTitle
+  featuredTrack
 }: FeaturedArtistHeroProps) {
   return (
     <section className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-white/5 shadow-[0_20px_60px_rgba(0,0,0,0.32)] backdrop-blur-md">
@@ -84,13 +80,6 @@ export default function FeaturedArtistHero({
               <StreamButton
                 audioUrl={featuredTrack.audioUrl}
                 label={`Play ${featuredTrack.title}`}
-                pauseLabel="Pause"
-              />
-            ) : null}
-            {releaseTrack?.audioUrl ? (
-              <StreamButton
-                audioUrl={releaseTrack.audioUrl}
-                label={`Listen to ${releaseTitle}`}
                 pauseLabel="Pause"
               />
             ) : null}

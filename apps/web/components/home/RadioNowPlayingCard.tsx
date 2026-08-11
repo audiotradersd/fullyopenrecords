@@ -44,7 +44,7 @@ export default function RadioNowPlayingCard({ artist, title }: RadioNowPlayingCa
     async function refresh() {
       try {
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL ?? "https://api.fullyopenrecords.com"}/radio`,
+          `${process.env.NEXT_PUBLIC_API_URL ?? "https://fully-open-records-api.sbdownes.workers.dev"}/radio`,
           {
             cache: "no-store"
           }

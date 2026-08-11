@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function ArtistBioSection() {
   return (
     <div className="mt-4 rounded-xl border border-white/10 bg-white/[0.03] p-4">
@@ -6,6 +8,11 @@ export default function ArtistBioSection() {
         Stone!? are an industrial and experimental rock band from Brighton, building dense riffs,
         broken electronics, and live-show energy into heavy, cinematic songs made for late-night
         radio and dark rooms.
+      </p>
+      <p className="mt-3 text-sm font-semibold text-pink">
+        <Link href="/artist/stone" className="underline-offset-4 hover:underline">
+          View Stone!? on Fully Open Records
+        </Link>
       </p>
     </div>
   );

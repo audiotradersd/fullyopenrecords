@@ -35,7 +35,7 @@ import {
   users,
   videos
 } from "@fully-open-records/db/src/schema";
-import { and, asc, count, desc, eq, gt, lt, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, gt, inArray, lt, sql } from "drizzle-orm";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { Hono } from "hono";
 import { fallbackContent } from "../lib/content";
@@ -148,7 +148,10 @@ async function destroySession(c: Parameters<typeof setCookie>[0]) {
 }
 
 async function getArtistUsage(db: ReturnType<typeof getDb>, artistId: number) {
-  const [songCountResult] = await db.select({ total: count() }).from(songs).where(eq(songs.artistId, artistId));
+  const [songCountResult] = await db
+    .select({ total: count() })
+    .from(songs)
+    .where(and(eq(songs.artistId, artistId), eq(songs.enabled, true)));
   const [photoCountResult] = await db.select({ total: count() }).from(photos).where(eq(photos.artistId, artistId));
   const [videoCountResult] = await db.select({ total: count() }).from(videos).where(eq(videos.artistId, artistId));
   const [radioSelectedResult] = await db
@@ -166,6 +169,64 @@ async function getArtistUsage(db: ReturnType<typeof getDb>, artistId: number) {
 
 function limitsExceeded(current: number, limit: number) {
   return current >= limit;
+}
+
+function isFreePlanArtist(artist: typeof artists.$inferSelect) {
+  return artist.plan === "free" && !artist.adminOverride;
+}
+
+function songOrderBy() {
+  return [
+    asc(sql`CASE WHEN ${songs.albumId} IS NULL THEN 1 ELSE 0 END`),
+    asc(songs.albumId),
+    asc(sql`COALESCE(${songs.trackNumber}, 9999)`),
+    asc(songs.title),
+    desc(songs.createdAt)
+  ] as const;
+}
+
+async function normalizeFreePlanActiveTracks(
+  db: ReturnType<typeof getDb>,
+  artist: typeof artists.$inferSelect,
+  existingSongs?: Array<typeof songs.$inferSelect>
+) {
+  const orderedSongs =
+    existingSongs ??
+    (await db
+      .select()
+      .from(songs)
+      .where(eq(songs.artistId, artist.id))
+      .orderBy(...songOrderBy()));
+
+  if (!isFreePlanArtist(artist)) {
+    return orderedSongs;
+  }
+
+  const enabledSongs = orderedSongs.filter((song) => song.enabled);
+  if (enabledSongs.length <= FREE_PLAN_LIMITS.songs) {
+    return orderedSongs;
+  }
+
+  const idsToDisable = enabledSongs.slice(FREE_PLAN_LIMITS.songs).map((song) => song.id);
+  if (idsToDisable.length) {
+    await db
+      .update(songs)
+      .set({
+        enabled: false,
+        updatedAt: new Date().toISOString()
+      })
+      .where(and(eq(songs.artistId, artist.id), inArray(songs.id, idsToDisable)));
+  }
+
+  const disabledIdSet = new Set(idsToDisable);
+  return orderedSongs.map((song) =>
+    disabledIdSet.has(song.id)
+      ? {
+          ...song,
+          enabled: false
+        }
+      : song
+  );
 }
 
 function mapArtistRecord(artist: typeof artists.$inferSelect) {
@@ -316,24 +377,15 @@ publicRouter.get("/artists/:slug/content", async (c) => {
     });
   }
 
-  const [artistAlbums, artistTracks, artistVideos, artistPhotos, artistGigs, artistPress] = await Promise.all([
+  const [artistAlbums, fetchedTracks, artistVideos, artistPhotos, artistGigs, artistPress] = await Promise.all([
     db.select().from(albums).where(eq(albums.artistId, artist.id)).orderBy(desc(albums.releaseDate), desc(albums.createdAt)),
-      db
-        .select()
-        .from(songs)
-        .where(eq(songs.artistId, artist.id))
-        .orderBy(
-          asc(sql`CASE WHEN ${songs.albumId} IS NULL THEN 1 ELSE 0 END`),
-          asc(songs.albumId),
-          asc(sql`COALESCE(${songs.trackNumber}, 9999)`),
-          asc(songs.title),
-          desc(songs.createdAt)
-        ),
+    db.select().from(songs).where(eq(songs.artistId, artist.id)).orderBy(...songOrderBy()),
     db.select().from(videos).where(eq(videos.artistId, artist.id)).orderBy(desc(videos.createdAt)),
     db.select().from(photos).where(eq(photos.artistId, artist.id)).orderBy(desc(photos.createdAt)),
     db.select().from(gigs).where(eq(gigs.artistId, artist.id)).orderBy(gigs.eventDate),
     db.select().from(pressItems).where(eq(pressItems.artistId, artist.id)).orderBy(desc(pressItems.pressDate), desc(pressItems.createdAt))
   ]);
+  const artistTracks = await normalizeFreePlanActiveTracks(db, artist, fetchedTracks);
 
   return c.json({
     albums: artistAlbums.map(mapAlbumRecord),
@@ -441,16 +493,43 @@ publicRouter.post("/auth/register", rateLimit, zValidator("json", registerSchema
     const db = getDb(c.env);
 
     const existing = await db
-      .select({ id: users.id })
+      .select({ id: users.id, email: users.email, username: users.username })
       .from(users)
       .where(sql`${users.email} = ${payload.email} OR ${users.username} = ${payload.username}`)
       .limit(1);
 
     if (existing.length) {
+      const conflictReasons = [];
+      const existingRow = existing[0];
+      const providedEmail = payload.email.toLowerCase();
+      const providedUsername = payload.username.toLowerCase();
+      const existingEmail = (existingRow.email ?? "").toLowerCase();
+      const existingUsername = (existingRow.username ?? "").toLowerCase();
+
+      if (existingEmail === providedEmail) {
+        conflictReasons.push("email");
+      }
+
+      if (existingUsername === providedUsername) {
+        conflictReasons.push("username");
+      }
+
+      const errorMessage =
+        conflictReasons.length === 2
+          ? "Email and username already in use"
+          : conflictReasons[0] === "email"
+            ? "Email already in use"
+            : "Username already in use";
+
       await logFlowEvent(c.env, c.req.raw, "auth.register.rejected", {
-        meta: { reason: "duplicate", email: payload.email, accountType: payload.accountType }
+        meta: {
+          reason: "duplicate",
+          email: payload.email,
+          accountType: payload.accountType
+        }
       });
-      return c.json({ error: "Unable to create account" }, 400);
+
+      return c.json({ error: errorMessage }, 400);
     }
 
     const { hash, salt } = await hashPassword(payload.password);
@@ -718,6 +797,7 @@ publicRouter.get("/artist/me", requireArtist, async (c) => {
     return c.json({ error: "Artist profile not found" }, 404);
   }
 
+  await normalizeFreePlanActiveTracks(db, artist);
   const usage = await getArtistUsage(db, artist.id);
   return c.json({
     artist: mapArtistRecord(artist),
@@ -864,25 +944,16 @@ publicRouter.get("/artist/me/content", requireArtist, async (c) => {
       return c.json({ error: "Artist profile not found" }, 404);
     }
 
-    const [artistAlbums, artistSongs, artistVideos, artistPhotos, artistGigs, artistPress, usage] = await Promise.all([
+    const [artistAlbums, fetchedSongs, artistVideos, artistPhotos, artistGigs, artistPress] = await Promise.all([
       db.select().from(albums).where(eq(albums.artistId, artist.id)).orderBy(desc(albums.releaseDate), desc(albums.createdAt)),
-      db
-        .select()
-        .from(songs)
-        .where(eq(songs.artistId, artist.id))
-        .orderBy(
-          asc(sql`CASE WHEN ${songs.albumId} IS NULL THEN 1 ELSE 0 END`),
-          asc(songs.albumId),
-          asc(sql`COALESCE(${songs.trackNumber}, 9999)`),
-          asc(songs.title),
-          desc(songs.createdAt)
-        ),
+      db.select().from(songs).where(eq(songs.artistId, artist.id)).orderBy(...songOrderBy()),
       db.select().from(videos).where(eq(videos.artistId, artist.id)).orderBy(desc(videos.createdAt)),
       db.select().from(photos).where(eq(photos.artistId, artist.id)).orderBy(desc(photos.createdAt)),
       db.select().from(gigs).where(eq(gigs.artistId, artist.id)).orderBy(desc(gigs.eventDate), desc(gigs.createdAt)),
-      db.select().from(pressItems).where(eq(pressItems.artistId, artist.id)).orderBy(desc(pressItems.pressDate), desc(pressItems.createdAt)),
-      getArtistUsage(db, artist.id)
+      db.select().from(pressItems).where(eq(pressItems.artistId, artist.id)).orderBy(desc(pressItems.pressDate), desc(pressItems.createdAt))
     ]);
+    const artistSongs = await normalizeFreePlanActiveTracks(db, artist, fetchedSongs);
+    const usage = await getArtistUsage(db, artist.id);
 
     return c.json({
       albums: artistAlbums.map(mapAlbumRecord),
@@ -984,18 +1055,21 @@ publicRouter.post("/artist/me/songs", requireArtist, zValidator("json", songSche
 
   const usage = await getArtistUsage(db, artist.id);
 
-  if (
-    artist.plan === "free" &&
-    !artist.adminOverride &&
-    payload.radioSelected &&
-    limitsExceeded(usage.radioTracks, FREE_PLAN_LIMITS.radioTracks)
-  ) {
+  if (isFreePlanArtist(artist) && payload.radioSelected && limitsExceeded(usage.radioTracks, FREE_PLAN_LIMITS.radioTracks)) {
     await logFlowEvent(c.env, c.req.raw, "artist.song.create.rejected", {
       user,
       artistId: artist.id,
       meta: { reason: "radio_track_limit", title: payload.title }
     });
     return c.json({ error: "Free plan allows only one radio-selected track" }, 403);
+  }
+
+  let enabled = payload.enabled;
+  let warning: string | undefined;
+
+  if (isFreePlanArtist(artist) && payload.enabled && limitsExceeded(usage.songs, FREE_PLAN_LIMITS.songs)) {
+    enabled = false;
+    warning = "Free plan allows only 5 active tracks. This track was uploaded as inactive.";
   }
 
   const created = await db
@@ -1011,7 +1085,7 @@ publicRouter.post("/artist/me/songs", requireArtist, zValidator("json", songSche
       coverImage: payload.coverImage ?? null,
       albumId: payload.albumId ?? null,
       description: payload.description ?? null,
-      enabled: payload.enabled,
+      enabled,
       isRadioEligible: payload.isRadioEligible,
       radioSelected: payload.radioSelected
     })
@@ -1020,9 +1094,9 @@ publicRouter.post("/artist/me/songs", requireArtist, zValidator("json", songSche
   await logFlowEvent(c.env, c.req.raw, "artist.song.created", {
     user,
     artistId: artist.id,
-    meta: { songId: created[0].id, title: payload.title, radioSelected: payload.radioSelected }
+    meta: { songId: created[0].id, title: payload.title, radioSelected: payload.radioSelected, enabled }
   });
-  return c.json({ song: created[0] }, 201);
+  return c.json({ song: created[0], warning }, 201);
 });
 
 publicRouter.put("/artist/me/songs/:id", requireArtist, zValidator("json", songSchema.partial()), async (c) => {
@@ -1046,12 +1120,7 @@ publicRouter.put("/artist/me/songs/:id", requireArtist, zValidator("json", songS
     return c.json({ error: "Track not found" }, 404);
   }
 
-  if (
-    artist.plan === "free" &&
-    !artist.adminOverride &&
-    payload.radioSelected === true &&
-    !existingSong.radioSelected
-  ) {
+  if (isFreePlanArtist(artist) && payload.radioSelected === true && !existingSong.radioSelected) {
     const usage = await getArtistUsage(db, artist.id);
     if (limitsExceeded(usage.radioTracks, FREE_PLAN_LIMITS.radioTracks)) {
       await logFlowEvent(c.env, c.req.raw, "artist.song.update.rejected", {
@@ -1060,6 +1129,17 @@ publicRouter.put("/artist/me/songs/:id", requireArtist, zValidator("json", songS
         meta: { reason: "radio_track_limit", songId }
       });
       return c.json({ error: "Free plan allows only one radio-selected track" }, 403);
+    }
+  }
+
+  let enabled = payload.enabled;
+  let warning: string | undefined;
+
+  if (isFreePlanArtist(artist) && payload.enabled === true && !existingSong.enabled) {
+    const usage = await getArtistUsage(db, artist.id);
+    if (limitsExceeded(usage.songs, FREE_PLAN_LIMITS.songs)) {
+      enabled = false;
+      warning = "Free plan allows only 5 active tracks. Disable another track before enabling this one.";
     }
   }
 
@@ -1073,7 +1153,7 @@ publicRouter.put("/artist/me/songs/:id", requireArtist, zValidator("json", songS
       ...(payload.coverImage !== undefined ? { coverImage: payload.coverImage ?? null } : {}),
       ...(payload.albumId !== undefined ? { albumId: payload.albumId ?? null } : {}),
       ...(payload.description !== undefined ? { description: payload.description ?? null } : {}),
-      ...(payload.enabled !== undefined ? { enabled: payload.enabled } : {}),
+      ...(payload.enabled !== undefined ? { enabled } : {}),
       ...(payload.isRadioEligible !== undefined ? { isRadioEligible: payload.isRadioEligible } : {}),
       ...(payload.radioSelected !== undefined ? { radioSelected: payload.radioSelected } : {}),
       ...(payload.title !== undefined ? { slug: slugify(`${artist.name}-${payload.title}`) } : {}),
@@ -1085,10 +1165,10 @@ publicRouter.put("/artist/me/songs/:id", requireArtist, zValidator("json", songS
   await logFlowEvent(c.env, c.req.raw, "artist.song.updated", {
     user,
     artistId: artist.id,
-    meta: { songId, albumId: payload.albumId ?? existingSong.albumId ?? null }
+    meta: { songId, albumId: payload.albumId ?? existingSong.albumId ?? null, enabled: enabled ?? existingSong.enabled }
   });
 
-  return c.json({ song: updated[0] });
+  return c.json({ song: updated[0], warning });
 });
 
 publicRouter.delete("/artist/me/songs/:id", requireArtist, async (c) => {

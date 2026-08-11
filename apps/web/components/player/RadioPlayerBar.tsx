@@ -109,9 +109,12 @@ export default function RadioPlayerBar() {
       }
 
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? "https://api.fullyopenrecords.com"}/radio`, {
-          cache: "no-store"
-        });
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL ?? "https://fully-open-records-api.sbdownes.workers.dev"}/radio`,
+          {
+            cache: "no-store"
+          }
+        );
         if (!response.ok) return;
         const payload = (await response.json()) as RadioPayload;
         if (!active) return;

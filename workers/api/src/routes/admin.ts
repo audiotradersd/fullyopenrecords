@@ -8,7 +8,7 @@ import {
   productSchema,
   releaseSchema
 } from "@fully-open-records/api/src/contracts";
-import { favouriteSongs, songs, trackingItems, users } from "@fully-open-records/db/src/schema";
+import { artists, favouriteSongs, songs, trackingItems, users } from "@fully-open-records/db/src/schema";
 import { count, desc, eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { getDb } from "../lib/db";
@@ -144,9 +144,13 @@ adminRouter.get("/users", async (c) => {
       username: users.username,
       accountType: users.accountType,
       role: users.role,
-      createdAt: users.createdAt
+      createdAt: users.createdAt,
+      artistName: artists.name,
+      artistSlug: artists.slug,
+      artistPlan: artists.plan
     })
     .from(users)
+    .leftJoin(artists, eq(artists.userId, users.id))
     .orderBy(desc(users.createdAt));
 
   return c.json(rows);

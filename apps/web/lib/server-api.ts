@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 
 export const WEB_SESSION_COOKIE = "for_web_session";
 export const WEB_SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 7;
+export const ADMIN_SESSION_COOKIE = "for_admin_session";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL ??

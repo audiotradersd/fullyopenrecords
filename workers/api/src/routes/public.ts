@@ -35,7 +35,7 @@ import {
   users,
   videos
 } from "@fully-open-records/db/src/schema";
-import { and, asc, count, desc, eq, gt, inArray, lt, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, gt, inArray, isNull, lt, or, sql } from "drizzle-orm";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { Hono } from "hono";
 import { fallbackContent } from "../lib/content";
@@ -344,17 +344,27 @@ async function uploadMediaObject(
 
 publicRouter.get("/artists", async (c) => {
   const db = getDb(c.env);
-  const rows = await db.select().from(artists).orderBy(desc(artists.featured), artists.name);
+  const rows = await db
+    .select({ artist: artists })
+    .from(artists)
+    .leftJoin(users, eq(artists.userId, users.id))
+    .where(or(isNull(artists.userId), eq(users.active, true)))
+    .orderBy(desc(artists.featured), artists.name);
   await logFlowEvent(c.env, c.req.raw, "artists.list.view", { meta: { count: rows.length } });
-  return c.json(rows.length ? rows.map(mapArtistRecord) : fallbackContent.artists);
+  return c.json(rows.length ? rows.map(({ artist }) => mapArtistRecord(artist)) : fallbackContent.artists);
 });
 
 publicRouter.get("/artists/:slug", async (c) => {
   const db = getDb(c.env);
-  const rows = await db.select().from(artists).where(eq(artists.slug, c.req.param("slug"))).limit(1);
-  const artist = rows[0];
+  const [record] = await db
+    .select({ artist: artists, active: users.active })
+    .from(artists)
+    .leftJoin(users, eq(artists.userId, users.id))
+    .where(eq(artists.slug, c.req.param("slug")))
+    .limit(1);
+  const artist = record?.artist;
 
-  if (artist) {
+  if (artist && (artist.userId === null || record.active)) {
     await logFlowEvent(c.env, c.req.raw, "artist.profile.view", {
       artistId: artist.id,
       meta: { slug: artist.slug }
@@ -362,15 +372,23 @@ publicRouter.get("/artists/:slug", async (c) => {
     return c.json(mapArtistRecord(artist));
   }
 
+  if (artist) return c.json({ error: "Not found" }, 404);
+
   const fallbackArtist = fallbackContent.artists.find((entry) => entry.slug === c.req.param("slug"));
   return fallbackArtist ? c.json(fallbackArtist) : c.json({ error: "Not found" }, 404);
 });
 
 publicRouter.get("/artists/:slug/content", async (c) => {
   const db = getDb(c.env);
-  const [artist] = await db.select().from(artists).where(eq(artists.slug, c.req.param("slug"))).limit(1);
+  const [record] = await db
+    .select({ artist: artists, active: users.active })
+    .from(artists)
+    .leftJoin(users, eq(artists.userId, users.id))
+    .where(eq(artists.slug, c.req.param("slug")))
+    .limit(1);
+  const artist = record?.artist;
 
-  if (!artist) {
+  if (!artist || (artist.userId !== null && !record?.active)) {
     return c.json({
       albums: [],
       tracks: [],
@@ -608,7 +626,7 @@ publicRouter.post("/auth/login", rateLimit, zValidator("json", loginSchema), asy
     .limit(1);
 
   const user = results[0];
-  if (!user) {
+  if (!user || !user.active) {
     await logFlowEvent(c.env, c.req.raw, "auth.login.rejected", {
       meta: { reason: "invalid_credentials", email: payload.email }
     });

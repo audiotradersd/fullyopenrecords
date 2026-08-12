@@ -8,8 +8,8 @@ import {
   productSchema,
   releaseSchema
 } from "@fully-open-records/api/src/contracts";
-import { artists, favouriteSongs, songs, trackingItems, users } from "@fully-open-records/db/src/schema";
-import { count, desc, eq } from "drizzle-orm";
+import { artists, favouriteSongs, flowEvents, media, sessions, songs, trackingItems, users } from "@fully-open-records/db/src/schema";
+import { count, desc, eq, like } from "drizzle-orm";
 import { Hono } from "hono";
 import { getDb } from "../lib/db";
 import { signAdminJwt } from "../lib/auth";
@@ -144,6 +144,7 @@ adminRouter.get("/users", async (c) => {
       username: users.username,
       accountType: users.accountType,
       role: users.role,
+      active: users.active,
       createdAt: users.createdAt,
       artistName: artists.name,
       artistSlug: artists.slug,
@@ -154,6 +155,19 @@ adminRouter.get("/users", async (c) => {
     .orderBy(desc(users.createdAt));
 
   return c.json(rows);
+});
+
+adminRouter.put("/users/:id/active", async (c) => {
+  const payload = await c.req.json<{ active?: unknown }>();
+  if (typeof payload.active !== "boolean") return c.json({ error: "Active status must be true or false" }, 400);
+  const db = getDb(c.env);
+  const userId = Number(c.req.param("id"));
+  const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+  if (!user) return c.json({ error: "Account not found" }, 404);
+  if (user.role === "admin" || user.email === c.env.ADMIN_EMAIL) return c.json({ error: "The administrator account cannot be changed here" }, 403);
+  const updated = await db.update(users).set({ active: payload.active, updatedAt: new Date().toISOString() }).where(eq(users.id, userId)).returning();
+  if (!payload.active) await db.delete(sessions).where(eq(sessions.userId, userId));
+  return c.json(updated[0]);
 });
 
 adminRouter.put("/users/:id/plan", async (c) => {
@@ -170,6 +184,19 @@ adminRouter.delete("/users/:id", async (c) => {
   const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
   if (!user) return c.json({ error: "Account not found" }, 404);
   if (user.role === "admin" || user.email === c.env.ADMIN_EMAIL) return c.json({ error: "The administrator account cannot be deleted here" }, 403);
+  const linkedArtists = await db.select({ id: artists.id, slug: artists.slug }).from(artists).where(eq(artists.userId, userId));
+  await db.delete(flowEvents).where(eq(flowEvents.userId, userId));
+  for (const artist of linkedArtists) {
+    const prefix = `artists/${artist.slug}/`;
+    let cursor: string | undefined;
+    do {
+      const listed = await c.env.MEDIA_BUCKET.list({ prefix, cursor });
+      if (listed.objects.length) await c.env.MEDIA_BUCKET.delete(listed.objects.map((object) => object.key));
+      cursor = listed.truncated ? listed.cursor : undefined;
+    } while (cursor);
+    await db.delete(media).where(like(media.r2Key, `${prefix}%`));
+    await db.delete(flowEvents).where(eq(flowEvents.artistId, artist.id));
+  }
   await db.delete(artists).where(eq(artists.userId, userId));
   await db.delete(users).where(eq(users.id, userId));
   return c.json({ ok: true });

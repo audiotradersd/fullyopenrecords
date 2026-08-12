@@ -29,6 +29,7 @@ export async function resolveSessionUser(
       username: users.username,
       accountType: users.accountType,
       role: users.role,
+      active: users.active,
       artistId: artists.id,
       artistSlug: artists.slug
     })
@@ -39,7 +40,7 @@ export async function resolveSessionUser(
     .limit(1);
 
   const row = rows[0];
-  if (!row) return null;
+  if (!row || !row.active) return null;
 
   return {
     id: row.userId,

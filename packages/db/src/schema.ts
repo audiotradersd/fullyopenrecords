@@ -52,6 +52,7 @@ export const users = sqliteTable(
     passwordSalt: text("password_salt").notNull(),
     accountType: text("account_type").notNull(),
     role: text("role").notNull().default("user"),
+    active: integer("active", { mode: "boolean" }).notNull().default(true),
     ...timestamps
   },
   (table) => [

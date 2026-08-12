@@ -175,6 +175,10 @@ function isFreePlanArtist(artist: typeof artists.$inferSelect) {
   return artist.plan === "free" && !artist.adminOverride;
 }
 
+function getArtistLimits(artist: typeof artists.$inferSelect) {
+  return isFreePlanArtist(artist) ? FREE_PLAN_LIMITS : { songs: null, photos: null, videos: null, radioTracks: null };
+}
+
 function songOrderBy() {
   return [
     asc(sql`CASE WHEN ${songs.albumId} IS NULL THEN 1 ELSE 0 END`),
@@ -802,7 +806,7 @@ publicRouter.get("/artist/me", requireArtist, async (c) => {
   return c.json({
     artist: mapArtistRecord(artist),
     usage,
-    limits: FREE_PLAN_LIMITS
+    limits: getArtistLimits(artist)
   });
 });
 
@@ -963,7 +967,7 @@ publicRouter.get("/artist/me/content", requireArtist, async (c) => {
       gigs: artistGigs.map(mapGigRecord),
       press: artistPress.map(mapPressRecord),
       usage,
-      limits: FREE_PLAN_LIMITS
+      limits: getArtistLimits(artist)
     });
   } catch (error) {
     console.error("artist content route failed", error);

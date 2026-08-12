@@ -28,10 +28,10 @@ type DashboardData = {
     radioTracks: number;
   };
   limits: {
-    songs: number;
-    photos: number;
-    videos: number;
-    radioTracks: number;
+    songs: number | null;
+    photos: number | null;
+    videos: number | null;
+    radioTracks: number | null;
   };
 };
 
@@ -1177,25 +1177,25 @@ export default function ArtistDashboard() {
           <Card className="p-5">
             <p className="text-fog">Active Tracks</p>
             <p className="mt-2 text-2xl text-white">
-              {dashboard?.usage.songs ?? 0}/{dashboard?.limits.songs ?? 5}
+              {dashboard?.usage.songs ?? 0}/{dashboard?.limits.songs ?? "Unlimited"}
             </p>
           </Card>
           <Card className="p-5">
             <p className="text-fog">Photos</p>
             <p className="mt-2 text-2xl text-white">
-              {dashboard?.usage.photos ?? 0}/{dashboard?.limits.photos ?? 10}
+              {dashboard?.usage.photos ?? 0}/{dashboard?.limits.photos ?? "Unlimited"}
             </p>
           </Card>
           <Card className="p-5">
             <p className="text-fog">Videos</p>
             <p className="mt-2 text-2xl text-white">
-              {dashboard?.usage.videos ?? 0}/{dashboard?.limits.videos ?? 3}
+              {dashboard?.usage.videos ?? 0}/{dashboard?.limits.videos ?? "Unlimited"}
             </p>
           </Card>
           <Card className="p-5">
             <p className="text-fog">Radio Picks</p>
             <p className="mt-2 text-2xl text-white">
-              {dashboard?.usage.radioTracks ?? 0}/{dashboard?.limits.radioTracks ?? 1}
+              {dashboard?.usage.radioTracks ?? 0}/{dashboard?.limits.radioTracks ?? "Unlimited"}
             </p>
           </Card>
         </div>
@@ -1437,7 +1437,7 @@ export default function ArtistDashboard() {
               </div>
             </div>
 
-            {dashboard?.artist.plan !== "premium" ? (
+            {dashboard?.artist.plan === "free" ? (
               <div className="mt-6 rounded-2xl border border-pink/30 bg-pink/10 p-4">
                 <p className="text-sm font-semibold text-white">Free plan active-track limit</p>
                 <p className="mt-2 text-sm leading-7 text-fog">

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, Space_Grotesk } from "next/font/google";
+import Script from "next/script";
 import { AuthProvider } from "../components/auth/AuthProvider";
 import Footer from "../components/layout/Footer";
 import Navbar from "../components/layout/Navbar";
@@ -42,6 +43,15 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
+      <head>
+        <Script src="https://www.googletagmanager.com/gtag/js?id=G-X10VP8P30J" strategy="afterInteractive" />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag("js", new Date());
+gtag("config", "G-X10VP8P30J");`}
+        </Script>
+      </head>
       <body className={`${inter.variable} ${spaceGrotesk.variable} flex min-h-screen flex-col`}>
         <AuthProvider>
           <Navbar />

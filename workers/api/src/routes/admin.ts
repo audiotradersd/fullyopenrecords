@@ -156,6 +156,25 @@ adminRouter.get("/users", async (c) => {
   return c.json(rows);
 });
 
+adminRouter.put("/users/:id/plan", async (c) => {
+  const payload = await c.req.json<{ plan?: unknown }>();
+  if (payload.plan !== "free" && payload.plan !== "paid") return c.json({ error: "Plan must be free or paid" }, 400);
+  const db = getDb(c.env);
+  const updated = await db.update(artists).set({ plan: payload.plan, updatedAt: new Date().toISOString() }).where(eq(artists.userId, Number(c.req.param("id")))).returning();
+  return updated[0] ? c.json(updated[0]) : c.json({ error: "Artist account not found" }, 404);
+});
+
+adminRouter.delete("/users/:id", async (c) => {
+  const db = getDb(c.env);
+  const userId = Number(c.req.param("id"));
+  const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+  if (!user) return c.json({ error: "Account not found" }, 404);
+  if (user.role === "admin" || user.email === c.env.ADMIN_EMAIL) return c.json({ error: "The administrator account cannot be deleted here" }, 403);
+  await db.delete(artists).where(eq(artists.userId, userId));
+  await db.delete(users).where(eq(users.id, userId));
+  return c.json({ ok: true });
+});
+
 adminRouter.get("/songs", async (c) => {
   const db = getDb(c.env);
   const rows = await db.select().from(songs).orderBy(desc(songs.createdAt));

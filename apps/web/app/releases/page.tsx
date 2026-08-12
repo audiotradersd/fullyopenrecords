@@ -10,7 +10,10 @@ import {
   mergeArtistRecordWithLivePreference
 } from "../../lib/artistProfiles";
 import { mergeArtistPageContent } from "../../lib/artistPageContent";
+import { pageMetadata } from "../../lib/seo";
 
+export const runtime = "edge";
+export const metadata = pageMetadata({ title: "New Independent Music Releases", description: "Explore new releases from Fully Open artists, with independent music from every corner of the catalogue.", path: "/releases" });
 
 const tracklistTitles = [
   "Intermingle",

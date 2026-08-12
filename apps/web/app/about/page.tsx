@@ -4,7 +4,10 @@ import FoundersSection from "../../components/about/FoundersSection";
 import PhilosophyQuote from "../../components/about/PhilosophyQuote";
 import PillarsGrid from "../../components/about/PillarsGrid";
 import StoryTimeline from "../../components/about/StoryTimeline";
+import { pageMetadata } from "../../lib/seo";
 
+export const runtime = "edge";
+export const metadata = pageMetadata({ title: "About Fully Open — An All-Genres Independent Music Community", description: "Meet Fully Open: an independent music community built around human discovery, open-minded radio and artists from every genre.", path: "/about" });
 
 export default function AboutPage() {
   return (

@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 
+export const runtime = "edge";
 
-export default async function ArtistPage({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = await params;
-  redirect(`/featured/${slug}`);
+export default async function ArtistPage({ params }: { params: { slug: string } }) {
+  redirect(`/artist/${params.slug}`);
 }

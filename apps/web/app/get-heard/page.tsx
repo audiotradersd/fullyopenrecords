@@ -7,6 +7,7 @@ import { Button } from "../../components/ui/button";
 import { getArtist, getArtistContent } from "../../lib/api";
 import { buildArtistFallback, mergeArtistRecordWithLivePreference } from "../../lib/artistProfiles";
 import { mergeArtistPageContent } from "../../lib/artistPageContent";
+import { pageMetadata } from "../../lib/seo";
 
 const trustIndicators = [
   "Any genre",
@@ -91,6 +92,8 @@ const radioTracks = [
   }
 ];
 
+export const runtime = "edge";
+export const metadata = pageMetadata({ title: "Submit Music & Build Your Artist Page", description: "Artists of every genre can create a Fully Open page, upload music and be considered for our human-curated radio.", path: "/get-heard" });
 
 export default async function GetHeardPage() {
   const stoneArtist = await getArtist("stone")

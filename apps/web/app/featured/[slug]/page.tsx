@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { noIndexMetadata } from "../../../lib/seo";
 import ArtistPageContent from "../../../components/artists/ArtistPageContent";
 import { getArtist } from "../../../lib/api";
 import {
@@ -7,17 +8,18 @@ import {
   mergeArtistRecordForFeaturedPage
 } from "../../../lib/artistProfiles";
 
+export const runtime = "edge";
+export const metadata = noIndexMetadata;
 
-export default async function FeaturedArtistPage({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = await params;
-  const editorialProfile = getEditorialArtistProfile(slug);
-  const artist = await getArtist(slug)
+export default async function FeaturedArtistPage({ params }: { params: { slug: string } }) {
+  const editorialProfile = getEditorialArtistProfile(params.slug);
+  const artist = await getArtist(params.slug)
     .then((entry) => mergeArtistRecordForFeaturedPage(entry))
-    .catch(() => buildArtistFallback(slug));
+    .catch(() => buildArtistFallback(params.slug));
 
   if (!artist && !editorialProfile) {
     notFound();
   }
 
-  return <ArtistPageContent artist={artist ?? buildArtistFallback(slug)!} />;
+  return <ArtistPageContent artist={artist ?? buildArtistFallback(params.slug)!} />;
 }

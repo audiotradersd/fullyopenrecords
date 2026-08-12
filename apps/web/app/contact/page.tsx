@@ -1,5 +1,8 @@
 import { Section } from "@fully-open-records/ui";
 import { ApiForm } from "../../components/Forms";
+import { pageMetadata } from "../../lib/seo";
+
+export const metadata = pageMetadata({ title: "Contact Fully Open Records", description: "Get in touch with Fully Open Records about independent music, artist opportunities, radio and the community.", path: "/contact" });
 
 export default function ContactPage() {
   return (

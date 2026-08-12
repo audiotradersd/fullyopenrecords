@@ -1,13 +1,15 @@
 import SignupPageContent from "../../components/auth/SignupPageContent";
+import { noIndexMetadata } from "../../lib/seo";
 
+export const runtime = "edge";
+export const metadata = noIndexMetadata;
 
-export default async function SignupPage({
+export default function SignupPage({
   searchParams
 }: {
-  searchParams?: Promise<{ type?: string }>;
+  searchParams?: { type?: string };
 }) {
-  const resolvedParams = await searchParams;
-  const initialType = resolvedParams?.type === "artist" ? "artist" : "listener";
+  const initialType = searchParams?.type === "artist" ? "artist" : "listener";
 
   return <SignupPageContent initialType={initialType} />;
 }

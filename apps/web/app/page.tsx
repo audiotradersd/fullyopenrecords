@@ -7,7 +7,10 @@ import ArtistSignupCTA from "../components/home/ArtistSignupCTA";
 import { getArtist, getArtistContent, getRadio } from "../lib/api";
 import { buildArtistFallback, mergeArtistRecordWithLivePreference } from "../lib/artistProfiles";
 import { mergeArtistPageContent } from "../lib/artistPageContent";
+import { pageMetadata } from "../lib/seo";
 
+export const runtime = "edge";
+export const metadata = pageMetadata({ title: "Independent Music, Radio & Artists", description: "Discover independent artists across every genre, listen to Fully Open Radio, and give your music a public home.", path: "/" });
 
 function parseTrack(raw: unknown, fallbackArtist?: string) {
   const value = typeof raw === "string" ? raw : String(raw ?? "");

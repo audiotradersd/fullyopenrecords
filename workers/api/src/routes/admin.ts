@@ -176,6 +176,23 @@ adminRouter.post("/songs/:id/approve", async (c) => {
   return updated[0] ? c.json(updated[0]) : c.json({ error: "Not found" }, 404);
 });
 
+adminRouter.put("/songs/:id/radio", async (c) => {
+  const payload = await c.req.json<{ enabled?: unknown }>();
+
+  if (typeof payload.enabled !== "boolean") {
+    return c.json({ error: "Radio status must be true or false" }, 400);
+  }
+
+  const db = getDb(c.env);
+  const updated = await db
+    .update(songs)
+    .set({ approvedForRadio: payload.enabled, updatedAt: new Date().toISOString() })
+    .where(eq(songs.id, Number(c.req.param("id"))))
+    .returning();
+
+  return updated[0] ? c.json(updated[0]) : c.json({ error: "Not found" }, 404);
+});
+
 adminRouter.get("/favourites/stats", async (c) => {
   const db = getDb(c.env);
   const mostFavourited = await db

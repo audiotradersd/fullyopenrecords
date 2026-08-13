@@ -1,4 +1,4 @@
--- Grzzly — Sonny Boy: artist profile, 15-track album and curated release.
+-- Grzzly — How 2 Have Fun and Stay Alive: artist profile, 15-track album and curated release.
 
 UPDATE artists
 SET
@@ -12,19 +12,19 @@ SET
 WHERE slug = 'grzzly';
 
 INSERT INTO albums (artist_id, title, release_date, description, cover_art)
-SELECT id, 'Sonny Boy', '2026-08-13',
-  'Sonny Boy is an immersive cinematic ambient album from Grzzly, sitting somewhere between dark ambient, experimental electronic and film score. Evolving textures, atmospheric synths and carefully crafted sound design create music that rewards close listening as much as it works as a backdrop for thought and reflection.\n\nRather than relying on conventional song structures, these compositions unfold gradually, using tension, space and subtle movement to create a strong sense of narrative. Spoken-word elements, drones and layered electronic textures combine to produce pieces equally at home accompanying documentaries, late-night journeys or moments of quiet introspection.\n\nThe result is haunting and immersive: expansive sonic landscapes where mood and emotion take precedence over genre conventions.',
+SELECT id, 'How 2 Have Fun and Stay Alive', '2026-08-13',
+  'How 2 Have Fun and Stay Alive is an immersive cinematic ambient album from Grzzly, sitting somewhere between dark ambient, experimental electronic and film score. Evolving textures, atmospheric synths and carefully crafted sound design create music that rewards close listening as much as it works as a backdrop for thought and reflection.\n\nRather than relying on conventional song structures, these compositions unfold gradually, using tension, space and subtle movement to create a strong sense of narrative. Spoken-word elements, drones and layered electronic textures combine to produce pieces equally at home accompanying documentaries, late-night journeys or moments of quiet introspection.\n\nThe result is haunting and immersive: expansive sonic landscapes where mood and emotion take precedence over genre conventions.',
   'https://fullyopenrecords.com/artists/grzzly.webp'
 FROM artists
 WHERE slug = 'grzzly'
   AND NOT EXISTS (
     SELECT 1 FROM albums
-    WHERE albums.artist_id = artists.id AND albums.title = 'Sonny Boy'
+    WHERE albums.artist_id = artists.id AND albums.title = 'How 2 Have Fun and Stay Alive'
   );
 
 UPDATE songs
 SET
-  album_id = (SELECT id FROM albums WHERE artist_id = songs.artist_id AND title = 'Sonny Boy' LIMIT 1),
+  album_id = (SELECT id FROM albums WHERE artist_id = songs.artist_id AND title = 'How 2 Have Fun and Stay Alive' LIMIT 1),
   track_number = CASE title
     WHEN 'Clement' THEN 1
     WHEN 'China boy' THEN 2
@@ -74,11 +74,11 @@ INSERT INTO releases (
   description, catalog_number, credits, artist_name, artist_slug, track_snapshot, media_snapshot
 )
 SELECT
-  'Sonny Boy', 'sonny-boy', 1, id, 'Album', 'https://fullyopenrecords.com/artists/grzzly.webp', '2026-08-13', '{}',
-  'Sonny Boy is an immersive cinematic ambient album from Grzzly, sitting somewhere between dark ambient, experimental electronic and film score. Evolving textures, atmospheric synths and carefully crafted sound design create music that rewards close listening as much as it works as a backdrop for thought and reflection.\n\nRather than relying on conventional song structures, these compositions unfold gradually, using tension, space and subtle movement to create a strong sense of narrative. Spoken-word elements, drones and layered electronic textures combine to produce pieces equally at home accompanying documentaries, late-night journeys or moments of quiet introspection.\n\nThe result is haunting and immersive: expansive sonic landscapes where mood and emotion take precedence over genre conventions.',
+  'How 2 Have Fun and Stay Alive', 'how-2-have-fun-and-stay-alive', 1, id, 'Album', 'https://fullyopenrecords.com/artists/grzzly.webp', '2026-08-13', '{}',
+  'How 2 Have Fun and Stay Alive is an immersive cinematic ambient album from Grzzly, sitting somewhere between dark ambient, experimental electronic and film score. Evolving textures, atmospheric synths and carefully crafted sound design create music that rewards close listening as much as it works as a backdrop for thought and reflection.\n\nRather than relying on conventional song structures, these compositions unfold gradually, using tension, space and subtle movement to create a strong sense of narrative. Spoken-word elements, drones and layered electronic textures combine to produce pieces equally at home accompanying documentaries, late-night journeys or moments of quiet introspection.\n\nThe result is haunting and immersive: expansive sonic landscapes where mood and emotion take precedence over genre conventions.',
   NULL, 'Written, produced and performed by Grzzly.', 'Grzzly', 'grzzly',
   '[{"title":"Clement","audioUrl":"https://fully-open-records-api.sbdownes.workers.dev/media/artists/grzzly/albums/sonny-boy/tracks/01-clement.mp3"},{"title":"China boy","audioUrl":"https://fully-open-records-api.sbdownes.workers.dev/media/artists/grzzly/albums/sonny-boy/tracks/02-china-boy.mp3"},{"title":"Water shortage","audioUrl":"https://fully-open-records-api.sbdownes.workers.dev/media/artists/grzzly/albums/sonny-boy/tracks/03-water-shortage.mp3"},{"title":"Advert for a daydream","audioUrl":"https://fully-open-records-api.sbdownes.workers.dev/media/artists/grzzly/albums/sonny-boy/tracks/04-advert-for-a-daydream.mp3"},{"title":"Winter wonderland","audioUrl":"https://fully-open-records-api.sbdownes.workers.dev/media/artists/grzzly/albums/sonny-boy/tracks/05-winter-wonderland.mp3"},{"title":"How to have fun","audioUrl":"https://fully-open-records-api.sbdownes.workers.dev/media/artists/grzzly/albums/sonny-boy/tracks/06-how-to-have-fun.mp3"},{"title":"The end","audioUrl":"https://fully-open-records-api.sbdownes.workers.dev/media/artists/grzzly/albums/sonny-boy/tracks/07-the-end.mp3"},{"title":"Grrr","audioUrl":"https://fully-open-records-api.sbdownes.workers.dev/media/artists/grzzly/albums/sonny-boy/tracks/08-grrr.mp3"},{"title":"Intermission","audioUrl":"https://fully-open-records-api.sbdownes.workers.dev/media/artists/grzzly/albums/sonny-boy/tracks/09-intermission.mp3"},{"title":"Being tapped by the US Gov","audioUrl":"https://fully-open-records-api.sbdownes.workers.dev/media/artists/grzzly/albums/sonny-boy/tracks/10-being-tapped-by-the-us-gov.mp3"},{"title":"Reprise","audioUrl":"https://fully-open-records-api.sbdownes.workers.dev/media/artists/grzzly/albums/sonny-boy/tracks/11-reprise.mp3"},{"title":"A Fire","audioUrl":"https://fully-open-records-api.sbdownes.workers.dev/media/artists/grzzly/albums/sonny-boy/tracks/12-a-fire.mp3"},{"title":"Sonny Boy","audioUrl":"https://fully-open-records-api.sbdownes.workers.dev/media/artists/grzzly/albums/sonny-boy/tracks/13-sonny-boy.mp3"},{"title":"Gonzalez","audioUrl":"https://fully-open-records-api.sbdownes.workers.dev/media/artists/grzzly/albums/sonny-boy/tracks/14-gonzalez.mp3"},{"title":"Bikini Woman","audioUrl":"https://fully-open-records-api.sbdownes.workers.dev/media/artists/grzzly/albums/sonny-boy/tracks/15-bikini-woman.mp3"}]',
-  '[{"url":"https://fullyopenrecords.com/artists/grzzly.webp","alt":"Sonny Boy album artwork by Grzzly"}]'
+  '[{"url":"https://fullyopenrecords.com/artists/grzzly.webp","alt":"How 2 Have Fun and Stay Alive album artwork by Grzzly"}]'
 FROM artists
 WHERE slug = 'grzzly'
-  AND NOT EXISTS (SELECT 1 FROM releases WHERE slug = 'sonny-boy');
+  AND NOT EXISTS (SELECT 1 FROM releases WHERE slug = 'how-2-have-fun-and-stay-alive');

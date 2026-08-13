@@ -8,7 +8,10 @@ const nextConfig = {
   output: "standalone",
   outputFileTracingRoot: repoRoot,
   async redirects() {
-    return [{ source: "/release/:slug", destination: "/releases/:slug", permanent: true }];
+    return [
+      { source: "/release/:slug", destination: "/releases/:slug", permanent: true },
+      { source: "/releases/sonny-boy", destination: "/releases/how-2-have-fun-and-stay-alive", permanent: true }
+    ];
   },
   images: {
     unoptimized: true,

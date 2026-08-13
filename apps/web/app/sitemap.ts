@@ -3,6 +3,7 @@ import { getApiBaseUrl } from "../lib/server-api";
 import { siteConfig } from "../lib/site";
 
 const staticPaths = ["", "/about", "/artists", "/radio", "/get-heard", "/releases", "/store", "/faq", "/contact"];
+const excludedArtistSlugs = new Set(["admin-test-artist"]);
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticPages = staticPaths.map((path) => ({
@@ -19,7 +20,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const artists = (await response.json()) as Array<{ slug?: unknown; updatedAt?: unknown }>;
     const artistPages = artists.flatMap((artist) => {
       const slug = typeof artist.slug === "string" ? artist.slug.trim() : "";
-      if (slug === "") return [];
+      if (slug === "" || excludedArtistSlugs.has(slug)) return [];
       const updatedAt = typeof artist.updatedAt === "string" ? new Date(artist.updatedAt) : new Date();
       return [{ url: `${siteConfig.url}/artist/${encodeURIComponent(slug)}`, lastModified: updatedAt }];
     });

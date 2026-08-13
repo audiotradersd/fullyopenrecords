@@ -7,6 +7,9 @@ const repoRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), "../.."
 const nextConfig = {
   output: "standalone",
   outputFileTracingRoot: repoRoot,
+  async redirects() {
+    return [{ source: "/release/:slug", destination: "/releases/:slug", permanent: true }];
+  },
   images: {
     unoptimized: true,
     remotePatterns: [

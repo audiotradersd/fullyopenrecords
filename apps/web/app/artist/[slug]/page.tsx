@@ -12,8 +12,9 @@ import { noIndexMetadata, pageMetadata } from "../../../lib/seo";
 
 export const runtime = "edge";
 
-export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
-  const slug = normalizeArtistSlug(params.slug);
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug: paramSlug } = await params;
+  const slug = normalizeArtistSlug(paramSlug);
   const artist = await getArtist(slug).then((entry) => mergeArtistRecordWithLivePreference(entry)).catch(() => buildArtistFallback(slug));
   if (!artist) return noIndexMetadata;
 
@@ -32,10 +33,11 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   return pageMetadata({ title, description: description.slice(0, 155), path: `/artist/${slug}`, image });
 }
 
-export default async function ArtistPage({ params }: { params: { slug: string } }) {
-  const canonicalSlug = normalizeArtistSlug(params.slug);
+export default async function ArtistPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug: paramSlug } = await params;
+  const canonicalSlug = normalizeArtistSlug(paramSlug);
 
-  if (canonicalSlug && canonicalSlug !== params.slug) {
+  if (canonicalSlug && canonicalSlug !== paramSlug) {
     redirect(`/artist/${canonicalSlug}`);
   }
 

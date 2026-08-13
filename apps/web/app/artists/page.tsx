@@ -7,7 +7,6 @@ import { buildFeaturedArtistList, featuredArtistSlugs } from "../../lib/artistPr
 import { featuredArtistHero } from "../../lib/featuredArtistHero";
 import { pageMetadata } from "../../lib/seo";
 
-export const runtime = "edge";
 export const metadata = pageMetadata({ title: "Discover Independent Artists Across Every Genre", description: "Meet independent artists from around the world. Fully Open connects listeners with music beyond genre gatekeeping.", path: "/artists" });
 
 export default async function ArtistsPage() {

@@ -8,7 +8,6 @@ import {
   mergeArtistRecordForFeaturedPage
 } from "../../../lib/artistProfiles";
 
-export const runtime = "edge";
 export const metadata = noIndexMetadata;
 
 export default async function FeaturedArtistPage({ params }: { params: Promise<{ slug: string }> }) {

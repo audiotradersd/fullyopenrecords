@@ -2,7 +2,6 @@ import { Section } from "@fully-open-records/ui";
 import { getFaq } from "../../lib/api";
 import { pageMetadata } from "../../lib/seo";
 
-export const runtime = "edge";
 export const metadata = pageMetadata({ title: "Fully Open FAQ — Artists, Radio & Music Submissions", description: "Answers about Fully Open artist pages, submitting music, radio consideration and discovering independent artists.", path: "/faq" });
 
 export default async function FAQPage() {

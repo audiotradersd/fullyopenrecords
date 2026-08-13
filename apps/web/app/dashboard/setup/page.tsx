@@ -4,7 +4,6 @@ import Container from "../../../components/layout/Container";
 import { Button } from "../../../components/ui/button";
 import { noIndexMetadata } from "../../../lib/seo";
 
-export const runtime = "edge";
 export const metadata = noIndexMetadata;
 
 export default function DashboardSetupPage() {

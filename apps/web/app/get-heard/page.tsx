@@ -93,7 +93,6 @@ const radioTracks = [
   }
 ];
 
-export const runtime = "edge";
 export const metadata = pageMetadata({ title: "Submit Music & Build Your Artist Page", description: "Artists of every genre can create a Fully Open page, upload music and be considered for our human-curated radio.", path: "/get-heard" });
 
 export default async function GetHeardPage() {

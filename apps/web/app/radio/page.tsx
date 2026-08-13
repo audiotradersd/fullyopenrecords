@@ -4,7 +4,6 @@ import RecentPlays from "../../components/radio/RecentPlays";
 import { getRadio, getRadioHistory } from "../../lib/api";
 import { pageMetadata } from "../../lib/seo";
 
-export const runtime = "edge";
 export const metadata = pageMetadata({ title: "Fully Open Radio — 24/7 Independent Music Across Genres", description: "Listen to human-curated independent music around the clock, from artists and sounds that deserve to be discovered.", path: "/radio" });
 
 export default async function RadioPage() {

@@ -10,7 +10,6 @@ import {
 import { mergeArtistPageContent } from "../../../lib/artistPageContent";
 import { noIndexMetadata, pageMetadata } from "../../../lib/seo";
 
-export const runtime = "edge";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug: paramSlug } = await params;

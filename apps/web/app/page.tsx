@@ -9,7 +9,6 @@ import { buildArtistFallback, mergeArtistRecordWithLivePreference } from "../lib
 import { mergeArtistPageContent } from "../lib/artistPageContent";
 import { pageMetadata } from "../lib/seo";
 
-export const runtime = "edge";
 export const metadata = pageMetadata({ title: "Independent Music, Radio & Artists", description: "Discover independent artists across every genre, listen to Fully Open Radio, and give your music a public home.", path: "/" });
 
 function parseTrack(raw: unknown, fallbackArtist?: string) {

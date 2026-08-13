@@ -3,7 +3,6 @@ import { ProductCard } from "../../components/Cards";
 import { getProducts } from "../../lib/api";
 import { pageMetadata } from "../../lib/seo";
 
-export const runtime = "edge";
 export const metadata = pageMetadata({ title: "Fully Open Records Store — Independent Music & Merch", description: "Shop records, merchandise and limited releases from Fully Open and its independent artist community.", path: "/store" });
 
 export default async function StorePage() {

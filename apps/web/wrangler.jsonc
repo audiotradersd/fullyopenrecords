@@ -3,6 +3,7 @@
   "name": "fully-open-records-web",
   "compatibility_date": "2026-03-10",
   "compatibility_flags": ["nodejs_compat"],
+  "routes": [{ "pattern": "fullyopenrecords.com/*", "zone_name": "fullyopenrecords.com" }],
   "main": ".open-next/worker.js",
   "assets": {
     "directory": ".open-next/assets",

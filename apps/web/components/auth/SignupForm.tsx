@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "../ui/button";
+import { trackEvent } from "../../lib/analytics";
 
 type AccountType = "listener" | "artist";
 
@@ -77,6 +78,7 @@ export default function SignupForm({ selected }: { selected: AccountType }) {
       return;
     }
 
+    if (selected === "artist") trackEvent("artist_signup_completed");
     router.push(selected === "artist" ? "/dashboard/setup" : "/");
     router.refresh();
   }

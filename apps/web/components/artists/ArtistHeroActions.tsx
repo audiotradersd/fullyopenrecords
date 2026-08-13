@@ -2,6 +2,7 @@
 
 import { Heart, Share2 } from "lucide-react";
 import { useState } from "react";
+import { trackEvent } from "../../lib/analytics";
 
 export default function ArtistHeroActions({
   url,
@@ -19,6 +20,7 @@ export default function ArtistHeroActions({
       } else {
         await navigator.clipboard.writeText(url);
       }
+      trackEvent("artist_page_shared", { artist_name: name });
       setMessage("Link copied");
     } catch {
       setMessage("Share unavailable");

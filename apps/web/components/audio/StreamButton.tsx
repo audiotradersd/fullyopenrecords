@@ -3,6 +3,7 @@
 import { Pause, Play } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "../ui/button";
+import { trackEvent } from "../../lib/analytics";
 
 type StreamButtonProps = {
   audioUrl: string;
@@ -11,6 +12,8 @@ type StreamButtonProps = {
   size?: "default" | "sm" | "lg";
   variant?: "default" | "outline" | "ghost";
   className?: string;
+  trackTitle?: string;
+  artistName?: string;
 };
 
 export default function StreamButton({
@@ -18,7 +21,9 @@ export default function StreamButton({
   label = "Play",
   size = "default",
   variant = "default",
-  className
+  className,
+  trackTitle,
+  artistName
 }: StreamButtonProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [playing, setPlaying] = useState(false);
@@ -75,7 +80,10 @@ export default function StreamButton({
     setLoading(true);
     void audioRef.current
       .play()
-      .then(() => setLoading(false))
+      .then(() => {
+        setLoading(false);
+        trackEvent("track_played", { track_title: trackTitle ?? label, artist_name: artistName });
+      })
       .catch(() => {
         setLoading(false);
         setError("Playback was blocked or the file is unavailable.");

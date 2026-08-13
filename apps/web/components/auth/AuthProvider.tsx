@@ -10,6 +10,7 @@ import {
 } from "react";
 import { X } from "lucide-react";
 import { Button } from "../ui/button";
+import { trackEvent } from "../../lib/analytics";
 
 type SessionUser = {
   id: number;
@@ -240,6 +241,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       modalMode,
       openAuth: (mode = "login", accountType = "listener") => {
+        if (mode === "register" && accountType === "artist") trackEvent("artist_signup_started");
         setRegisterType(accountType);
         setModalMode(mode);
       },

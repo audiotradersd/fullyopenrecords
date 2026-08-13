@@ -80,6 +80,8 @@ export const sessions = sqliteTable(
 export const releases = sqliteTable("releases", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   title: text("title").notNull(),
+  slug: text("slug").notNull(),
+  published: integer("published", { mode: "boolean" }).notNull().default(false),
   artistId: integer("artist_id")
     .notNull()
     .references(() => artists.id, { onDelete: "cascade" }),
@@ -88,6 +90,12 @@ export const releases = sqliteTable("releases", {
   releaseDate: text("release_date").notNull(),
   streamingLinks: text("streaming_links", { mode: "json" }).$type<Record<string, string>>(),
   description: text("description").notNull(),
+  catalogNumber: text("catalog_number"),
+  credits: text("credits"),
+  artistName: text("artist_name"),
+  artistSlug: text("artist_slug"),
+  trackSnapshot: text("track_snapshot", { mode: "json" }).$type<Array<{ title: string; audioUrl?: string; duration?: string; credits?: string }>>().notNull().default([]),
+  mediaSnapshot: text("media_snapshot", { mode: "json" }).$type<Array<{ url: string; alt?: string; caption?: string }>>().notNull().default([]),
   ...timestamps
 });
 

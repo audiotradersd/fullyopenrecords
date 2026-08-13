@@ -12,6 +12,14 @@ export function getArtistContent(slug: string) {
   return apiFetch<Record<string, unknown>>(`/artists/${slug}/content`);
 }
 
+export function getReleases() {
+  return apiFetch<Array<Record<string, unknown>>>("/releases");
+}
+
+export function getRelease(slug: string) {
+  return apiFetch<Record<string, unknown>>(`/releases/${slug}`);
+}
+
 export function getProducts() {
   return apiFetch<Array<Record<string, unknown>>>("/products");
 }

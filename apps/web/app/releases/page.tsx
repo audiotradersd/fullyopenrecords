@@ -158,8 +158,8 @@ export default async function ReleasesPage() {
                 <Link href="#tracklist">
                   <Button variant="outline">View Tracklist</Button>
                 </Link>
-                <Link href="/artist/stone#albums">
-                  <Button variant="outline">Album Page</Button>
+                <Link href="/releases/jack-issues">
+                  <Button variant="outline">View Release</Button>
                 </Link>
               </div>
 

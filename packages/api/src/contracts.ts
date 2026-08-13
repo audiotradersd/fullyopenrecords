@@ -17,15 +17,36 @@ export const artistSchema = z.object({
   featured: z.boolean().default(false)
 });
 
+const curatedTrackSchema = z.object({
+  title: z.string().min(1),
+  audioUrl: optionalUrlSchema,
+  duration: z.string().optional(),
+  credits: z.string().optional()
+});
+
+const curatedMediaSchema = z.object({
+  url: z.string().url(),
+  alt: z.string().optional(),
+  caption: z.string().optional()
+});
+
 export const releaseSchema = z.object({
   id: z.number().optional(),
   title: z.string().min(1),
+  slug: z.string().min(1),
+  published: z.boolean().default(false),
   artistId: z.number(),
+  artistName: z.string().min(1),
+  artistSlug: z.string().min(1),
   type: z.string().min(1),
   artwork: z.string().url(),
   releaseDate: z.string(),
   streamingLinks: socialLinksSchema,
-  description: z.string().min(1)
+  description: z.string().min(1),
+  catalogNumber: z.string().optional().nullable(),
+  credits: z.string().optional().nullable(),
+  trackSnapshot: z.array(curatedTrackSchema).default([]),
+  mediaSnapshot: z.array(curatedMediaSchema).default([]),
 });
 
 export const productSchema = z.object({

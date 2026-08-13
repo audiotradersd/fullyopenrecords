@@ -247,7 +247,9 @@ function mapArtistRecord(artist: typeof artists.$inferSelect) {
 function mapReleaseRecord(release: typeof releases.$inferSelect) {
   return {
     ...release,
-    streamingLinks: release.streamingLinks ?? {}
+    streamingLinks: release.streamingLinks ?? {},
+    trackSnapshot: release.trackSnapshot ?? [],
+    mediaSnapshot: release.mediaSnapshot ?? []
   };
 }
 
@@ -421,9 +423,26 @@ publicRouter.get("/artists/:slug/content", async (c) => {
 
 publicRouter.get("/releases", async (c) => {
   const db = getDb(c.env);
-  const rows = await db.select().from(releases).orderBy(desc(releases.releaseDate));
+  const rows = await db
+    .select()
+    .from(releases)
+    .where(eq(releases.published, true))
+    .orderBy(desc(releases.releaseDate));
   await logFlowEvent(c.env, c.req.raw, "releases.list.view", { meta: { count: rows.length } });
-  return c.json(rows.length ? rows.map(mapReleaseRecord) : fallbackContent.releases);
+  return c.json(rows.map(mapReleaseRecord));
+});
+
+publicRouter.get("/releases/:slug", async (c) => {
+  const db = getDb(c.env);
+  const [release] = await db
+    .select()
+    .from(releases)
+    .where(and(eq(releases.slug, c.req.param("slug")), eq(releases.published, true)))
+    .limit(1);
+
+  if (!release) return c.json({ error: "Not found" }, 404);
+  await logFlowEvent(c.env, c.req.raw, "release.view", { meta: { slug: release.slug } });
+  return c.json(mapReleaseRecord(release));
 });
 
 publicRouter.get("/products", async (c) => {

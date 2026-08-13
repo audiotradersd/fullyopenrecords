@@ -4,6 +4,7 @@ import type { RefObject } from "react";
 import { useEffect, useRef, useState } from "react";
 import { Heart, Pause, Play } from "lucide-react";
 import { useAuth } from "../auth/AuthProvider";
+import { trackEvent } from "../../lib/analytics";
 
 type RadioPayload = {
   streamUrl?: string;
@@ -63,7 +64,7 @@ function GraphicEq({
 }: {
   active: boolean;
   analyzerReady: boolean;
-  containerRef: RefObject<HTMLDivElement | null>;
+  containerRef: RefObject<HTMLDivElement>;
 }) {
   return (
     <div className="hidden min-w-[360px] flex-1 justify-center md:flex lg:min-w-[520px]" aria-hidden="true">
@@ -84,7 +85,7 @@ function GraphicEq({
 
 export default function RadioPlayerBar() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const eqContainerRef = useRef<HTMLDivElement | null>(null);
+  const eqContainerRef = useRef<HTMLDivElement>(null!);
   const analyzerRef = useRef<any>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const [radio, setRadio] = useState<RadioPayload>({
@@ -248,6 +249,8 @@ export default function RadioPlayerBar() {
       void attachAnalyzer(liveAudio);
       await liveAudio.play();
       setIsPlaying(true);
+      const track = parseTrack(radio.nowPlaying ?? "Fully Open Radio", radio.host);
+      trackEvent("radio_play_started", { track_title: track.title, artist_name: track.artist });
     } finally {
       setIsLoading(false);
     }

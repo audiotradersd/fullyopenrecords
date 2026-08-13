@@ -18,6 +18,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     if (response.ok === false) return staticPages;
 
     const artists = (await response.json()) as Array<{ slug?: unknown; updatedAt?: unknown }>;
+    const releaseResponse = await fetch(getApiBaseUrl() + "/releases", { next: { revalidate: 3600 } });
+    const releases = releaseResponse.ok ? (await releaseResponse.json()) as Array<{ slug?: unknown; updatedAt?: unknown }> : [];
     const artistPages = artists.flatMap((artist) => {
       const slug = typeof artist.slug === "string" ? artist.slug.trim() : "";
       if (slug === "" || excludedArtistSlugs.has(slug)) return [];
@@ -25,7 +27,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       return [{ url: `${siteConfig.url}/artist/${encodeURIComponent(slug)}`, lastModified: updatedAt }];
     });
 
-    return [...staticPages, ...artistPages];
+    const releasePages = releases.flatMap((release) => {
+      const slug = typeof release.slug === "string" ? release.slug.trim() : "";
+      if (slug === "") return [];
+      const updatedAt = typeof release.updatedAt === "string" ? new Date(release.updatedAt) : new Date();
+      return [{ url: siteConfig.url + "/releases/" + encodeURIComponent(slug), lastModified: updatedAt }];
+    });
+
+    return [...staticPages, ...artistPages, ...releasePages];
   } catch {
     return staticPages;
   }

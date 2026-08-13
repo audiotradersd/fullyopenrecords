@@ -4,6 +4,7 @@ import StreamButton from "../audio/StreamButton";
 import ArtistGallery from "./ArtistGallery";
 import ArtistHeroActions from "./ArtistHeroActions";
 import type { ArtistPageContentModel } from "../../lib/artistPageContent";
+import PageViewEvent from "../analytics/PageViewEvent";
 
 type ArtistRecord = Record<string, unknown>;
 
@@ -64,6 +65,7 @@ export default function PublicArtistPage({
 
   return (
     <main>
+      <PageViewEvent eventName="artist_profile_viewed" />
       <section className="relative overflow-hidden border-b border-white/10">
         <div className="absolute inset-0">
           {heroImage ? (
@@ -167,6 +169,8 @@ export default function PublicArtistPage({
                                       label="Play"
                                       pauseLabel="Pause"
                                       size="sm"
+                                      trackTitle={track.title}
+                                      artistName={name}
                                     />
                                   ) : (
                                     <PlayCircle className="h-5 w-5 text-pink" />
@@ -204,6 +208,8 @@ export default function PublicArtistPage({
                             label="Play"
                             pauseLabel="Pause"
                             size="sm"
+                            trackTitle={track.title}
+                            artistName={name}
                           />
                         ) : (
                           <div className="inline-flex h-9 items-center justify-center rounded-xl border border-white/10 px-3 text-xs uppercase tracking-[0.18em] text-fog">

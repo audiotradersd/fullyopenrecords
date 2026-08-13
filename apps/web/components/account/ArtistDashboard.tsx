@@ -184,6 +184,14 @@ export default function ArtistDashboard() {
     title: "",
     description: ""
   });
+  const seoChecks = [
+    ["A useful artist bio", profile.bio.trim().length >= 80],
+    ["At least one genre", profile.genres.split(",").some((genre) => genre.trim())],
+    ["A location", Boolean(profile.location.trim())],
+    ["A profile or hero image", Boolean(profile.profileImage || profile.heroImage)],
+    ["A public link", Boolean(profile.website || profile.bandcamp || profile.spotify || profile.soundcloud)]
+  ] as const;
+  const completedSeoChecks = seoChecks.filter(([, complete]) => complete).length;
 
   async function loadData() {
     const [artistRes, contentRes] = await Promise.all([
@@ -1223,6 +1231,18 @@ export default function ArtistDashboard() {
           <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
             <Card className="space-y-4 p-6">
               <h2 className="text-2xl font-semibold text-white">Profile</h2>
+              <div className="rounded-xl border border-pink/30 bg-pink/10 p-4">
+                <div className="flex items-center justify-between gap-4">
+                  <p className="font-meta text-xs uppercase tracking-[0.2em] text-pink">Search-ready profile</p>
+                  <p className="text-sm text-white">{completedSeoChecks}/{seoChecks.length} complete</p>
+                </div>
+                <p className="mt-2 text-sm leading-6 text-fog">These visible details help listeners and search engines understand your music. Add a descriptive alt text when uploading gallery photos.</p>
+                <ul className="mt-3 grid gap-2 text-sm text-fog">
+                  {seoChecks.map(([label, complete]) => (
+                    <li key={label} className={complete ? "text-white" : undefined}>{complete ? "✓" : "○"} {label}</li>
+                  ))}
+                </ul>
+              </div>
               <div className="grid gap-4 md:grid-cols-2">
                 <input value={profile.name} onChange={(e) => setProfile((s) => ({ ...s, name: e.target.value }))} placeholder="Artist name" className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white" />
                 <input value={profile.slug} onChange={(e) => setProfile((s) => ({ ...s, slug: e.target.value }))} placeholder="Slug" className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white" />

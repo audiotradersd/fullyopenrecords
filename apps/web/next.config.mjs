@@ -8,6 +8,7 @@ const nextConfig = {
   output: "standalone",
   outputFileTracingRoot: repoRoot,
   images: {
+    unoptimized: true,
     remotePatterns: [
       { protocol: "https", hostname: "images.unsplash.com" },
       { protocol: "https", hostname: "images.squarespace-cdn.com" },

@@ -1,4 +1,4 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { radioHistory, songs } from "@fully-open-records/db/src/schema";
 import { getDb } from "./db";
 import type { Env } from "../types";
@@ -104,6 +104,18 @@ export async function syncRadioHistory(env: Env) {
         playedAt: new Date().toISOString()
       });
     }
+
+    // Radio history is a short, recent-play list, not an archive. Keeping it
+    // bounded prevents routine queries from growing with the lifetime of the site.
+    await db.run(sql`
+      DELETE FROM radio_history
+      WHERE id NOT IN (
+        SELECT id
+        FROM radio_history
+        ORDER BY played_at DESC, id DESC
+        LIMIT 100
+      )
+    `);
   } catch (error) {
     console.error("radio history sync failed", error);
   }

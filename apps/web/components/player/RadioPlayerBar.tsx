@@ -103,13 +103,6 @@ export default function RadioPlayerBar() {
 
     async function loadRadio() {
       try {
-        const response = await fetch("/api/auth/session", { cache: "no-store" });
-        void response;
-      } catch {
-        // no-op: keeps the provider warm on initial mount.
-      }
-
-      try {
         const response = await fetch(
           `${process.env.NEXT_PUBLIC_API_URL ?? "https://fully-open-records-api.sbdownes.workers.dev"}/radio`,
           {
@@ -127,7 +120,7 @@ export default function RadioPlayerBar() {
     }
 
     void loadRadio();
-    const timer = window.setInterval(loadRadio, 15000);
+    const timer = window.setInterval(loadRadio, 60_000);
     return () => {
       active = false;
       window.clearInterval(timer);

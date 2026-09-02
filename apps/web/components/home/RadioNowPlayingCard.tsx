@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
 import Container from "../layout/Container";
 import { Button } from "../ui/button";
 import { Card } from "../ui/card";
@@ -11,68 +10,8 @@ type RadioNowPlayingCardProps = {
   title: string;
 };
 
-type RadioPayload = {
-  nowPlaying?: unknown;
-  host?: unknown;
-};
-
-function parseTrack(raw: unknown, fallbackArtist?: string) {
-  const value = typeof raw === "string" ? raw : String(raw ?? "");
-
-  if (value.includes(" - ")) {
-    const [artist, title] = value.split(" - ", 2);
-    return { artist: artist.trim(), title: title.trim() };
-  }
-
-  if (value.includes(" — ")) {
-    const [artist, title] = value.split(" — ", 2);
-    return { artist: artist.trim(), title: title.trim() };
-  }
-
-  return {
-    artist: fallbackArtist?.trim() || "Fully Open Radio",
-    title: value || "Fully Open Radio"
-  };
-}
-
 export default function RadioNowPlayingCard({ artist, title }: RadioNowPlayingCardProps) {
-  const [track, setTrack] = useState({ artist, title });
-
-  useEffect(() => {
-    let active = true;
-
-    async function refresh() {
-      try {
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL ?? "https://fully-open-records-api.sbdownes.workers.dev"}/radio`,
-          {
-            cache: "no-store"
-          }
-        );
-
-        if (!response.ok) {
-          return;
-        }
-
-        const radio = (await response.json()) as RadioPayload;
-        if (!active) {
-          return;
-        }
-
-        setTrack(parseTrack(radio.nowPlaying, typeof radio.host === "string" ? radio.host : undefined));
-      } catch {
-        // Keep the current snapshot if polling fails.
-      }
-    }
-
-    refresh();
-    const interval = window.setInterval(refresh, 5000);
-
-    return () => {
-      active = false;
-      window.clearInterval(interval);
-    };
-  }, []);
+  const track = { artist, title };
 
   return (
     <section className="py-24 pt-0">

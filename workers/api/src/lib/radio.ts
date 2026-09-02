@@ -33,7 +33,7 @@ export function splitTrack(raw: string, fallbackArtist?: string) {
   };
 }
 
-export async function syncRadioHistory(env: Env) {
+export async function getRadioStatus(env: Env) {
   let nowPlaying = "Fully Open Radio";
   let listeners: number | string = "Live";
   let host: string | undefined;
@@ -61,9 +61,22 @@ export async function syncRadioHistory(env: Env) {
     }
   }
 
+  return {
+    streamUrl: env.RADIO_STREAM_URL,
+    metadataUrl: env.RADIO_METADATA_URL,
+    embedUrl: env.RADIO_EMBED_URL,
+    nowPlaying,
+    listeners,
+    host
+  };
+}
+
+export async function syncRadioHistory(env: Env) {
+  const radio = await getRadioStatus(env);
+
   try {
     const db = getDb(env);
-    const parsedTrack = splitTrack(nowPlaying, host);
+    const parsedTrack = splitTrack(radio.nowPlaying, radio.host);
     const latestHistory = await db
       .select()
       .from(radioHistory)
@@ -95,12 +108,5 @@ export async function syncRadioHistory(env: Env) {
     console.error("radio history sync failed", error);
   }
 
-  return {
-    streamUrl: env.RADIO_STREAM_URL,
-    metadataUrl: env.RADIO_METADATA_URL,
-    embedUrl: env.RADIO_EMBED_URL,
-    nowPlaying,
-    listeners,
-    host
-  };
+  return radio;
 }

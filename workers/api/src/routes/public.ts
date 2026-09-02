@@ -42,7 +42,7 @@ import { fallbackContent } from "../lib/content";
 import { generateRandomToken, hashPassword, hashSessionToken, SESSION_COOKIE_NAME, SESSION_MAX_AGE_SECONDS, verifyPassword } from "../lib/auth";
 import { getDb } from "../lib/db";
 import { logFlowEvent } from "../lib/events";
-import { syncRadioHistory } from "../lib/radio";
+import { getRadioStatus } from "../lib/radio";
 import { getStripe } from "../lib/stripe";
 import { rateLimit } from "../middleware/rate-limit";
 import { optionalUser, requireArtist, requireUser } from "../middleware/auth";
@@ -1434,16 +1434,8 @@ publicRouter.post("/artist/me/media", requireArtist, async (c) => {
 
 publicRouter.get("/radio", async (c) => {
   try {
-    const radio = await syncRadioHistory(c.env);
-
-    try {
-      await logFlowEvent(c.env, c.req.raw, "radio.view", {
-        meta: { nowPlaying: radio.nowPlaying, listeners: radio.listeners, host: radio.host }
-      });
-    } catch (error) {
-      console.error("radio flow event failed", error);
-    }
-
+    const radio = await getRadioStatus(c.env);
+    c.header("Cache-Control", "public, max-age=30, s-maxage=60, stale-while-revalidate=300");
     return c.json(radio);
   } catch (error) {
     console.error("radio route failed", error);

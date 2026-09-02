@@ -441,28 +441,31 @@ export default function ArtistDashboard() {
     }
   }
 
-  async function readTrackMetadata(file: File) {
+  async function getTrackDetailsFromAudio(file: File) {
     const fallback = parseBulkTrackFilename(file.name);
-    setTrackMetadataStatus("Reading track metadata…");
-    setTrackDraft({
-      title: fallback.title,
-      trackNumber: fallback.trackNumber?.toString() ?? ""
-    });
 
     try {
       const { parseBlob } = await import("music-metadata-browser");
       const metadata = await parseBlob(file, { duration: false, skipCovers: true });
-      const title = metadata.common.title?.trim() || fallback.title;
-      const trackNumber = metadata.common.track.no ?? fallback.trackNumber;
-
-      setTrackDraft({
-        title,
-        trackNumber: trackNumber && trackNumber > 0 ? String(trackNumber) : ""
-      });
-      setTrackMetadataStatus(metadata.common.title || metadata.common.track.no ? "Title and track number filled from the audio file." : "No embedded metadata found; filled from the filename.");
+      return {
+        title: metadata.common.title?.trim() || fallback.title,
+        trackNumber: metadata.common.track.no ?? fallback.trackNumber,
+        albumTitle: metadata.common.album?.trim() || fallback.albumTitle,
+        foundEmbeddedMetadata: Boolean(metadata.common.title || metadata.common.track.no || metadata.common.album)
+      };
     } catch {
-      setTrackMetadataStatus("Could not read embedded metadata; filled from the filename.");
+      return { ...fallback, foundEmbeddedMetadata: false };
     }
+  }
+
+  async function readTrackMetadata(file: File) {
+    setTrackMetadataStatus("Reading track metadata…");
+    const details = await getTrackDetailsFromAudio(file);
+    setTrackDraft({
+      title: details.title,
+      trackNumber: details.trackNumber && details.trackNumber > 0 ? String(details.trackNumber) : ""
+    });
+    setTrackMetadataStatus(details.foundEmbeddedMetadata ? "Title and track number filled from the audio file." : "No embedded metadata found; filled from the filename.");
   }
 
   async function createAlbumByTitle(title: string) {
@@ -510,7 +513,7 @@ export default function ArtistDashboard() {
 
       for (let index = 0; index < files.length; index += 1) {
         const file = files[index];
-        const parsed = parseBulkTrackFilename(file.name);
+        const parsed = await getTrackDetailsFromAudio(file);
 
         if (!parsed.title) {
           throw new Error(`Could not derive a track title from "${file.name}".`);

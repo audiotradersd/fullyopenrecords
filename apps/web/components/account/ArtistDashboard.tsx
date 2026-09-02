@@ -170,6 +170,8 @@ export default function ArtistDashboard() {
   const [albumCreated, setAlbumCreated] = useState<{ title: string; coverArt?: string | null } | null>(null);
   const [showCreateAlbumModal, setShowCreateAlbumModal] = useState(false);
   const [showCreateTrackModal, setShowCreateTrackModal] = useState(false);
+  const [trackDraft, setTrackDraft] = useState({ title: "", trackNumber: "" });
+  const [trackMetadataStatus, setTrackMetadataStatus] = useState<string | null>(null);
   const [showBulkTrackModal, setShowBulkTrackModal] = useState(false);
   const [bulkTrackFiles, setBulkTrackFiles] = useState<
     Array<{ fileName: string; title: string; albumTitle: string | null; trackNumber: number | null }>
@@ -404,6 +406,8 @@ export default function ArtistDashboard() {
       setUploadPercent(0);
 
       const albumIdValue = String(formData.get("albumId") ?? "");
+      const trackNumberValue = String(formData.get("trackNumber") ?? "").trim();
+      const trackNumber = trackNumberValue ? Number(trackNumberValue) : null;
       const response = await fetch("/api/artist/me/songs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -412,6 +416,7 @@ export default function ArtistDashboard() {
           audioUrl,
           coverImage,
           albumId: albumIdValue ? Number(albumIdValue) : null,
+          trackNumber: Number.isInteger(trackNumber) && (trackNumber ?? 0) > 0 ? trackNumber : null,
           description: String(formData.get("description") ?? ""),
           enabled: formData.get("enabled") === "on",
           isRadioEligible: true,
@@ -423,6 +428,8 @@ export default function ArtistDashboard() {
       if (response.ok) {
         setMessage(payload.warning ?? "Track saved.");
         setShowCreateTrackModal(false);
+        setTrackDraft({ title: "", trackNumber: "" });
+        setTrackMetadataStatus(null);
         await loadData();
       } else {
         setMessage(payload.error ?? "Track upload failed.");
@@ -431,6 +438,30 @@ export default function ArtistDashboard() {
       setUploading(null);
       setUploadPercent(0);
       setMessage(error instanceof Error ? error.message : "Track upload failed.");
+    }
+  }
+
+  async function readTrackMetadata(file: File) {
+    const fallback = parseBulkTrackFilename(file.name);
+    setTrackMetadataStatus("Reading track metadata…");
+    setTrackDraft({
+      title: fallback.title,
+      trackNumber: fallback.trackNumber?.toString() ?? ""
+    });
+
+    try {
+      const { parseBlob } = await import("music-metadata-browser");
+      const metadata = await parseBlob(file, { duration: false, skipCovers: true });
+      const title = metadata.common.title?.trim() || fallback.title;
+      const trackNumber = metadata.common.track.no ?? fallback.trackNumber;
+
+      setTrackDraft({
+        title,
+        trackNumber: trackNumber && trackNumber > 0 ? String(trackNumber) : ""
+      });
+      setTrackMetadataStatus(metadata.common.title || metadata.common.track.no ? "Title and track number filled from the audio file." : "No embedded metadata found; filled from the filename.");
+    } catch {
+      setTrackMetadataStatus("Could not read embedded metadata; filled from the filename.");
     }
   }
 
@@ -949,12 +980,13 @@ export default function ArtistDashboard() {
                   <p className="text-xs uppercase tracking-[0.24em] text-pink">Tracks</p>
                   <h2 className="mt-2 text-2xl font-semibold text-white">Add Track</h2>
                 </div>
-                <Button type="button" variant="outline" onClick={() => setShowCreateTrackModal(false)}>
+                <Button type="button" variant="outline" onClick={() => { setShowCreateTrackModal(false); setTrackMetadataStatus(null); }}>
                   Close
                 </Button>
               </div>
               <form action={async (formData) => { await uploadSong(formData); }} className="mt-6 space-y-4">
-                <input name="title" required placeholder="Track title" className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white" />
+                <input name="title" required value={trackDraft.title} onChange={(event) => setTrackDraft((draft) => ({ ...draft, title: event.target.value }))} placeholder="Track title" className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white" />
+                <input name="trackNumber" type="number" min="1" value={trackDraft.trackNumber} onChange={(event) => setTrackDraft((draft) => ({ ...draft, trackNumber: event.target.value }))} placeholder="Track number (optional)" className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white" />
                 <label className="block">
                   <span className="mb-2 block text-sm text-fog">Album</span>
                   <select name="albumId" className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white">
@@ -969,8 +1001,9 @@ export default function ArtistDashboard() {
                 <input name="coverImage" placeholder="Cover art URL fallback (optional)" className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white" />
                 <label className="block rounded-xl border border-dashed border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-fog">
                   Upload audio file
-                  <input name="audioFile" type="file" accept="audio/*" className="mt-2 block w-full text-xs" />
+                  <input name="audioFile" type="file" accept="audio/*" onChange={(event) => { const file = event.target.files?.[0]; if (file) void readTrackMetadata(file); }} className="mt-2 block w-full text-xs" />
                 </label>
+                {trackMetadataStatus ? <p className="text-xs text-fog">{trackMetadataStatus}</p> : null}
                 <label className="block rounded-xl border border-dashed border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-fog">
                   Upload cover art
                   <input name="coverFile" type="file" accept="image/*" className="mt-2 block w-full text-xs" />
@@ -1451,7 +1484,7 @@ export default function ArtistDashboard() {
                 <Button type="button" variant="outline" onClick={() => setShowBulkTrackModal(true)}>
                   Bulk Upload
                 </Button>
-                <Button type="button" onClick={() => setShowCreateTrackModal(true)}>
+                <Button type="button" onClick={() => { setTrackDraft({ title: "", trackNumber: "" }); setTrackMetadataStatus(null); setShowCreateTrackModal(true); }}>
                   Add Track
                 </Button>
               </div>

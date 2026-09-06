@@ -32,13 +32,13 @@ const otherReleases = [
     artist: "Violet Piper",
     title: "Inside Baseball",
     image: "/latest-releases/violet-piper.jpeg",
-    audioUrl: "/api/media/latest-releases/violet-piper-inside-baseball.mp3"
+    audioUrl: "/api/media/latest-releases/violet-piper-inside-baseball.mp3", href: ""
   },
   {
     artist: "Troll Mother",
     title: "Forest Child",
     image: "/latest-releases/troll-mother.jpg",
-    audioUrl: "/api/media/latest-releases/troll-mother-forest-child.mp3"
+    audioUrl: "/api/media/latest-releases/troll-mother-forest-child.mp3", href: ""
   },
 ];
 
@@ -86,7 +86,7 @@ export default async function ReleasesPage() {
     tracklist.find((track) => normalizeTitle(track.title) === "intermingle") ??
     null;
 
-  const heroImage = "/artists/stone-new-logo.png";
+  const heroImage = "/artists/grzzly.webp";
 
   return (
     <main className="pb-24 pt-12">
@@ -104,7 +104,7 @@ export default async function ReleasesPage() {
               <div className="relative aspect-square overflow-hidden rounded-[2rem] border border-white/10 bg-black/20 shadow-[0_24px_60px_rgba(0,0,0,0.32)]">
                 <Image
                   src={heroImage}
-                  alt="Jack Issues cover"
+                  alt="How 2 Have Fun and Stay Alive cover"
                   fill
                   className="object-cover"
                   sizes="(max-width: 1024px) 100vw, 420px"
@@ -124,36 +124,22 @@ export default async function ReleasesPage() {
                 </span>
               </div>
 
-              <p className="mt-8 text-sm uppercase tracking-[0.18em] text-fog">Stone!?</p>
-              <h2 className="mt-3 text-5xl font-semibold text-white md:text-6xl">Jack Issues</h2>
+              <p className="mt-8 text-sm uppercase tracking-[0.18em] text-fog">GRZZLY</p>
+              <h2 className="mt-3 text-5xl font-semibold text-white md:text-6xl">How 2 Have Fun and Stay Alive</h2>
               <p className="mt-6 max-w-xl text-lg leading-8 text-fog">
-                10-track debut album from groove metal trio Stone!? Heavy riffs, locked-in rhythms and raw stripped-down aggression.
+                An immersive cinematic ambient album built from evolving textures, atmospheric synths and carefully crafted sound design.
               </p>
 
               <div className="mt-8 flex flex-wrap gap-4">
-                {featuredSingle?.audioUrl ? (
-                  <StreamButton
-                    audioUrl={featuredSingle.audioUrl}
-                    label={`Listen to ${featuredSingle.title}`}
-                    pauseLabel="Pause"
-                  />
-                ) : (
-                  <Button disabled>Listen to Single</Button>
-                )}
-                <Link href="#tracklist">
-                  <Button variant="outline">View Tracklist</Button>
-                </Link>
-                <Link href="/releases/jack-issues">
-                  <Button variant="outline">View Release</Button>
-                </Link>
+                <Link href="/releases/how-2-have-fun-and-stay-alive"><Button>View Release</Button></Link>
               </div>
 
-              <p className="mt-8 text-sm text-fog">Verbal released 9 March 2026.</p>
+              <p className="mt-8 text-sm text-fog">A Fully Open Records featured release.</p>
             </div>
           </div>
         </section>
 
-        <section
+        {false && <><section
           id="tracklist"
           className="mt-12 rounded-[1.6rem] border border-white/10 bg-white/[0.04] p-6 shadow-panel backdrop-blur-md md:p-8"
         >
@@ -214,7 +200,7 @@ export default async function ReleasesPage() {
               </Link>
             </div>
           </div>
-        </section>
+        </section></>}
 
         <section className="mt-12">
           <div className="mb-8 flex items-end justify-between gap-4">
@@ -229,10 +215,10 @@ export default async function ReleasesPage() {
               ...otherReleases,
                 {
                   artist: "Stone!?",
-                  title: "Intermingle",
-                  image: heroImage,
-                  audioUrl:
-                    "https://fully-open-records-api.sbdownes.workers.dev/media/artists/stone/songs/audio/1773339566072-01---Intermingle---Jack-Issues.mp3"
+                  title: "Jack Issues",
+                  image: "/artists/stone-new-logo.png",
+                  audioUrl: "",
+                  href: "/releases/jack-issues"
                 }
               ].map((release) => (
               <div
@@ -252,14 +238,7 @@ export default async function ReleasesPage() {
                 <div className="px-1 pb-1 pt-4">
                   <p className="text-sm font-semibold text-white">{release.artist}</p>
                   <p className="mt-1 text-sm text-fog">{release.title}</p>
-                  <div className="mt-4">
-                    <StreamButton
-                      audioUrl={release.audioUrl}
-                      label={`Play ${release.title}`}
-                      pauseLabel="Pause"
-                      size="sm"
-                    />
-                  </div>
+                  <div className="mt-4">{release.href ? <Link href={release.href}><Button variant="outline">View Release</Button></Link> : <StreamButton audioUrl={release.audioUrl} label={`Play ${release.title}`} pauseLabel="Pause" size="sm" />}</div>
                 </div>
               </div>
             ))}

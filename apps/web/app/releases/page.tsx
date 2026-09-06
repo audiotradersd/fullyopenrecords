@@ -11,6 +11,7 @@ import {
 } from "../../lib/artistProfiles";
 import { mergeArtistPageContent } from "../../lib/artistPageContent";
 import { pageMetadata } from "../../lib/seo";
+import { artistAssets } from "../../lib/assets";
 
 export const metadata = pageMetadata({ title: "New Independent Music Releases", description: "Explore new releases from Fully Open artists, with independent music from every corner of the catalogue.", path: "/releases" });
 
@@ -216,7 +217,7 @@ export default async function ReleasesPage() {
                 {
                   artist: "Stone!?",
                   title: "Jack Issues",
-                  image: "/artists/stone-new-logo.png",
+                  image: artistAssets.stone.promoImage,
                   audioUrl: "",
                   href: "/releases/jack-issues"
                 }

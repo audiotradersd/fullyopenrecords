@@ -7,6 +7,7 @@ import ArtistSignupCTA from "../components/home/ArtistSignupCTA";
 import { getArtist, getArtistContent, getRadio } from "../lib/api";
 import { buildArtistFallback, mergeArtistRecordWithLivePreference } from "../lib/artistProfiles";
 import { mergeArtistPageContent } from "../lib/artistPageContent";
+import { artistAssets } from "../lib/assets";
 import { pageMetadata } from "../lib/seo";
 
 export const metadata = pageMetadata({ title: "Independent Music, Radio & Artists", description: "Discover independent artists across every genre, listen to Fully Open Radio, and give your music a public home.", path: "/" });
@@ -39,7 +40,7 @@ export default async function Home() {
   ]);
   const track = parseTrack(String(radio.nowPlaying ?? "Fully Open Radio"), String(radio.host ?? ""));
   const mergedStoneContent = mergeArtistPageContent("stone", stoneArtist ?? {}, stoneContent);
-  const stoneHeroImage = "/artists/stone-new-logo.png";
+  const stoneHeroImage = artistAssets.stone.promoImage;
 
   return (
     <>

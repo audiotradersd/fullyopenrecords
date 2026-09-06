@@ -8,6 +8,7 @@ import { getArtist, getArtistContent } from "../../lib/api";
 import { buildArtistFallback, mergeArtistRecordWithLivePreference } from "../../lib/artistProfiles";
 import { mergeArtistPageContent } from "../../lib/artistPageContent";
 import { pageMetadata } from "../../lib/seo";
+import { artistAssets } from "../../lib/assets";
 import PageViewEvent from "../../components/analytics/PageViewEvent";
 
 const trustIndicators = [
@@ -101,7 +102,7 @@ export default async function GetHeardPage() {
     .catch(() => buildArtistFallback("stone"));
   const stoneContent = await getArtistContent("stone").catch(() => null);
   const mergedStoneContent = mergeArtistPageContent("stone", stoneArtist ?? {}, stoneContent);
-  const stoneHeroImage = "/artists/stone-new-logo.png";
+  const stoneHeroImage = artistAssets.stone.promoImage;
   const featuredBands = [
     { name: "GRZZLY", image: "/artists/grzzly.webp" },
     { name: "Audio Kulture", image: "/artists/audio-kulture.webp" },

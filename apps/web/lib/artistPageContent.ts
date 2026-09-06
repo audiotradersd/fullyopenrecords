@@ -1,3 +1,5 @@
+import { getArtistHeroImage } from "./assets";
+
 type AlbumContent = {
   title: string;
   releaseDate?: string | null;
@@ -123,6 +125,7 @@ export function mergeArtistPageContent(
 
   return {
     heroImage:
+      getArtistHeroImage(slug) ||
       (typeof artist.bannerImage === "string" && artist.bannerImage) ||
       (typeof artist.heroImage === "string" && artist.heroImage) ||
       editorial?.heroImage ||

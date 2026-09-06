@@ -309,6 +309,34 @@ export const songs = sqliteTable("songs", {
   ...timestamps
 });
 
+export const trackVersions = sqliteTable(
+  "track_versions",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    songId: integer("song_id").notNull().references(() => songs.id, { onDelete: "cascade" }),
+    versionType: text("version_type").notNull(),
+    versionNumber: integer("version_number"),
+    audioUrl: text("audio_url").notNull(),
+    duration: integer("duration"),
+    notes: text("notes"),
+    recordedAt: text("recorded_at"),
+    uploadedBy: integer("uploaded_by").references(() => users.id, { onDelete: "set null" }),
+    ...timestamps
+  },
+  (table) => [
+    uniqueIndex("track_versions_song_type_number_idx").on(table.songId, table.versionType, table.versionNumber),
+    uniqueIndex("track_versions_song_created_idx").on(table.songId, table.createdAt, table.id)
+  ]
+);
+
+export const trackVersionPhotos = sqliteTable("track_version_photos", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  trackVersionId: integer("track_version_id").notNull().references(() => trackVersions.id, { onDelete: "cascade" }),
+  imageUrl: text("image_url").notNull(),
+  sortOrder: integer("sort_order").notNull().default(0),
+  ...timestamps
+});
+
 export const videos = sqliteTable("videos", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   artistId: integer("artist_id")

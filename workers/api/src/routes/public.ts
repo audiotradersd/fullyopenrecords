@@ -13,6 +13,8 @@ import {
   registerSchema,
   songSchema,
   submissionSchema,
+  trackVersionCreateSchema,
+  trackVersionUpdateSchema,
   videoSchema
 } from "@fully-open-records/api/src/contracts";
 import {
@@ -32,6 +34,8 @@ import {
   sessions,
   submissions,
   songs,
+  trackVersionPhotos,
+  trackVersions,
   users,
   videos
 } from "@fully-open-records/db/src/schema";
@@ -56,6 +60,14 @@ const FREE_PLAN_LIMITS = {
   videos: 3,
   radioTracks: 1
 } as const;
+
+const NUMBERED_VERSION_TYPES = new Set([
+  "Demo", "Rehearsal", "Live Recording", "Home Recording", "Studio Recording", "Rough Mix", "Mix", "Master"
+]);
+
+function versionLabel(versionType: string, versionNumber: number | null) {
+  return versionNumber ? `${versionType} ${versionNumber}` : versionType;
+}
 
 const mutableFallback = fallbackContent as {
   submissions: Array<Record<string, unknown>>;
@@ -401,15 +413,20 @@ publicRouter.get("/artists/:slug/content", async (c) => {
     });
   }
 
-  const [artistAlbums, fetchedTracks, artistVideos, artistPhotos, artistGigs, artistPress] = await Promise.all([
+  const [artistAlbums, fetchedTracks, artistVideos, artistPhotos, artistGigs, artistPress, artistTrackVersions] = await Promise.all([
     db.select().from(albums).where(eq(albums.artistId, artist.id)).orderBy(desc(albums.releaseDate), desc(albums.createdAt)),
     db.select().from(songs).where(eq(songs.artistId, artist.id)).orderBy(...songOrderBy()),
     db.select().from(videos).where(eq(videos.artistId, artist.id)).orderBy(desc(videos.createdAt)),
     db.select().from(photos).where(eq(photos.artistId, artist.id)).orderBy(desc(photos.createdAt)),
     db.select().from(gigs).where(eq(gigs.artistId, artist.id)).orderBy(gigs.eventDate),
-    db.select().from(pressItems).where(eq(pressItems.artistId, artist.id)).orderBy(desc(pressItems.pressDate), desc(pressItems.createdAt))
+    db.select().from(pressItems).where(eq(pressItems.artistId, artist.id)).orderBy(desc(pressItems.pressDate), desc(pressItems.createdAt)),
+    db.select({ version: trackVersions, songId: songs.id }).from(trackVersions).innerJoin(songs, eq(trackVersions.songId, songs.id)).where(eq(songs.artistId, artist.id)).orderBy(asc(trackVersions.recordedAt), asc(trackVersions.createdAt), asc(trackVersions.id))
   ]);
   const artistTracks = await normalizeFreePlanActiveTracks(db, artist, fetchedTracks);
+  const versionIds = artistTrackVersions.map(({ version }) => version.id);
+  const versionPhotos = versionIds.length ? await db.select().from(trackVersionPhotos).where(inArray(trackVersionPhotos.trackVersionId, versionIds)).orderBy(asc(trackVersionPhotos.sortOrder), asc(trackVersionPhotos.id)) : [];
+  const photosByVersion = new Map<number, typeof versionPhotos>();
+  for (const photo of versionPhotos) photosByVersion.set(photo.trackVersionId, [...(photosByVersion.get(photo.trackVersionId) ?? []), photo]);
 
   return c.json({
     albums: artistAlbums.map(mapAlbumRecord),
@@ -417,7 +434,8 @@ publicRouter.get("/artists/:slug/content", async (c) => {
     photos: artistPhotos,
     videos: artistVideos,
     gigs: artistGigs.map(mapGigRecord),
-    press: artistPress.map(mapPressRecord)
+    press: artistPress.map(mapPressRecord),
+    trackVersions: artistTrackVersions.map(({ version }) => ({ ...version, label: versionLabel(version.versionType, version.versionNumber), photos: photosByVersion.get(version.id) ?? [] }))
   });
 });
 
@@ -1387,6 +1405,62 @@ publicRouter.post("/artist/me/press", requireArtist, zValidator("json", pressSch
   });
 
   return c.json({ press: mapPressRecord(created[0]) }, 201);
+});
+
+publicRouter.post("/artist/me/track-versions", requireArtist, zValidator("json", trackVersionCreateSchema), async (c) => {
+  const db = getDb(c.env);
+  const user = c.get("user");
+  const payload = c.req.valid("json");
+  const [artist] = await db.select().from(artists).where(eq(artists.userId, user.id)).limit(1);
+  if (!artist) return c.json({ error: "Artist profile not found" }, 404);
+  const [song] = await db.select().from(songs).where(and(eq(songs.id, payload.songId), eq(songs.artistId, artist.id))).limit(1);
+  if (!song) return c.json({ error: "Track not found" }, 404);
+
+  let versionNumber: number | null = null;
+  if (NUMBERED_VERSION_TYPES.has(payload.versionType)) {
+    const existing = await db.select({ number: trackVersions.versionNumber }).from(trackVersions)
+      .where(and(eq(trackVersions.songId, song.id), eq(trackVersions.versionType, payload.versionType)))
+      .orderBy(desc(trackVersions.versionNumber)).limit(1);
+    versionNumber = (existing[0]?.number ?? 0) + 1;
+  }
+
+  const created = await db.insert(trackVersions).values({
+    songId: song.id, versionType: payload.versionType, versionNumber, audioUrl: payload.audioUrl,
+    duration: payload.duration ?? null, notes: payload.notes ?? null, recordedAt: payload.recordedAt ?? null, uploadedBy: user.id,
+    updatedAt: new Date().toISOString()
+  }).returning();
+  const version = created[0];
+  if (payload.photoUrls.length) await db.insert(trackVersionPhotos).values(payload.photoUrls.map((imageUrl, sortOrder) => ({ trackVersionId: version.id, imageUrl, sortOrder })));
+  if (payload.versionType === "Final Master") {
+    await db.update(songs).set({ audioUrl: payload.audioUrl, duration: payload.duration ?? null, updatedAt: new Date().toISOString() }).where(eq(songs.id, song.id));
+  }
+  await logFlowEvent(c.env, c.req.raw, "artist.track_version.created", { user, artistId: artist.id, meta: { songId: song.id, versionId: version.id, label: versionLabel(version.versionType, version.versionNumber) } });
+  return c.json({ version: { ...version, label: versionLabel(version.versionType, version.versionNumber), photos: payload.photoUrls.map((imageUrl, sortOrder) => ({ imageUrl, sortOrder })) } }, 201);
+});
+
+publicRouter.put("/artist/me/track-versions/:id", requireArtist, zValidator("json", trackVersionUpdateSchema), async (c) => {
+  const db = getDb(c.env); const user = c.get("user"); const payload = c.req.valid("json"); const versionId = Number(c.req.param("id"));
+  const [artist] = await db.select().from(artists).where(eq(artists.userId, user.id)).limit(1);
+  if (!artist) return c.json({ error: "Artist profile not found" }, 404);
+  const [version] = await db.select({ version: trackVersions }).from(trackVersions).innerJoin(songs, eq(trackVersions.songId, songs.id)).where(and(eq(trackVersions.id, versionId), eq(songs.artistId, artist.id))).limit(1);
+  if (!version) return c.json({ error: "Track version not found" }, 404);
+  const updated = await db.update(trackVersions).set({ ...(payload.versionType !== undefined ? { versionType: payload.versionType } : {}), ...(payload.notes !== undefined ? { notes: payload.notes } : {}), ...(payload.recordedAt !== undefined ? { recordedAt: payload.recordedAt } : {}), updatedAt: new Date().toISOString() }).where(eq(trackVersions.id, versionId)).returning();
+  if (payload.photoUrls !== undefined) { await db.delete(trackVersionPhotos).where(eq(trackVersionPhotos.trackVersionId, versionId)); if (payload.photoUrls.length) await db.insert(trackVersionPhotos).values(payload.photoUrls.map((imageUrl, sortOrder) => ({ trackVersionId: versionId, imageUrl, sortOrder }))); }
+  return c.json({ version: { ...updated[0], label: versionLabel(updated[0].versionType, updated[0].versionNumber), photos: payload.photoUrls ?? await db.select().from(trackVersionPhotos).where(eq(trackVersionPhotos.trackVersionId, versionId)) } });
+});
+
+publicRouter.delete("/artist/me/track-versions/:id", requireArtist, async (c) => {
+  const db = getDb(c.env); const user = c.get("user"); const versionId = Number(c.req.param("id"));
+  const [artist] = await db.select().from(artists).where(eq(artists.userId, user.id)).limit(1);
+  if (!artist) return c.json({ error: "Artist profile not found" }, 404);
+  const [record] = await db.select({ version: trackVersions, song: songs }).from(trackVersions).innerJoin(songs, eq(trackVersions.songId, songs.id)).where(and(eq(trackVersions.id, versionId), eq(songs.artistId, artist.id))).limit(1);
+  if (!record) return c.json({ error: "Track version not found" }, 404);
+  if (record.song.audioUrl === record.version.audioUrl) return c.json({ error: "This is the current public audio. Upload and select another master before deleting it." }, 409);
+  const urls = [record.version.audioUrl, ...(await db.select({ imageUrl: trackVersionPhotos.imageUrl }).from(trackVersionPhotos).where(eq(trackVersionPhotos.trackVersionId, versionId))).map((photo) => photo.imageUrl)];
+  for (const url of urls) { const key = getManagedMediaKey(url, c.req.url); if (key) { await c.env.MEDIA_BUCKET.delete(key).catch(() => undefined); await db.delete(media).where(eq(media.r2Key, key)); } }
+  await db.delete(trackVersions).where(eq(trackVersions.id, versionId));
+  await logFlowEvent(c.env, c.req.raw, "artist.track_version.deleted", { user, artistId: artist.id, meta: { versionId, songId: record.song.id } });
+  return c.json({ success: true, deletedId: versionId });
 });
 
 publicRouter.post("/artist/me/media", requireArtist, async (c) => {

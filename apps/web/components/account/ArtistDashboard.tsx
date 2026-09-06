@@ -7,6 +7,9 @@ import { useAuth } from "../auth/AuthProvider";
 import Container from "../layout/Container";
 import { Button } from "../ui/button";
 import { Card } from "../ui/card";
+import StreamButton from "../audio/StreamButton";
+
+const TRACK_VERSION_TYPES = ["First Jam", "Song Idea", "Demo", "Rehearsal", "Live Recording", "Home Recording", "Studio Recording", "Rough Mix", "Mix", "Pre-Master", "Master", "Final Master"] as const;
 
 type DashboardData = {
   artist: {
@@ -74,6 +77,11 @@ type ContentData = {
     articleLink?: string | null;
     excerpt?: string | null;
     featureImage?: string | null;
+  }>;
+  trackVersions: Array<{
+    id: number; songId: number; versionType: string; versionNumber?: number | null; label: string;
+    audioUrl: string; duration?: number | null; notes?: string | null; recordedAt?: string | null; createdAt: string;
+    photos: Array<{ id?: number; imageUrl: string; sortOrder: number }>;
   }>;
 };
 
@@ -173,6 +181,7 @@ export default function ArtistDashboard() {
   const [trackDraft, setTrackDraft] = useState({ title: "", trackNumber: "" });
   const [trackMetadataStatus, setTrackMetadataStatus] = useState<string | null>(null);
   const [showBulkTrackModal, setShowBulkTrackModal] = useState(false);
+  const [versionSongId, setVersionSongId] = useState<number | null>(null);
   const [bulkTrackFiles, setBulkTrackFiles] = useState<
     Array<{ fileName: string; title: string; albumTitle: string | null; trackNumber: number | null }>
   >([]);
@@ -233,7 +242,8 @@ export default function ArtistDashboard() {
         videos: contentPayload.videos ?? [],
         photos: contentPayload.photos ?? [],
         gigs: contentPayload.gigs ?? [],
-        press: contentPayload.press ?? []
+        press: contentPayload.press ?? [],
+        trackVersions: contentPayload.trackVersions ?? []
       });
     }
   }
@@ -441,20 +451,59 @@ export default function ArtistDashboard() {
     }
   }
 
+  async function addTrackVersion(formData: FormData) {
+    const songId = versionSongId;
+    const audioFile = formData.get("audioFile");
+    if (!songId || !(audioFile instanceof File) || audioFile.size === 0) {
+      setMessage("Choose an audio file for this version.");
+      return;
+    }
+    try {
+      const versionType = String(formData.get("versionType") ?? "Demo");
+      const uploadedAudio = await uploadAsset(audioFile, "songs/versions/audio", versionType, "Uploading version audio…");
+      const photoFiles = formData.getAll("setupPhotos").filter((value): value is File => value instanceof File && value.size > 0);
+      const photoUrls: string[] = [];
+      for (const photo of photoFiles) {
+        const uploaded = await uploadAsset(photo, "songs/versions/setup-photos", "Recording setup reference", `Uploading setup photo ${photoUrls.length + 1} of ${photoFiles.length}…`);
+        photoUrls.push(uploaded.url);
+      }
+      const metadata = await getTrackDetailsFromAudio(audioFile);
+      const response = await fetch("/api/artist/me/track-versions", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ songId, versionType, audioUrl: uploadedAudio.url, duration: metadata.duration, notes: String(formData.get("notes") ?? ""), recordedAt: String(formData.get("recordedAt") ?? "") || null, photoUrls })
+      });
+      const payload = await response.json();
+      setMessage(response.ok ? `${payload.version?.label ?? versionType} added to the recording diary.` : payload.error ?? "Version upload failed.");
+      if (response.ok) { setVersionSongId(null); await loadData(); }
+      void metadata;
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Version upload failed.");
+    } finally { setUploading(null); setUploadPercent(0); }
+  }
+
+  async function deleteTrackVersion(versionId: number, label: string) {
+    if (!window.confirm(`Delete ${label}? This removes its audio and setup photos.`)) return;
+    const response = await fetch(`/api/artist/me/track-versions/${versionId}`, { method: "DELETE" });
+    const payload = await response.json();
+    setMessage(response.ok ? `${label} deleted.` : payload.error ?? "Could not delete version.");
+    if (response.ok) await loadData();
+  }
+
   async function getTrackDetailsFromAudio(file: File) {
     const fallback = parseBulkTrackFilename(file.name);
 
     try {
       const { parseBlob } = await import("music-metadata-browser");
-      const metadata = await parseBlob(file, { duration: false, skipCovers: true });
+      const metadata = await parseBlob(file, { duration: true, skipCovers: true });
       return {
         title: metadata.common.title?.trim() || fallback.title,
         trackNumber: metadata.common.track.no ?? fallback.trackNumber,
         albumTitle: metadata.common.album?.trim() || fallback.albumTitle,
+        duration: metadata.format.duration ? Math.round(metadata.format.duration) : null,
         foundEmbeddedMetadata: Boolean(metadata.common.title || metadata.common.track.no || metadata.common.album)
       };
     } catch {
-      return { ...fallback, foundEmbeddedMetadata: false };
+      return { ...fallback, duration: null, foundEmbeddedMetadata: false };
     }
   }
 
@@ -1025,6 +1074,30 @@ export default function ArtistDashboard() {
           </div>
         ) : null}
 
+        {versionSongId ? (
+          <div className="fixed inset-0 z-[90] overflow-y-auto bg-black/70 px-4 py-6 backdrop-blur-sm">
+            <Card className="mx-auto w-full max-w-xl p-6">
+              <div className="flex items-start justify-between gap-4">
+                <div><p className="text-xs uppercase tracking-[0.24em] text-pink">Recording diary</p><h2 className="mt-2 text-2xl font-semibold text-white">Add new version</h2></div>
+                <Button type="button" variant="outline" onClick={() => setVersionSongId(null)}>Close</Button>
+              </div>
+              <form action={async (formData) => { await addTrackVersion(formData); }} className="mt-6 space-y-4">
+                <label className="block text-sm text-fog">Version type
+                  <select name="versionType" className="mt-2 w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white">
+                    {TRACK_VERSION_TYPES.map((type) => <option key={type} value={type}>{type}</option>)}
+                  </select>
+                </label>
+                <p className="rounded-xl border border-white/10 bg-white/[0.03] p-3 text-sm text-fog">The next number is assigned automatically where needed, for example <span className="text-white">Mix 4</span>. Previous versions are never overwritten.</p>
+                <label className="block rounded-xl border border-dashed border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-fog">Audio <input name="audioFile" required type="file" accept="audio/*" className="mt-2 block w-full text-xs" /></label>
+                <textarea name="notes" rows={5} placeholder="Notes (optional): what changed, what worked, and anything to remember for next time." className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white" />
+                <label className="block text-sm text-fog">Date recorded / created <input name="recordedAt" type="date" className="mt-2 w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white" /></label>
+                <label className="block rounded-xl border border-dashed border-pink/30 bg-pink/5 px-4 py-3 text-sm text-fog"><strong className="block text-white">Setup photos (optional)</strong><span className="mt-1 block">Capture anything you’ll want to recreate later — pedal settings, amp controls, microphone placement, drum setup, room position, outboard gear or other recording settings.</span><input name="setupPhotos" type="file" accept="image/*" capture="environment" multiple className="mt-3 block w-full text-xs" /></label>
+                <Button type="submit" className="w-full">Add Version</Button>
+              </form>
+            </Card>
+          </div>
+        ) : null}
+
         {showBulkTrackModal ? (
           <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm">
             <Card className="w-full max-w-xl p-6">
@@ -1582,6 +1655,7 @@ export default function ArtistDashboard() {
                       </div>
 
                       <div className="flex flex-wrap gap-2 lg:justify-end">
+                        <Button type="button" variant="outline" onClick={() => setVersionSongId(song.id)}>Add Version</Button>
                         <Button
                           type="button"
                           variant="outline"
@@ -1623,6 +1697,21 @@ export default function ArtistDashboard() {
                           </a>
                         ) : null}
                       </div>
+                    </div>
+                    <div className="mt-5 border-t border-white/10 pt-4">
+                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-pink">Recording diary</p>
+                      {(content.trackVersions ?? []).filter((version) => version.songId === song.id).length ? (
+                        <div className="mt-3 space-y-3">
+                          {(content.trackVersions ?? []).filter((version) => version.songId === song.id).map((version) => (
+                            <div key={version.id} className="rounded-xl border border-white/10 bg-black/10 p-4">
+                              <div className="flex flex-wrap items-start justify-between gap-3"><div><p className="font-semibold text-white">{version.label}</p><p className="mt-1 text-xs text-fog">{formatDate(version.recordedAt || version.createdAt)} · uploaded {formatDate(version.createdAt)}</p></div><Button type="button" variant="outline" className="border-red-400/20 text-red-200" onClick={() => void deleteTrackVersion(version.id, version.label)}>Delete version</Button></div>
+                              <div className="mt-3"><StreamButton audioUrl={version.audioUrl} label="Play version" pauseLabel="Pause" size="sm" trackTitle={`${song.title} — ${version.label}`} /></div>
+                              {version.notes ? <p className="mt-3 whitespace-pre-line text-sm leading-6 text-fog">{version.notes}</p> : null}
+                              {version.photos.length ? <div className="mt-4 flex flex-wrap gap-2">{version.photos.map((photo, index) => <a key={`${photo.imageUrl}-${index}`} href={photo.imageUrl} target="_blank" rel="noreferrer" className="relative h-20 w-20 overflow-hidden rounded-lg border border-white/10"><Image src={photo.imageUrl} alt={`${version.label} setup photo ${index + 1}`} fill sizes="80px" className="object-cover" unoptimized /></a>)}</div> : null}
+                            </div>
+                          ))}
+                        </div>
+                      ) : <p className="mt-2 text-sm text-fog">No versions yet. Add the first jam, demo, mix or master to begin the history.</p>}
                     </div>
                   </div>
                 );

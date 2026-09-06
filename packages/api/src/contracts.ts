@@ -176,6 +176,28 @@ export const songSchema = z.object({
   radioSelected: z.boolean().default(false)
 });
 
+export const trackVersionTypeSchema = z.enum([
+  "First Jam", "Song Idea", "Demo", "Rehearsal", "Live Recording", "Home Recording",
+  "Studio Recording", "Rough Mix", "Mix", "Pre-Master", "Master", "Final Master"
+]);
+
+export const trackVersionCreateSchema = z.object({
+  songId: z.number().int().positive(),
+  versionType: trackVersionTypeSchema,
+  audioUrl: z.string().url(),
+  duration: z.number().int().nonnegative().optional().nullable(),
+  notes: z.string().max(10000).optional().nullable(),
+  recordedAt: z.string().max(32).optional().nullable(),
+  photoUrls: z.array(z.string().url()).max(20).default([])
+});
+
+export const trackVersionUpdateSchema = z.object({
+  versionType: trackVersionTypeSchema.optional(),
+  notes: z.string().max(10000).optional().nullable(),
+  recordedAt: z.string().max(32).optional().nullable(),
+  photoUrls: z.array(z.string().url()).max(20).optional()
+});
+
 export const albumSchema = z.object({
   id: z.number().optional(),
   title: z.string().min(1),

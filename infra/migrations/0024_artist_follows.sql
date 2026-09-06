@@ -1,0 +1,8 @@
+CREATE TABLE IF NOT EXISTS artist_follows (
+  id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  artist_id INTEGER NOT NULL REFERENCES artists(id) ON DELETE CASCADE,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(user_id, artist_id)
+);
+CREATE INDEX IF NOT EXISTS artist_follows_artist_idx ON artist_follows (artist_id);

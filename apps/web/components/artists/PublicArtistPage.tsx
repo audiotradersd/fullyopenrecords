@@ -90,7 +90,7 @@ export default function PublicArtistPage({
               {artistUrl}
             </div>
             <div className="mt-8">
-              <ArtistHeroActions url={artistUrl} name={name} />
+              <ArtistHeroActions url={artistUrl} name={name} slug={slug} />
             </div>
             {socialLinks.length ? (
               <div className="mt-8 flex flex-wrap gap-3">

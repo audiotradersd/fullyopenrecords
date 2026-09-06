@@ -1,0 +1,6 @@
+import { NextResponse } from "next/server";
+import { apiProxy, getSessionToken } from "../../../../../lib/server-api";
+
+export async function GET(_: Request, { params }: { params: Promise<{ slug: string }> }) { const { slug } = await params; const token = await getSessionToken(); const response = await apiProxy(`/artists/${slug}/follow`, undefined, token ?? undefined); return NextResponse.json(await response.json(), { status: response.status }); }
+export async function POST(_: Request, { params }: { params: Promise<{ slug: string }> }) { const { slug } = await params; const token = await getSessionToken(); if (!token) return NextResponse.json({ error: "Login required" }, { status: 401 }); const response = await apiProxy(`/artists/${slug}/follow`, { method: "POST" }, token); return NextResponse.json(await response.json(), { status: response.status }); }
+export async function DELETE(_: Request, { params }: { params: Promise<{ slug: string }> }) { const { slug } = await params; const token = await getSessionToken(); if (!token) return NextResponse.json({ error: "Login required" }, { status: 401 }); const response = await apiProxy(`/artists/${slug}/follow`, { method: "DELETE" }, token); return NextResponse.json(await response.json(), { status: response.status }); }

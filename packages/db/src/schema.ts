@@ -375,6 +375,13 @@ export const favouriteSongs = sqliteTable(
   (table) => [uniqueIndex("favourite_songs_user_song_idx").on(table.userId, table.songId)]
 );
 
+export const artistFollows = sqliteTable("artist_follows", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  artistId: integer("artist_id").notNull().references(() => artists.id, { onDelete: "cascade" }),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`)
+}, (table) => [uniqueIndex("artist_follows_user_artist_idx").on(table.userId, table.artistId), uniqueIndex("artist_follows_artist_idx").on(table.artistId)]);
+
 export const radioHistory = sqliteTable("radio_history", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   artistName: text("artist_name").notNull(),

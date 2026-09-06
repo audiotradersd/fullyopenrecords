@@ -20,6 +20,7 @@ import {
 import {
   albums,
   artists,
+  artistFollows,
   contacts,
   faqItems,
   favouriteSongs,
@@ -390,6 +391,34 @@ publicRouter.get("/artists/:slug", async (c) => {
 
   const fallbackArtist = fallbackContent.artists.find((entry) => entry.slug === c.req.param("slug"));
   return fallbackArtist ? c.json(fallbackArtist) : c.json({ error: "Not found" }, 404);
+});
+
+publicRouter.get("/artists/:slug/follow", optionalUser, async (c) => {
+  const db = getDb(c.env); const user = c.get("user");
+  const [artist] = await db.select().from(artists).where(eq(artists.slug, c.req.param("slug"))).limit(1);
+  if (!artist) return c.json({ error: "Artist not found" }, 404);
+  const [total, existing] = await Promise.all([
+    db.select({ value: count() }).from(artistFollows).where(eq(artistFollows.artistId, artist.id)),
+    user ? db.select({ id: artistFollows.id }).from(artistFollows).where(and(eq(artistFollows.artistId, artist.id), eq(artistFollows.userId, user.id))).limit(1) : Promise.resolve([])
+  ]);
+  return c.json({ followerCount: total[0]?.value ?? 0, following: existing.length > 0, canFollow: !user || artist.userId !== user.id });
+});
+
+publicRouter.post("/artists/:slug/follow", requireUser, async (c) => {
+  const db = getDb(c.env); const user = c.get("user"); const [artist] = await db.select().from(artists).where(eq(artists.slug, c.req.param("slug"))).limit(1);
+  if (!artist) return c.json({ error: "Artist not found" }, 404);
+  if (artist.userId === user.id) return c.json({ error: "You cannot follow your own artist page." }, 403);
+  await db.insert(artistFollows).values({ userId: user.id, artistId: artist.id }).onConflictDoNothing();
+  const [total] = await db.select({ value: count() }).from(artistFollows).where(eq(artistFollows.artistId, artist.id));
+  return c.json({ following: true, followerCount: total?.value ?? 0 });
+});
+
+publicRouter.delete("/artists/:slug/follow", requireUser, async (c) => {
+  const db = getDb(c.env); const user = c.get("user"); const [artist] = await db.select().from(artists).where(eq(artists.slug, c.req.param("slug"))).limit(1);
+  if (!artist) return c.json({ error: "Artist not found" }, 404);
+  await db.delete(artistFollows).where(and(eq(artistFollows.artistId, artist.id), eq(artistFollows.userId, user.id)));
+  const [total] = await db.select({ value: count() }).from(artistFollows).where(eq(artistFollows.artistId, artist.id));
+  return c.json({ following: false, followerCount: total?.value ?? 0 });
 });
 
 publicRouter.get("/artists/:slug/content", async (c) => {

@@ -43,7 +43,7 @@ export default function ArtistHeroActions({
         type="button"
         onClick={() => void toggleFollow()}
         disabled={loading || pending}
-        className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-pink px-5 text-sm font-medium text-white shadow-[0_0_18px_rgba(209,74,139,0.35)] transition duration-200 hover:-translate-y-0.5"
+        className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-pink px-5 text-sm font-medium text-white shadow-[0_0_18px_rgba(59,157,255,0.38)] transition duration-200 hover:-translate-y-0.5"
       >
         <Heart className={`h-4 w-4 ${following ? "fill-current" : ""}`} />
         {following ? "Following" : "Follow"}{count ? ` · ${count}` : ""}

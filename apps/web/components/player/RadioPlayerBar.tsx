@@ -184,15 +184,15 @@ export default function RadioPlayerBar() {
       });
 
       analyzerRef.current.registerGradient("for-bright", {
-        bgColor: "#09040f",
+        bgColor: "#030816",
         colorStops: [
           { pos: 0, color: "#ffffff" },
-          { pos: 0.12, color: "#fff2fb" },
-          { pos: 0.28, color: "#ffd0ea" },
-          { pos: 0.48, color: "#f2a7c4" },
-          { pos: 0.7, color: "#ff5db1" },
-          { pos: 0.88, color: "#d14a8b" },
-          { pos: 1, color: "#8b4dff" }
+          { pos: 0.12, color: "#eaf6ff" },
+          { pos: 0.28, color: "#b9e2ff" },
+          { pos: 0.48, color: "#75c8ff" },
+          { pos: 0.7, color: "#3b9dff" },
+          { pos: 0.88, color: "#1a65b8" },
+          { pos: 1, color: "#635bff" }
         ]
       });
       analyzerRef.current.gradient = "for-bright";

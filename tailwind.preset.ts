@@ -4,18 +4,18 @@ const config = {
   theme: {
     extend: {
       colors: {
-        ink: "#0F0621",
-        midnight: "#1E0D3A",
-        haze: "#1E0D3A",
-        plum: "#3A1B5C",
-        paper: "#241146",
-        line: "#4D2B73",
-        ember: "#A12C6A",
-        pink: "#D14A8B",
-        rose: "#E36A9C",
+        ink: "#030816",
+        midnight: "#07152D",
+        haze: "#061126",
+        plum: "#102B54",
+        paper: "#0B1D3B",
+        line: "#24558C",
+        ember: "#1A65B8",
+        pink: "#3B9DFF",
+        rose: "#75C8FF",
         sand: "#FFFFFF",
-        fog: "#C9B6D9",
-        glow: "#D14A8B"
+        fog: "#B7CAE5",
+        glow: "#3B9DFF"
       },
       fontFamily: {
         display: ["var(--font-display)", "Space Grotesk", "sans-serif"],
@@ -23,7 +23,7 @@ const config = {
         meta: ["var(--font-display)", "Space Grotesk", "sans-serif"]
       },
       boxShadow: {
-        panel: "0 24px 80px rgba(8, 4, 20, 0.42)"
+        panel: "0 24px 80px rgba(2, 10, 28, 0.56)"
       }
     }
   },

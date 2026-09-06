@@ -7,7 +7,7 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-pink text-white shadow-[0_0_18px_rgba(209,74,139,0.35)] hover:-translate-y-0.5",
+        default: "bg-pink text-white shadow-[0_0_18px_rgba(59,157,255,0.38)] hover:-translate-y-0.5",
         outline: "border border-white/15 bg-white/[0.03] text-white hover:bg-white/[0.08]",
         ghost: "text-fog hover:bg-white/[0.06] hover:text-white"
       },

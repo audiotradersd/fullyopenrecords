@@ -517,34 +517,6 @@ export default function ArtistDashboard() {
     setTrackMetadataStatus(details.foundEmbeddedMetadata ? "Title and track number filled from the audio file." : "No embedded metadata found; filled from the filename.");
   }
 
-  async function createAlbumByTitle(title: string) {
-    const existingAlbum = (content?.albums ?? []).find(
-      (album) => album.title.trim().toLowerCase() === title.trim().toLowerCase()
-    );
-
-    if (existingAlbum) {
-      return existingAlbum.id;
-    }
-
-    const response = await fetch("/api/artist/me/albums", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        title,
-        releaseDate: "",
-        description: "",
-        coverArt: ""
-      })
-    });
-
-    const payload = await response.json();
-    if (!response.ok) {
-      throw new Error(payload.error ?? `Could not create album "${title}".`);
-    }
-
-    return Number(payload.album?.id);
-  }
-
   async function bulkUploadSongs(formData: FormData) {
     const files = formData.getAll("audioFiles").filter((value): value is File => value instanceof File && value.size > 0);
 
@@ -557,7 +529,6 @@ export default function ArtistDashboard() {
       setUploading(`Uploading 0 of ${files.length} tracks…`);
       setUploadPercent(0);
 
-      const albumMap = new Map<string, number>();
       let inactiveUploads = 0;
 
       for (let index = 0; index < files.length; index += 1) {
@@ -576,18 +547,6 @@ export default function ArtistDashboard() {
           `Uploading ${index + 1} of ${files.length}: ${parsed.title}`
         );
 
-        let albumId: number | null = null;
-        if (parsed.albumTitle) {
-          const cached = albumMap.get(parsed.albumTitle.toLowerCase());
-          if (cached) {
-            albumId = cached;
-          } else {
-            const createdAlbumId = await createAlbumByTitle(parsed.albumTitle);
-            albumMap.set(parsed.albumTitle.toLowerCase(), createdAlbumId);
-            albumId = createdAlbumId;
-          }
-        }
-
         const response = await fetch("/api/artist/me/songs", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -596,7 +555,7 @@ export default function ArtistDashboard() {
             trackNumber: parsed.trackNumber,
             audioUrl: uploadedAudio.url,
             coverImage: "",
-            albumId,
+            albumId: null,
             description: "",
             enabled: true,
             isRadioEligible: true,
@@ -1115,11 +1074,8 @@ export default function ArtistDashboard() {
                 <div className="mt-3 space-y-2">
                   <p><span className="text-white">Track only:</span> <span className="font-mono">Hello World.mp3</span></p>
                   <p><span className="text-white">Numbered track only:</span> <span className="font-mono">01 - Some Song Title.mp3</span></p>
-                  <p><span className="text-white">Track + album:</span> <span className="font-mono">01 - Track Title - Album Name.mp3</span></p>
                 </div>
-                <p className="mt-3">
-                  If an album name is present, tracks will be assigned to that album. If the album does not exist yet, it will be created automatically.
-                </p>
+                <p className="mt-3">Bulk uploads stay albumless. Use the Track Library’s album assignment controls once you are ready to group them.</p>
               </div>
               <form action={async (formData) => { await bulkUploadSongs(formData); }} className="mt-6 space-y-4">
                 <label className="block rounded-xl border border-dashed border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-fog">

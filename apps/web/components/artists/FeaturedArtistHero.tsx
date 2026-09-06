@@ -57,7 +57,7 @@ export default function FeaturedArtistHero({
               unoptimized
             />
           ) : null}
-          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.02),rgba(8,4,16,0.3))]" />
+          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(142,175,205,0.03),rgba(3,10,24,0.56))]" />
         </div>
 
         <div className="flex flex-col justify-center">

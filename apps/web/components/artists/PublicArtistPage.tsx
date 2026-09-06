@@ -153,31 +153,20 @@ export default function PublicArtistPage({
                           <p className="mt-1 text-sm text-fog">Released {formatDate(album.releaseDate)}</p>
                           {album.description ? <p className="mt-3 text-sm leading-7 text-fog">{album.description}</p> : null}
                           {album.tracks.length ? (
-                            <div className="mt-4 space-y-2">
-                              {album.tracks.map((track) => (
-                                <div
-                                  key={`${album.title}-${track.title}`}
-                                  className="flex items-center justify-between rounded-lg border border-white/10 bg-white/[0.03] px-4 py-3"
-                                >
-                                  <div>
-                                    <p className="text-sm text-white">{track.title}</p>
-                                    {track.duration ? <p className="text-xs text-fog">{track.duration}</p> : null}
+                            <details className="group mt-5">
+                              <summary className="inline-flex h-10 cursor-pointer list-none items-center rounded-full border border-white/15 bg-white/[0.04] px-4 text-sm font-medium text-white transition hover:border-pink/40 hover:bg-white/[0.08]">
+                                <span className="group-open:hidden">Show tracks ({album.tracks.length})</span>
+                                <span className="hidden group-open:inline">Hide tracks</span>
+                              </summary>
+                              <div className="mt-4 space-y-2">
+                                {album.tracks.map((track) => (
+                                  <div key={`${album.title}-${track.title}`} className="flex items-center justify-between rounded-lg border border-white/10 bg-white/[0.03] px-4 py-3">
+                                    <div><p className="text-sm text-white">{track.title}</p>{track.duration ? <p className="text-xs text-fog">{track.duration}</p> : null}</div>
+                                    {track.audioUrl && track.enabled !== false ? <StreamButton audioUrl={track.audioUrl} label="Play" pauseLabel="Pause" size="sm" trackTitle={track.title} artistName={name} /> : <PlayCircle className="h-5 w-5 text-pink" />}
                                   </div>
-                                  {track.audioUrl && track.enabled !== false ? (
-                                    <StreamButton
-                                      audioUrl={track.audioUrl}
-                                      label="Play"
-                                      pauseLabel="Pause"
-                                      size="sm"
-                                      trackTitle={track.title}
-                                      artistName={name}
-                                    />
-                                  ) : (
-                                    <PlayCircle className="h-5 w-5 text-pink" />
-                                  )}
-                                </div>
-                              ))}
-                            </div>
+                                ))}
+                              </div>
+                            </details>
                           ) : null}
                         </div>
                       </div>

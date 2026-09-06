@@ -101,10 +101,7 @@ export default async function GetHeardPage() {
     .catch(() => buildArtistFallback("stone"));
   const stoneContent = await getArtistContent("stone").catch(() => null);
   const mergedStoneContent = mergeArtistPageContent("stone", stoneArtist ?? {}, stoneContent);
-  const stoneHeroImage =
-    mergedStoneContent.heroImage ||
-    mergedStoneContent.profileImage ||
-    (typeof stoneArtist?.image === "string" ? stoneArtist.image : "/artists/stone.webp");
+  const stoneHeroImage = "/artists/stone-new-logo.png";
   const featuredBands = [
     { name: "GRZZLY", image: "/artists/grzzly.webp" },
     { name: "Audio Kulture", image: "/artists/audio-kulture.webp" },

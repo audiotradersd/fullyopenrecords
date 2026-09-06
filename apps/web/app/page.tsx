@@ -39,10 +39,7 @@ export default async function Home() {
   ]);
   const track = parseTrack(String(radio.nowPlaying ?? "Fully Open Radio"), String(radio.host ?? ""));
   const mergedStoneContent = mergeArtistPageContent("stone", stoneArtist ?? {}, stoneContent);
-  const stoneHeroImage =
-    mergedStoneContent.heroImage ||
-    mergedStoneContent.profileImage ||
-    (typeof stoneArtist?.image === "string" ? stoneArtist.image : "");
+  const stoneHeroImage = "/artists/stone-new-logo.png";
 
   return (
     <>

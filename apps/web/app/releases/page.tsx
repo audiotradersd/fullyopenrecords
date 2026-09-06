@@ -96,11 +96,7 @@ export default async function ReleasesPage() {
     tracklist.find((track) => normalizeTitle(track.title) === "intermingle") ??
     null;
 
-  const heroImage =
-    jackIssuesAlbum?.coverArt ||
-    mergedContent.heroImage ||
-    mergedContent.profileImage ||
-    "https://fully-open-records-api.sbdownes.workers.dev/media/artists/stone/profile/heroImage/1773336610660-ChatGPT-Image-Mar-12-2026-01_55_52-PM.png";
+  const heroImage = "/artists/stone-new-logo.png";
 
   return (
     <main className="pb-24 pt-12">

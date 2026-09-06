@@ -14,17 +14,17 @@ import { pageMetadata } from "../../lib/seo";
 
 export const metadata = pageMetadata({ title: "New Independent Music Releases", description: "Explore new releases from Fully Open artists, with independent music from every corner of the catalogue.", path: "/releases" });
 
-const tracklistTitles = [
-  "Intermingle",
-  "Kodiak",
-  "Dead Leg",
-  "Frock",
-  "Verbal",
-  "Nail It",
-  "Rob Ref",
-  "Jack Issues",
-  "Break The Duck",
-  "Fun Bus"
+const jackIssuesTracks = [
+  ["Nail It", "01 - LANDR-NAIL - 30082026, 15.51-Warm-Medium.mp3"],
+  ["Kodiak", "02 - LANDR-Kodiak - 30082026, 16.03-Warm-Medium.mp3"],
+  ["Intermingle", "03 - LANDR-Mngle - 30082026, 16.23-Warm-Medium.mp3"],
+  ["Fun Bus", "04 - LANDR-Bus - 30082026, 16.50-Warm-Medium.mp3"],
+  ["Jack Issues", "05 - LANDR-Jack - 30082026, 16.55-Warm-Medium.mp3"],
+  ["Break the Duck", "06 - LANDR-Duck - 30082026, 16.59-Warm-Medium.mp3"],
+  ["Rob References", "07 - LANDR-Rob Ref - 30082026, 17.03-Warm-Medium.mp3"],
+  ["Verbal", "08 - LANDR-Verbal - 30082026, 17.05-Warm-Medium.mp3"],
+  ["Dead Leg", "09 - LANDR-Leg - 30082026, 17.13-Warm-Medium.mp3"],
+  ["Frock", "10 - LANDR-Frock - 30082026, 17.26-Warm-Medium.mp3"]
 ];
 
 const otherReleases = [
@@ -74,21 +74,11 @@ export default async function ReleasesPage() {
     mergedContent.albums[0] ??
     null;
 
-  const allTracks = [
-    ...(jackIssuesAlbum?.tracks ?? []),
-    ...mergedContent.tracks
-  ];
-
-  const tracklist = tracklistTitles.map((title, index) => {
-    const match =
-      allTracks.find((track) => normalizeTitle(track.title) === normalizeTitle(title)) ?? null;
-
-    return {
-      number: index + 1,
-      title,
-      audioUrl: match?.audioUrl ?? null
-    };
-  });
+  const tracklist = jackIssuesTracks.map(([title, fileName], index) => ({
+    number: index + 1,
+    title,
+    audioUrl: `/releases/jack-issues/${encodeURIComponent(fileName)}`
+  }));
 
   const featuredSingle =
     tracklist.find((track) => normalizeTitle(track.title) === "verbal") ??

@@ -5,17 +5,17 @@ const config = {
     extend: {
       colors: {
         ink: "#030816",
-        midnight: "#07152D",
-        haze: "#061126",
-        plum: "#102B54",
-        paper: "#0B1D3B",
-        line: "#24558C",
-        ember: "#1A65B8",
-        pink: "#3B9DFF",
-        rose: "#75C8FF",
+        midnight: "#081326",
+        haze: "#050B18",
+        plum: "#13253D",
+        paper: "#0C1930",
+        line: "#294B70",
+        ember: "#24527E",
+        pink: "#4D7FAF",
+        rose: "#8EAFCD",
         sand: "#FFFFFF",
-        fog: "#B7CAE5",
-        glow: "#3B9DFF"
+        fog: "#B7C5D5",
+        glow: "#4D7FAF"
       },
       fontFamily: {
         display: ["var(--font-display)", "Space Grotesk", "sans-serif"],

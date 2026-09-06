@@ -13,7 +13,7 @@ html {
 body {
   @apply bg-haze text-sand font-body antialiased;
   background:
-    linear-gradient(180deg, rgba(2, 8, 23, 0.46), rgba(2, 10, 28, 0.88)),
+    linear-gradient(180deg, rgba(2, 7, 17, 0.7), rgba(2, 8, 20, 0.94)),
     url("/bg/cosmic-blue-v2.png");
   background-position: center top;
   background-repeat: no-repeat;
@@ -60,8 +60,8 @@ body::before {
   pointer-events: none;
   background-image:
     radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.1) 0 1px, transparent 1px),
-    radial-gradient(circle at 66% 22%, rgba(117, 200, 255, 0.15) 0 1px, transparent 1px),
-    radial-gradient(circle at 78% 68%, rgba(59, 157, 255, 0.18) 0 1px, transparent 1px);
+    radial-gradient(circle at 66% 22%, rgba(142, 175, 205, 0.1) 0 1px, transparent 1px),
+    radial-gradient(circle at 78% 68%, rgba(77, 127, 175, 0.12) 0 1px, transparent 1px);
   background-size: 220px 220px, 260px 260px, 320px 320px;
   mix-blend-mode: screen;
   opacity: 0.18;
@@ -88,23 +88,23 @@ body::after {
 
 .cosmic-card:hover {
   transform: translateY(-6px);
-  border-color: rgba(59, 157, 255, 0.48);
-  box-shadow: 0 20px 40px rgba(20, 117, 218, 0.27);
+  border-color: rgba(77, 127, 175, 0.42);
+  box-shadow: 0 20px 40px rgba(15, 55, 95, 0.3);
 }
 
 .cosmic-artwork {
   border-radius: 12px;
   background:
-    radial-gradient(circle at 30% 20%, rgba(117, 200, 255, 0.9), transparent 28%),
-    radial-gradient(circle at 70% 32%, rgba(59, 157, 255, 0.75), transparent 30%),
-    linear-gradient(135deg, #07152d 0%, #123f78 48%, #1a65b8 100%);
+    radial-gradient(circle at 30% 20%, rgba(142, 175, 205, 0.7), transparent 28%),
+    radial-gradient(circle at 70% 32%, rgba(77, 127, 175, 0.62), transparent 30%),
+    linear-gradient(135deg, #081326 0%, #173454 48%, #24527e 100%);
 }
 
 .cosmic-bg {
   background:
-    radial-gradient(circle at 20% 30%, rgba(59, 157, 255, 0.16), transparent 42%),
-    radial-gradient(circle at 80% 70%, rgba(26, 101, 184, 0.14), transparent 44%),
-    radial-gradient(circle at 60% 10%, rgba(117, 200, 255, 0.1), transparent 40%);
+    radial-gradient(circle at 20% 30%, rgba(77, 127, 175, 0.11), transparent 42%),
+    radial-gradient(circle at 80% 70%, rgba(36, 82, 126, 0.1), transparent 44%),
+    radial-gradient(circle at 60% 10%, rgba(142, 175, 205, 0.07), transparent 40%);
   min-height: 100vh;
 }
 
@@ -128,7 +128,7 @@ body::after {
 }
 
 .primary-button {
-  background: linear-gradient(135deg, #1a65b8, #3b9dff);
+  background: linear-gradient(135deg, #24527e, #4d7faf);
   border-radius: 10px;
   padding: 10px 20px;
   color: white;
@@ -136,7 +136,7 @@ body::after {
 }
 
 .primary-button:hover {
-  box-shadow: 0 0 18px rgba(59, 157, 255, 0.58);
+  box-shadow: 0 0 18px rgba(77, 127, 175, 0.45);
   transform: translateY(-2px);
 }
 

@@ -26,7 +26,7 @@ export async function apiProxy(
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
     headers: {
-      "Content-Type": "application/json",
+      ...(init?.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
       Origin: origin,
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(init?.headers ?? {})

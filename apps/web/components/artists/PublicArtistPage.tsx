@@ -5,6 +5,7 @@ import ArtistGallery from "./ArtistGallery";
 import ArtistHeroActions from "./ArtistHeroActions";
 import type { ArtistPageContentModel } from "../../lib/artistPageContent";
 import PageViewEvent from "../analytics/PageViewEvent";
+import { getYouTubeThumbnail } from "../../lib/videoThumbnail";
 
 type ArtistRecord = Record<string, unknown>;
 
@@ -312,12 +313,11 @@ export default function PublicArtistPage({
             </div>
             <div className="mt-6 grid gap-6 lg:grid-cols-2">
               {content.videos.length ? (
-                content.videos.map((video) => (
-                  <div key={video.title} className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                content.videos.map((video) => {
+                  const thumbnailUrl = video.thumbnailUrl || getYouTubeThumbnail(video.videoUrl);
+                  return <div key={video.title} className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
                     <div className="relative aspect-video overflow-hidden rounded-xl border border-white/10 bg-white/[0.04]">
-                      {video.thumbnailUrl ? (
-                        <Image src={video.thumbnailUrl} alt={video.title} fill className="object-cover" unoptimized />
-                      ) : null}
+                      {thumbnailUrl ? <Image src={thumbnailUrl} alt={video.title} fill className="object-cover" unoptimized /> : null}
                     </div>
                     <p className="mt-4 text-lg font-semibold text-white">{video.title}</p>
                     {video.description ? <p className="mt-2 text-sm leading-7 text-fog">{video.description}</p> : null}
@@ -332,8 +332,8 @@ export default function PublicArtistPage({
                         <ExternalLink className="h-4 w-4" />
                       </a>
                     ) : null}
-                  </div>
-                ))
+                  </div>;
+                })
               ) : (
                 <p className="text-fog">No videos added yet.</p>
               )}

@@ -16,6 +16,8 @@ export type Env = {
   DB: D1Database;
   MEDIA_BUCKET: R2Bucket;
   JWT_SECRET: string;
+  POSTMARK_SERVER_TOKEN: string;
+  POSTMARK_FROM_EMAIL: string;
   ADMIN_EMAIL: string;
   ADMIN_PASSWORD: string;
   STRIPE_SECRET_KEY: string;

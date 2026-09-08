@@ -2,11 +2,9 @@ import Image from "next/image";
 import Link from "next/link";
 import Container from "../layout/Container";
 import { Card } from "../ui/card";
-import { editorialArtistProfiles } from "../../lib/artistProfiles";
+type FeaturedArtist = { id: number; name: string; slug: string; genre: string; image: string };
 
-const artists = editorialArtistProfiles.filter((artist) => artist.sampleTrack).slice(0, 4);
-
-export default function ArtistGrid() {
+export default function ArtistGrid({ artists }: { artists: FeaturedArtist[] }) {
   return (
     <section className="py-20">
       <Container>
@@ -23,7 +21,7 @@ export default function ArtistGrid() {
               key={artist.slug}
               className="rounded-xl bg-white/5 p-4 backdrop-blur transition duration-200 hover:-translate-y-1 hover:border-pink/40"
             >
-              <Link href={`/featured/${artist.slug}`}>
+              <Link href={`/artist/${artist.slug}`}>
                 <div className="relative aspect-[4/5] overflow-hidden rounded-xl border border-white/10">
                   <Image
                     src={artist.image}
@@ -36,7 +34,7 @@ export default function ArtistGrid() {
                 <div className="mt-4">
                   <h3 className="text-lg font-semibold text-white">{artist.name}</h3>
                   <span className="mt-2 inline-flex rounded-full border border-pink/30 bg-pink/10 px-3 py-1 text-xs uppercase tracking-[0.16em] text-fog">
-                    {artist.genres[0]}
+                    {artist.genre}
                   </span>
                   <div className="mt-4 flex items-center justify-between text-[11px] uppercase tracking-[0.18em] text-fog">
                     <span>View Artist</span>

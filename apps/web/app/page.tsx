@@ -4,10 +4,8 @@ import ArtistGrid from "../components/home/ArtistGrid";
 import LatestReleasesGrid from "../components/home/LatestReleasesGrid";
 import RadioNowPlayingCard from "../components/home/RadioNowPlayingCard";
 import ArtistSignupCTA from "../components/home/ArtistSignupCTA";
-import { getArtist, getArtistContent, getRadio } from "../lib/api";
-import { buildArtistFallback, mergeArtistRecordWithLivePreference } from "../lib/artistProfiles";
-import { mergeArtistPageContent } from "../lib/artistPageContent";
-import { artistAssets } from "../lib/assets";
+import ShareFullyOpen from "../components/share/ShareFullyOpen";
+import { getHome, getRadio } from "../lib/api";
 import { pageMetadata } from "../lib/seo";
 
 export const metadata = pageMetadata({ title: "Independent Music, Radio & Artists", description: "Discover independent artists across every genre, listen to Fully Open Radio, and give your music a public home.", path: "/" });
@@ -31,16 +29,13 @@ function parseTrack(raw: unknown, fallbackArtist?: string) {
 }
 
 export default async function Home() {
-  const [radio, stoneArtist, stoneContent] = await Promise.all([
+  const [radio, home] = await Promise.all([
     getRadio(),
-    getArtist("stone")
-      .then((entry) => mergeArtistRecordWithLivePreference(entry))
-      .catch(() => buildArtistFallback("stone")),
-    getArtistContent("stone").catch(() => null)
+    getHome()
   ]);
   const track = parseTrack(String(radio.nowPlaying ?? "Fully Open Radio"), String(radio.host ?? ""));
-  const mergedStoneContent = mergeArtistPageContent("stone", stoneArtist ?? {}, stoneContent);
-  const stoneHeroImage = artistAssets.stone.promoImage;
+  const featuredArtists = (home.featuredArtists ?? []) as Array<{ id: number; name: string; slug: string; genre: string; image: string }>;
+  const latestReleases = (home.latestReleases ?? []) as Array<{ id: number; artistName: string; title: string; artwork: string; audioUrl: string | null }>;
 
   return (
     <>
@@ -48,10 +43,11 @@ export default async function Home() {
       <div className="mt-20">
         <FeaturedRelease />
       </div>
-      <ArtistGrid />
-      <LatestReleasesGrid stoneImage={stoneHeroImage} />
-      <RadioNowPlayingCard artist={track.artist} title={track.title} />
+      <ArtistGrid artists={featuredArtists} />
+      <LatestReleasesGrid releases={latestReleases} />
+      <ShareFullyOpen variant="homepage" />
       <ArtistSignupCTA />
+      <RadioNowPlayingCard artist={track.artist} title={track.title} />
     </>
   );
 }

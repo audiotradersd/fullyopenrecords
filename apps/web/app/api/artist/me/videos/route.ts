@@ -16,3 +16,14 @@ export async function POST(request: Request) {
   const payload = await response.json();
   return NextResponse.json(payload, { status: response.status });
 }
+
+export async function DELETE(request: Request) {
+  const token = await getSessionToken();
+  if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const body = (await request.json()) as { id?: number };
+  if (!body.id) return NextResponse.json({ error: "Video id required" }, { status: 400 });
+
+  const response = await apiProxy(`/artist/me/videos/${body.id}`, { method: "DELETE" }, token);
+  const payload = await response.json();
+  return NextResponse.json(payload, { status: response.status });
+}

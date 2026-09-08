@@ -8,12 +8,13 @@ import {
   productSchema,
   releaseSchema
 } from "@fully-open-records/api/src/contracts";
-import { artists, favouriteSongs, flowEvents, media, sessions, songs, trackingItems, users } from "@fully-open-records/db/src/schema";
-import { count, desc, eq, like } from "drizzle-orm";
+import { artists, editorialSlotItems, editorialSlots, favouriteSongs, flowEvents, media, sessions, songs, trackingItems, users } from "@fully-open-records/db/src/schema";
+import { asc, count, desc, eq, inArray, isNotNull, like } from "drizzle-orm";
 import { Hono } from "hono";
 import { getDb } from "../lib/db";
 import { signAdminJwt } from "../lib/auth";
 import { fallbackContent } from "../lib/content";
+import { resolveArtistImage } from "../lib/artist-images";
 import { requireAdmin } from "../middleware/auth";
 import type { AppVariables, Env } from "../types";
 
@@ -57,6 +58,62 @@ adminRouter.post("/login", zValidator("json", loginSchema), async (c) => {
 });
 
 adminRouter.use("/*", requireAdmin);
+
+const homepageSlotRules = {
+  home_featured_artists: { itemType: "artist", count: 4 },
+  home_latest_releases: { itemType: "song", count: 3 }
+} as const;
+
+adminRouter.get("/editorial/home", async (c) => {
+  const db = getDb(c.env);
+  const slotKeys = Object.keys(homepageSlotRules) as Array<keyof typeof homepageSlotRules>;
+  const [slotRows, artistCandidates, songCandidates, imageMedia] = await Promise.all([
+    db.select().from(editorialSlots).where(inArray(editorialSlots.slotKey, slotKeys)),
+    db.select({ id: artists.id, name: artists.name, slug: artists.slug, image: artists.profileImage, heroImage: artists.heroImage, genres: artists.genres }).from(artists).orderBy(asc(artists.name)),
+    db.select({ id: songs.id, title: songs.title, artistName: songs.artistName, artistId: songs.artistId, audioUrl: songs.audioUrl, image: songs.coverImage, artistImage: artists.profileImage, heroImage: artists.heroImage, artistSlug: artists.slug }).from(songs).leftJoin(artists, eq(songs.artistId, artists.id)).where(isNotNull(songs.audioUrl)).orderBy(desc(songs.id)),
+    db.select({ id: media.id, fileName: media.fileName, url: media.url }).from(media).where(like(media.mimeType, "image/%")).orderBy(desc(media.id)).limit(150)
+  ]);
+  const slotIds = slotRows.map((slot) => slot.id);
+  const items = slotIds.length ? await db.select().from(editorialSlotItems).where(inArray(editorialSlotItems.slotId, slotIds)).orderBy(asc(editorialSlotItems.sortOrder)) : [];
+  return c.json({
+    artists: artistCandidates.map((artist) => ({ ...artist, image: resolveArtistImage(artist.slug, artist.image, artist.heroImage) })),
+    songs: songCandidates.map((song) => ({ ...song, image: song.image || resolveArtistImage(song.artistSlug, song.artistImage, song.heroImage) })),
+    images: imageMedia,
+    slots: Object.fromEntries(slotKeys.map((key) => {
+      const slot = slotRows.find((entry) => entry.slotKey === key);
+      return [key, items.filter((item) => item.slotId === slot?.id).map((item) => ({ itemId: item.itemId, artistId: item.artistId, customImage: item.customImage ?? "" }))];
+    }))
+  });
+});
+
+adminRouter.put("/editorial/home/:slotKey", async (c) => {
+  const slotKey = c.req.param("slotKey") as keyof typeof homepageSlotRules;
+  const rule = homepageSlotRules[slotKey];
+  if (!rule) return c.json({ error: "Unknown homepage slot" }, 404);
+  const payload = await c.req.json<{ items?: Array<{ itemId?: unknown; customImage?: unknown }> }>();
+  if (!Array.isArray(payload.items) || payload.items.length !== rule.count) return c.json({ error: `Select exactly ${rule.count} ${rule.itemType === "artist" ? "artists" : "songs"}.` }, 400);
+  const itemIds = payload.items.map((item) => Number(item.itemId));
+  if (itemIds.some((id) => !Number.isInteger(id)) || new Set(itemIds).size !== itemIds.length) return c.json({ error: "Selections must be unique." }, 400);
+  const db = getDb(c.env);
+  const candidates = rule.itemType === "artist"
+    ? await db.select({ id: artists.id, artistId: artists.id, slug: artists.slug, profileImage: artists.profileImage, heroImage: artists.heroImage }).from(artists).where(inArray(artists.id, itemIds))
+    : await db.select({ id: songs.id, artistId: songs.artistId, coverImage: songs.coverImage, artistSlug: artists.slug, artistProfileImage: artists.profileImage, artistHeroImage: artists.heroImage }).from(songs).leftJoin(artists, eq(songs.artistId, artists.id)).where(inArray(songs.id, itemIds));
+  if (candidates.length !== rule.count) return c.json({ error: "One or more selected items no longer exist." }, 400);
+  let [slot] = await db.select().from(editorialSlots).where(eq(editorialSlots.slotKey, slotKey)).limit(1);
+  if (!slot) [slot] = await db.insert(editorialSlots).values({ slotKey, title: slotKey, active: true }).returning();
+  await db.delete(editorialSlotItems).where(eq(editorialSlotItems.slotId, slot.id));
+  await db.insert(editorialSlotItems).values(payload.items.map((item, sortOrder) => {
+    const candidate: any = candidates.find((entry) => entry.id === itemIds[sortOrder]);
+    const suppliedImage = typeof item.customImage === "string" && item.customImage.trim() ? item.customImage.trim() : "";
+    const defaultImage = candidate && rule.itemType === "artist"
+      ? resolveArtistImage(candidate.slug, candidate.profileImage, candidate.heroImage)
+      : candidate && rule.itemType === "song"
+        ? candidate.coverImage || resolveArtistImage(candidate.artistSlug, candidate.artistProfileImage, candidate.artistHeroImage)
+        : "";
+    return { slotId: slot.id, itemType: rule.itemType, itemId: itemIds[sortOrder], artistId: candidate?.artistId ?? null, sortOrder, customImage: suppliedImage || defaultImage || null, active: true };
+  }));
+  return c.json({ ok: true });
+});
 
 adminRouter.get("/artists", (c) => c.json(fallbackContent.artists));
 adminRouter.post("/artists", zValidator("json", artistSchema), (c) => {
@@ -279,13 +336,15 @@ adminRouter.post("/media", async (c) => {
     return c.json({ error: "File required" }, 400);
   }
 
-  const key = `${Date.now()}-${file.name}`;
+  const key = `editorial/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "-")}`;
   await c.env.MEDIA_BUCKET.put(key, await file.arrayBuffer(), {
     httpMetadata: { contentType: file.type }
   });
 
-  const publicUrl = `${c.env.R2_PUBLIC_URL ?? ""}/${key}`;
-  return c.json({ key, url: publicUrl });
+  const publicUrl = `${c.env.R2_PUBLIC_URL || new URL(c.req.url).origin}/media/${key}`;
+  const db = getDb(c.env);
+  await db.insert(media).values({ fileName: file.name, mimeType: file.type || "application/octet-stream", url: publicUrl, r2Key: key });
+  return c.json({ key, url: publicUrl }, 201);
 });
 
 adminRouter.get("/tracking", async (c) => {

@@ -2,12 +2,18 @@ import {
   artists,
   editorialSlotItems,
   editorialSlots,
-  releases
+  releases,
+  songs
 } from "@fully-open-records/db/src/schema";
-import { and, asc, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, isNotNull } from "drizzle-orm";
+import { alias } from "drizzle-orm/sqlite-core";
+import { resolveArtistImage } from "./artist-images";
 import { fallbackContent } from "./content";
 import { getDb } from "./db";
 import type { Env } from "../types";
+
+const itemArtists = alias(artists, "home_item_artists");
+const songArtists = alias(artists, "home_song_artists");
 
 type HomeArtist = {
   id: number;
@@ -24,6 +30,7 @@ type HomeRelease = {
   description: string;
   artwork: string;
   href: string;
+  audioUrl: string | null;
 };
 
 async function getSlotItems(env: Env, slotKey: string) {
@@ -40,26 +47,37 @@ async function getSlotItems(env: Env, slotKey: string) {
       customDescription: editorialSlotItems.customDescription,
       customImage: editorialSlotItems.customImage,
       customHref: editorialSlotItems.customHref,
-      artistName: artists.name,
-      artistSlug: artists.slug,
-      artistHeroImage: artists.heroImage,
-      artistGenres: artists.genres,
+      artistName: itemArtists.name,
+      artistSlug: itemArtists.slug,
+      artistProfileImage: itemArtists.profileImage,
+      artistHeroImage: itemArtists.heroImage,
+      artistGenres: itemArtists.genres,
       releaseTitle: releases.title,
       releaseDescription: releases.description,
       releaseArtwork: releases.artwork,
-      releaseId: releases.id
+      releaseId: releases.id,
+      songTitle: songs.title,
+      songAudioUrl: songs.audioUrl,
+      songCoverImage: songs.coverImage,
+      songArtistName: songs.artistName,
+      songArtistSlug: songArtists.slug,
+      songArtistProfileImage: songArtists.profileImage,
+      songArtistHeroImage: songArtists.heroImage,
+      songId: songs.id
     })
     .from(editorialSlotItems)
     .innerJoin(editorialSlots, eq(editorialSlotItems.slotId, editorialSlots.id))
-    .leftJoin(artists, eq(editorialSlotItems.artistId, artists.id))
+    .leftJoin(itemArtists, eq(editorialSlotItems.artistId, itemArtists.id))
     .leftJoin(releases, eq(editorialSlotItems.itemId, releases.id))
+    .leftJoin(songs, eq(editorialSlotItems.itemId, songs.id))
+    .leftJoin(songArtists, eq(songs.artistId, songArtists.id))
     .where(and(eq(editorialSlots.slotKey, slotKey), eq(editorialSlotItems.active, true), eq(editorialSlots.active, true)))
     .orderBy(asc(editorialSlotItems.sortOrder), asc(editorialSlotItems.id));
 }
 
 export async function getHomePayload(env: Env) {
   const db = getDb(env);
-  const [featuredReleaseItems, featuredArtistItems, latestReleaseItems, featuredArtistsFallback, latestReleasesFallback] =
+  const [featuredReleaseItems, featuredArtistItems, latestReleaseItems, featuredArtistsFallback, releaseFallback, latestSongsFallback] =
     await Promise.all([
       getSlotItems(env, "home_featured_release"),
       getSlotItems(env, "home_featured_artists"),
@@ -73,6 +91,7 @@ export async function getHomePayload(env: Env) {
         artistId: releases.artistId,
         artistName: artists.name
       }).from(releases).innerJoin(artists, eq(releases.artistId, artists.id)).orderBy(desc(releases.releaseDate)).limit(3)
+      ,db.select({ id: songs.id, title: songs.title, audioUrl: songs.audioUrl, artistName: songs.artistName, artwork: artists.heroImage, artistSlug: artists.slug }).from(songs).leftJoin(artists, eq(songs.artistId, artists.id)).where(isNotNull(songs.audioUrl)).orderBy(desc(songs.id)).limit(3)
     ]);
 
   const featuredRelease = featuredReleaseItems[0]
@@ -91,22 +110,23 @@ export async function getHomePayload(env: Env) {
           featuredReleaseItems[0].releaseDescription ??
           "Curated from the artist layer by Fully Open staff.",
         artwork:
-          featuredReleaseItems[0].customImage ??
-          featuredReleaseItems[0].releaseArtwork ??
-          featuredReleaseItems[0].artistHeroImage ??
+          featuredReleaseItems[0].customImage ||
+          featuredReleaseItems[0].releaseArtwork ||
+          resolveArtistImage(featuredReleaseItems[0].artistSlug, featuredReleaseItems[0].artistProfileImage, featuredReleaseItems[0].artistHeroImage) ||
           "",
         href:
           featuredReleaseItems[0].customHref ??
           "/releases"
       }
-    : latestReleasesFallback[0]
+    : releaseFallback[0]
       ? {
-          id: latestReleasesFallback[0].id,
-          artistName: latestReleasesFallback[0].artistName,
-          title: latestReleasesFallback[0].title,
-          description: latestReleasesFallback[0].description,
-          artwork: latestReleasesFallback[0].artwork,
-          href: "/releases"
+          id: releaseFallback[0].id,
+          artistName: releaseFallback[0].artistName,
+          title: releaseFallback[0].title,
+          description: releaseFallback[0].description,
+          artwork: releaseFallback[0].artwork,
+        href: "/releases",
+        audioUrl: null
         }
       : {
           id: 0,
@@ -114,7 +134,8 @@ export async function getHomePayload(env: Env) {
           title: "Featured Release",
           description: "Curated selections from the label.",
           artwork: "",
-          href: "/releases"
+        href: "/releases",
+        audioUrl: null
         };
 
   const featuredArtists: HomeArtist[] =
@@ -126,36 +147,35 @@ export async function getHomePayload(env: Env) {
           genre:
             item.customSubtitle ??
             ((item.artistGenres as string[] | null)?.[0] ?? "Underground"),
-          image: item.customImage ?? item.artistHeroImage ?? ""
+          image: item.customImage || resolveArtistImage(item.artistSlug, item.artistProfileImage, item.artistHeroImage)
         }))
       : (featuredArtistsFallback.length ? featuredArtistsFallback : fallbackContent.artists).slice(0, 4).map((artist) => ({
           id: artist.id,
           name: artist.name,
           slug: artist.slug,
           genre: artist.genres?.[0] ?? "Underground",
-          image: artist.heroImage
+          image: resolveArtistImage(artist.slug, "profileImage" in artist ? artist.profileImage : null, artist.heroImage)
         }));
 
   const latestReleases: HomeRelease[] =
     latestReleaseItems.length > 0
       ? latestReleaseItems.slice(0, 3).map((item) => ({
-          id: item.releaseId ?? item.slotItemId,
-          artistName: item.customSubtitle ?? item.artistName ?? "Artist",
-          title: item.customTitle ?? item.releaseTitle ?? "Release",
-          description: item.customDescription ?? item.releaseDescription ?? "",
-          artwork: item.customImage ?? item.releaseArtwork ?? item.artistHeroImage ?? "",
-          href: item.customHref ?? "/releases"
+          id: item.songId ?? item.slotItemId,
+          artistName: item.customSubtitle ?? item.songArtistName ?? item.artistName ?? "Artist",
+          title: item.customTitle ?? item.songTitle ?? "Release",
+          description: item.customDescription ?? "",
+          artwork: item.customImage || item.songCoverImage || resolveArtistImage(item.songArtistSlug ?? item.artistSlug, item.songArtistProfileImage ?? item.artistProfileImage, item.songArtistHeroImage ?? item.artistHeroImage),
+          href: item.customHref ?? (item.songArtistSlug ?? item.artistSlug ? `/artist/${item.songArtistSlug ?? item.artistSlug}` : "/releases"),
+          audioUrl: item.songAudioUrl ?? null
         }))
-      : (latestReleasesFallback.length ? latestReleasesFallback : fallbackContent.releases.map((release) => ({
-          ...release,
-          artistName: fallbackContent.artists.find((artist) => artist.id === release.artistId)?.name ?? "Artist"
-        }))).slice(0, 3).map((release) => ({
-          id: release.id,
-          artistName: release.artistName,
-          title: release.title,
-          description: release.description,
-          artwork: release.artwork,
-          href: "/releases"
+      : latestSongsFallback.slice(0, 3).map((song) => ({
+          id: song.id,
+          artistName: song.artistName,
+          title: song.title,
+          description: "",
+          artwork: song.artwork ?? "",
+          href: song.artistSlug ? `/artist/${song.artistSlug}` : "/releases",
+          audioUrl: song.audioUrl
         }));
 
   return {

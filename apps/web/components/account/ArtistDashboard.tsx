@@ -1,13 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useAuth } from "../auth/AuthProvider";
 import Container from "../layout/Container";
 import { Button } from "../ui/button";
+import { getYouTubeThumbnail } from "../../lib/videoThumbnail";
 import { Card } from "../ui/card";
 import StreamButton from "../audio/StreamButton";
+import ShareFullyOpen from "../share/ShareFullyOpen";
 
 const TRACK_VERSION_TYPES = ["First Jam", "Song Idea", "Demo", "Rehearsal", "Live Recording", "Home Recording", "Studio Recording", "Rough Mix", "Mix", "Pre-Master", "Master", "Final Master"] as const;
 
@@ -191,6 +193,7 @@ export default function ArtistDashboard() {
   const [albumTrackDraft, setAlbumTrackDraft] = useState<ContentData["songs"]>([]);
   const [draggedTrackId, setDraggedTrackId] = useState<number | null>(null);
   const [selectedTrackIds, setSelectedTrackIds] = useState<number[]>([]);
+  const latestLoadRequest = useRef(0);
   const [albumDraft, setAlbumDraft] = useState<{ title: string; description: string }>({
     title: "",
     description: ""
@@ -205,15 +208,18 @@ export default function ArtistDashboard() {
   const completedSeoChecks = seoChecks.filter(([, complete]) => complete).length;
 
   async function loadData() {
-    const [artistRes, contentRes] = await Promise.all([
+    const requestId = ++latestLoadRequest.current;
+    const [artistRes, contentRes, diaryRes] = await Promise.all([
       fetch("/api/artist/me", { cache: "no-store" }),
-      fetch("/api/artist/me/content", { cache: "no-store" })
+      fetch("/api/artist/me/content", { cache: "no-store" }),
+      fetch("/api/artist/me/track-versions", { cache: "no-store" })
     ]);
 
     const artistPayload = await artistRes.json();
     const contentPayload = await contentRes.json();
+    const diaryPayload = await diaryRes.json();
 
-    if (artistRes.ok) {
+    if (artistRes.ok && requestId === latestLoadRequest.current) {
       setDashboard(artistPayload);
       setProfile({
         name: artistPayload.artist.name ?? "",
@@ -235,7 +241,7 @@ export default function ArtistDashboard() {
       });
     }
 
-    if (contentRes.ok) {
+    if (contentRes.ok && requestId === latestLoadRequest.current) {
       setContent({
         albums: contentPayload.albums ?? [],
         songs: contentPayload.songs ?? [],
@@ -243,7 +249,7 @@ export default function ArtistDashboard() {
         photos: contentPayload.photos ?? [],
         gigs: contentPayload.gigs ?? [],
         press: contentPayload.press ?? [],
-        trackVersions: contentPayload.trackVersions ?? []
+        trackVersions: diaryRes.ok ? diaryPayload.trackVersions ?? [] : contentPayload.trackVersions ?? []
       });
     }
   }
@@ -472,9 +478,24 @@ export default function ArtistDashboard() {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ songId, versionType, audioUrl: uploadedAudio.url, duration: metadata.duration, notes: String(formData.get("notes") ?? ""), recordedAt: String(formData.get("recordedAt") ?? "") || null, photoUrls })
       });
-      const payload = await response.json();
+      const payload = await response.json() as { error?: string; version?: ContentData["trackVersions"][number] };
       setMessage(response.ok ? `${payload.version?.label ?? versionType} added to the recording diary.` : payload.error ?? "Version upload failed.");
-      if (response.ok) { setVersionSongId(null); await loadData(); }
+      if (response.ok && payload.version) {
+        // Add the new entry before refreshing so a transient content request failure
+        // never makes a successfully uploaded version appear to be missing.
+        setContent((current) => current
+          ? {
+              ...current,
+              trackVersions: [
+                ...current.trackVersions.filter((version) => version.id !== payload.version!.id),
+                payload.version!
+              ]
+            }
+          : current
+        );
+        setVersionSongId(null);
+        await loadData();
+      }
       void metadata;
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Version upload failed.");
@@ -814,6 +835,19 @@ export default function ArtistDashboard() {
       setUploadPercent(0);
       setMessage(error instanceof Error ? error.message : "Upload failed.");
     }
+  }
+
+  async function deleteMedia(kind: "photo" | "video", id: number, label: string) {
+    if (!window.confirm(`Delete ${label}? This cannot be undone.`)) return;
+
+    const response = await fetch(`/api/artist/me/${kind}s`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id })
+    });
+    const payload = await response.json();
+    setMessage(response.ok ? `${kind === "photo" ? "Photo" : "Video"} deleted.` : payload.error ?? "Delete failed.");
+    if (response.ok) await loadData();
   }
 
   async function addPress(formData: FormData) {
@@ -1273,6 +1307,8 @@ export default function ArtistDashboard() {
           </Card>
         </div>
 
+        <ShareFullyOpen variant="dashboard" />
+
         <div className="flex flex-wrap gap-2">
           {tabs.map((tab) => (
             <button
@@ -1656,9 +1692,9 @@ export default function ArtistDashboard() {
                     </div>
                     <div className="mt-5 border-t border-white/10 pt-4">
                       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-pink">Recording diary</p>
-                      {(content.trackVersions ?? []).filter((version) => version.songId === song.id).length ? (
+                      {(content.trackVersions ?? []).filter((version) => Number(version.songId) === Number(song.id)).length ? (
                         <div className="mt-3 space-y-3">
-                          {(content.trackVersions ?? []).filter((version) => version.songId === song.id).map((version) => (
+                          {(content.trackVersions ?? []).filter((version) => Number(version.songId) === Number(song.id)).map((version) => (
                             <div key={version.id} className="rounded-xl border border-white/10 bg-black/10 p-4">
                               <div className="flex flex-wrap items-start justify-between gap-3"><div><p className="font-semibold text-white">{version.label}</p><p className="mt-1 text-xs text-fog">{formatDate(version.recordedAt || version.createdAt)} · uploaded {formatDate(version.createdAt)}</p></div><Button type="button" variant="outline" className="border-red-400/20 text-red-200" onClick={() => void deleteTrackVersion(version.id, version.label)}>Delete version</Button></div>
                               <div className="mt-3"><StreamButton audioUrl={version.audioUrl} label="Play version" pauseLabel="Pause" size="sm" trackTitle={`${song.title} — ${version.label}`} /></div>
@@ -1726,6 +1762,10 @@ export default function ArtistDashboard() {
                   <div key={photo.id} className="overflow-hidden rounded-xl border border-white/10 bg-white/[0.03]">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={photo.imageUrl} alt={photo.alt ?? ""} className="aspect-square w-full object-cover" />
+                    <div className="flex items-center justify-between gap-3 p-3">
+                      <p className="min-w-0 truncate text-sm text-fog">{photo.alt || "Untitled photo"}</p>
+                      <Button type="button" variant="outline" size="sm" onClick={() => void deleteMedia("photo", photo.id, "this photo")}>Delete</Button>
+                    </div>
                   </div>
                 )) : <p className="text-fog">No photos uploaded yet.</p>}
               </div>
@@ -1747,13 +1787,14 @@ export default function ArtistDashboard() {
                 {content?.videos.length ? content.videos.map((video) => (
                   <div key={video.id} className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
                     <p className="text-white">{video.title}</p>
-                    {video.thumbnailUrl ? (
+                    {video.thumbnailUrl || getYouTubeThumbnail(video.videoUrl) ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={video.thumbnailUrl} alt="" className="mt-3 h-32 w-full rounded-xl object-cover" />
+                      <img src={video.thumbnailUrl || getYouTubeThumbnail(video.videoUrl) || ""} alt="" className="mt-3 h-32 w-full rounded-xl object-cover" />
                     ) : null}
                     <a href={video.videoUrl ?? "#"} target="_blank" rel="noreferrer" className="mt-3 inline-block text-xs uppercase tracking-[0.18em] text-fog">
                       View video
                     </a>
+                    <Button type="button" variant="outline" size="sm" className="mt-3 ml-3" onClick={() => void deleteMedia("video", video.id, `“${video.title}”`)}>Delete</Button>
                   </div>
                 )) : <p className="text-fog">No videos added yet.</p>}
               </div>

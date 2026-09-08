@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next";
 import { getApiBaseUrl } from "../lib/server-api";
 import { siteConfig } from "../lib/site";
 
-const staticPaths = ["", "/about", "/artists", "/radio", "/get-heard", "/releases", "/store", "/faq", "/contact"];
+const staticPaths = ["", "/about", "/artists", "/radio", "/get-heard", "/track-version-control", "/releases", "/store", "/faq", "/contact"];
 const excludedArtistSlugs = new Set(["admin-test-artist"]);
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {

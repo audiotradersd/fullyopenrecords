@@ -43,3 +43,7 @@ export function getRadio() {
 export function getRadioHistory() {
   return apiFetch<Array<Record<string, unknown>>>("/radio/history");
 }
+
+export function getHome() {
+  return apiFetch<Record<string, unknown>>("/home");
+}

@@ -12,13 +12,6 @@ type RadioPayload = {
   host?: string;
 };
 
-const EQ_BARS = [
-  12, 18, 26, 34, 20, 28, 40, 22,
-  16, 30, 24, 38, 18, 32, 44, 26,
-  14, 22, 36, 28, 18, 34, 24, 42,
-  16, 26, 38, 20, 30, 24, 40, 18
-] as const;
-
 function parseTrack(raw: unknown, fallbackArtist?: string) {
   const value = typeof raw === "string" ? raw : String(raw ?? "");
 
@@ -36,27 +29,6 @@ function parseTrack(raw: unknown, fallbackArtist?: string) {
   };
 }
 
-function FallbackEq({ active }: { active: boolean }) {
-  return (
-    <div className="flex h-[52px] w-full items-end justify-between gap-[2px]">
-      {EQ_BARS.map((height, index) => (
-        <span
-          key={`${height}-${index}`}
-          className="min-w-0 flex-1 rounded-full bg-[linear-gradient(180deg,rgba(255,255,255,1),rgba(255,186,220,0.98),rgba(255,93,177,0.95),rgba(209,74,139,0.92))] shadow-[0_0_14px_rgba(255,93,177,0.85)]"
-          style={{
-            height: active ? `${height}px` : "8px",
-            opacity: active ? 1 : 0.45,
-            transformOrigin: "bottom center",
-            animation: active
-              ? `equalizerPulse ${680 + index * 70}ms ease-in-out ${index * 90}ms infinite alternate`
-              : "none"
-          }}
-        />
-      ))}
-    </div>
-  );
-}
-
 function GraphicEq({
   active,
   analyzerReady,
@@ -66,14 +38,11 @@ function GraphicEq({
   analyzerReady: boolean;
   containerRef: RefObject<HTMLDivElement>;
 }) {
+  if (!active) return null;
+
   return (
     <div className="hidden min-w-[360px] flex-1 justify-center md:flex lg:min-w-[520px]" aria-hidden="true">
-      <div className="relative h-[60px] w-full max-w-[600px] overflow-hidden rounded-xl border border-pink/25 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.02))] px-2 py-1 shadow-[0_0_24px_rgba(255,93,177,0.18)]">
-        {!analyzerReady ? (
-          <div className="absolute inset-1">
-            <FallbackEq active={active} />
-          </div>
-        ) : null}
+      <div className="relative h-[60px] w-full max-w-[600px] overflow-hidden">
         <div
           ref={containerRef}
           className={`relative z-[1] h-full w-full origin-bottom scale-y-[3.8] transition-opacity duration-300 ${analyzerReady ? "opacity-100" : "opacity-0"}`}
@@ -286,7 +255,14 @@ export default function RadioPlayerBar() {
         <div className="min-w-0 flex-1">
           <p className="font-meta text-[10px] uppercase tracking-[0.26em] text-fog">Now Playing</p>
           <div className="mt-1 flex min-w-0 items-center gap-3">
-            <div className="hidden h-10 w-10 shrink-0 rounded-lg bg-[linear-gradient(135deg,#3A1B5C,#D14A8B)] md:block" />
+            <div className="relative hidden h-10 w-10 shrink-0 md:block" aria-hidden="true">
+              <div className={`absolute inset-0 rounded-full border border-white/15 bg-[repeating-radial-gradient(circle_at_center,#090a12_0_3px,#25202e_4px,#080911_5px,#080911_7px)] shadow-[inset_0_0_0_5px_rgba(0,0,0,0.34),0_2px_8px_rgba(0,0,0,0.42)] ${isPlaying ? "animate-[spin_2.4s_linear_infinite]" : ""}`}>
+                <span className="absolute left-1/2 top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/40 bg-[#69b5f5] shadow-[0_0_6px_rgba(105,181,245,0.8)]" />
+              </div>
+              <span className={`absolute -right-1 top-0 h-[21px] w-px origin-top bg-[#c8d7e8] shadow-[0_0_3px_rgba(255,255,255,0.7)] transition-transform duration-300 ${isPlaying ? "-rotate-[35deg]" : "-rotate-[58deg]"}`}>
+                <span className="absolute -bottom-1 -left-1 h-2 w-2 rounded-full bg-[#dbe8f4] shadow-[0_0_3px_rgba(255,255,255,0.65)]" />
+              </span>
+            </div>
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold text-white">{track.artist}</p>
               <p className="truncate text-sm text-fog">{track.title}</p>

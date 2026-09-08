@@ -7,6 +7,7 @@ const footerLinks = [
   ["Radio", "/radio"],
   ["Artists", "/artists"],
   ["Releases", "/releases"],
+  ["Track Version Control", "/track-version-control"],
   ["Get Heard", "/get-heard"]
 ] as const;
 

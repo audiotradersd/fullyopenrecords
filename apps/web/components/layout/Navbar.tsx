@@ -4,6 +4,8 @@ import Image from "next/image";
 import Link from "next/link";
 import type { Route } from "next";
 import { usePathname } from "next/navigation";
+import { Menu, X } from "lucide-react";
+import { useState } from "react";
 import Container from "./Container";
 import { Button } from "../ui/button";
 import { useAuth } from "../auth/AuthProvider";
@@ -20,6 +22,7 @@ const links = [
 export default function Navbar() {
   const pathname = usePathname();
   const { user, loading, openAuth, logout } = useAuth();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
     <header className="sticky top-0 z-50 border-b border-white/10 bg-[rgba(4,2,10,0.78)] backdrop-blur-xl">
@@ -91,7 +94,7 @@ export default function Navbar() {
             </div>
           </div>
 
-          <div className="md:hidden">
+          <div className="flex items-center gap-2 md:hidden">
             {user ? (
               user.accountType === "artist" ? (
                 <a href="/artist/dashboard">
@@ -107,8 +110,30 @@ export default function Navbar() {
                 <Button size="sm">Join</Button>
               </Link>
             )}
+            <Button type="button" variant="outline" aria-label={mobileMenuOpen ? "Close navigation menu" : "Open navigation menu"} aria-expanded={mobileMenuOpen} onClick={() => setMobileMenuOpen((open) => !open)} className="h-9 w-9 p-0">
+              {mobileMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+            </Button>
           </div>
         </div>
+
+        {mobileMenuOpen ? (
+          <div className="border-t border-white/10 py-4 md:hidden">
+            <nav className="grid gap-1" aria-label="Mobile navigation">
+              {links.map(([label, href]) => {
+                const active = pathname === href || pathname.startsWith(`${href}/`);
+                return <Link key={href} href={href} onClick={() => setMobileMenuOpen(false)} className={`rounded-lg px-4 py-3 text-sm uppercase tracking-[0.16em] transition ${active ? "bg-white/[0.08] text-white" : "text-fog hover:bg-white/[0.05] hover:text-white"}`}>{label}</Link>;
+              })}
+            </nav>
+            <div className="mt-4 grid grid-cols-2 gap-3 border-t border-white/10 pt-4">
+              <Link href="/radio" onClick={() => setMobileMenuOpen(false)}><Button className="w-full">Listen Live</Button></Link>
+              {loading ? null : user ? (
+                <Button variant="outline" onClick={() => { setMobileMenuOpen(false); void logout(); }} className="w-full">Log out</Button>
+              ) : (
+                <Button variant="outline" onClick={() => { setMobileMenuOpen(false); openAuth("login"); }} className="w-full">Log in</Button>
+              )}
+            </div>
+          </div>
+        ) : null}
       </Container>
     </header>
   );

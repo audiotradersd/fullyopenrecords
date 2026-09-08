@@ -47,7 +47,9 @@ import { fallbackContent } from "../lib/content";
 import { generateRandomToken, hashPassword, hashSessionToken, SESSION_COOKIE_NAME, SESSION_MAX_AGE_SECONDS, verifyPassword } from "../lib/auth";
 import { getDb } from "../lib/db";
 import { logFlowEvent } from "../lib/events";
+import { sendAccountWelcomeEmail } from "../lib/email";
 import { getRadioStatus } from "../lib/radio";
+import { getHomePayload } from "../lib/home";
 import { getStripe } from "../lib/stripe";
 import { rateLimit } from "../middleware/rate-limit";
 import { optionalUser, requireArtist, requireUser } from "../middleware/auth";
@@ -575,6 +577,8 @@ async function serveMediaObject(c: Parameters<typeof setCookie>[0]) {
 
 publicRouter.on(["GET", "HEAD"], "/media/*", serveMediaObject);
 
+publicRouter.get("/home", async (c) => c.json(await getHomePayload(c.env)));
+
 publicRouter.post("/auth/register", rateLimit, zValidator("json", registerSchema), async (c) => {
   try {
     const payload = c.req.valid("json");
@@ -662,6 +666,8 @@ publicRouter.post("/auth/register", rateLimit, zValidator("json", registerSchema
       .from(artists)
       .where(eq(artists.userId, user.id))
       .limit(1);
+
+    c.executionCtx.waitUntil(sendAccountWelcomeEmail(c.env, { email: user.email, username: user.username }));
 
     return c.json({
       sessionToken,
@@ -1404,6 +1410,58 @@ publicRouter.post("/artist/me/photos", requireArtist, zValidator("json", photoSc
   return c.json({ photo: created[0] }, 201);
 });
 
+publicRouter.delete("/artist/me/photos/:id", requireArtist, async (c) => {
+  const db = getDb(c.env);
+  const user = c.get("user");
+  const photoId = Number(c.req.param("id"));
+  const [artist] = await db.select().from(artists).where(eq(artists.userId, user.id)).limit(1);
+
+  if (!artist) return c.json({ error: "Artist profile not found" }, 404);
+
+  const [photo] = await db
+    .select()
+    .from(photos)
+    .where(and(eq(photos.id, photoId), eq(photos.artistId, artist.id)))
+    .limit(1);
+
+  if (!photo) return c.json({ error: "Photo not found" }, 404);
+
+  const key = getManagedMediaKey(photo.imageUrl, c.req.url);
+  if (key) {
+    await c.env.MEDIA_BUCKET.delete(key).catch(() => undefined);
+    await db.delete(media).where(eq(media.r2Key, key));
+  }
+  await db.delete(photos).where(eq(photos.id, photoId));
+  await logFlowEvent(c.env, c.req.raw, "artist.photo.deleted", { user, artistId: artist.id, meta: { photoId } });
+  return c.json({ success: true, deletedId: photoId });
+});
+
+publicRouter.delete("/artist/me/videos/:id", requireArtist, async (c) => {
+  const db = getDb(c.env);
+  const user = c.get("user");
+  const videoId = Number(c.req.param("id"));
+  const [artist] = await db.select().from(artists).where(eq(artists.userId, user.id)).limit(1);
+
+  if (!artist) return c.json({ error: "Artist profile not found" }, 404);
+
+  const [video] = await db
+    .select()
+    .from(videos)
+    .where(and(eq(videos.id, videoId), eq(videos.artistId, artist.id)))
+    .limit(1);
+
+  if (!video) return c.json({ error: "Video not found" }, 404);
+
+  const key = getManagedMediaKey(video.thumbnailUrl, c.req.url);
+  if (key) {
+    await c.env.MEDIA_BUCKET.delete(key).catch(() => undefined);
+    await db.delete(media).where(eq(media.r2Key, key));
+  }
+  await db.delete(videos).where(eq(videos.id, videoId));
+  await logFlowEvent(c.env, c.req.raw, "artist.video.deleted", { user, artistId: artist.id, meta: { videoId, title: video.title } });
+  return c.json({ success: true, deletedId: videoId });
+});
+
 publicRouter.post("/artist/me/press", requireArtist, zValidator("json", pressSchema), async (c) => {
   const db = getDb(c.env);
   const user = c.get("user");
@@ -1465,6 +1523,35 @@ publicRouter.post("/artist/me/track-versions", requireArtist, zValidator("json",
   }
   await logFlowEvent(c.env, c.req.raw, "artist.track_version.created", { user, artistId: artist.id, meta: { songId: song.id, versionId: version.id, label: versionLabel(version.versionType, version.versionNumber) } });
   return c.json({ version: { ...version, label: versionLabel(version.versionType, version.versionNumber), photos: payload.photoUrls.map((imageUrl, sortOrder) => ({ imageUrl, sortOrder })) } }, 201);
+});
+
+publicRouter.get("/artist/me/track-versions", requireArtist, async (c) => {
+  const db = getDb(c.env);
+  const user = c.get("user");
+  const [artist] = await db.select().from(artists).where(eq(artists.userId, user.id)).limit(1);
+
+  if (!artist) return c.json({ error: "Artist profile not found" }, 404);
+
+  const rows = await db
+    .select({ version: trackVersions, songId: songs.id })
+    .from(trackVersions)
+    .innerJoin(songs, eq(trackVersions.songId, songs.id))
+    .where(eq(songs.artistId, artist.id))
+    .orderBy(asc(trackVersions.recordedAt), asc(trackVersions.createdAt), asc(trackVersions.id));
+  const versionIds = rows.map(({ version }) => version.id);
+  const versionPhotos = versionIds.length
+    ? await db.select().from(trackVersionPhotos).where(inArray(trackVersionPhotos.trackVersionId, versionIds)).orderBy(asc(trackVersionPhotos.sortOrder), asc(trackVersionPhotos.id))
+    : [];
+  const photosByVersion = new Map<number, typeof versionPhotos>();
+  for (const photo of versionPhotos) photosByVersion.set(photo.trackVersionId, [...(photosByVersion.get(photo.trackVersionId) ?? []), photo]);
+
+  return c.json({
+    trackVersions: rows.map(({ version }) => ({
+      ...version,
+      label: versionLabel(version.versionType, version.versionNumber),
+      photos: photosByVersion.get(version.id) ?? []
+    }))
+  });
 });
 
 publicRouter.put("/artist/me/track-versions/:id", requireArtist, zValidator("json", trackVersionUpdateSchema), async (c) => {

@@ -130,11 +130,10 @@ adminRouter.put("/editorial/artists/:slotKey", async (c) => {
   const payload = await c.req.json<{ items?: Array<Record<string, unknown>> }>(); const items = payload.items ?? [];
   if ((key === "artists_hero" && items.length !== 1) || (key === "artists_grid" && (items.length < 6 || items.length > 30))) return c.json({ error: key === "artists_hero" ? "Choose one hero artist track." : "Choose between 6 and 30 artists." }, 400);
   const ids = items.map((item) => Number(item.itemId)); if (ids.some((id) => !Number.isInteger(id)) || new Set(ids).size !== ids.length) return c.json({ error: "Selections must be unique." }, 400);
-  const db = getDb(c.env); const selectedSongs = await db.select({ id: songs.id, artistId: songs.artistId }).from(songs).where(inArray(songs.id, ids));
-  if (selectedSongs.length !== ids.length) return c.json({ error: "One or more selected tracks no longer exist." }, 400);
+  const db = getDb(c.env);
   let [slot] = await db.select().from(editorialSlots).where(eq(editorialSlots.slotKey, key)).limit(1); if (!slot) [slot] = await db.insert(editorialSlots).values({ slotKey: key, title: key, active: true }).returning();
   await db.delete(editorialSlotItems).where(eq(editorialSlotItems.slotId, slot.id));
-  await db.insert(editorialSlotItems).values(items.map((item, sortOrder) => { const song = selectedSongs.find((entry) => entry.id === ids[sortOrder]); return { slotId: slot.id, itemType: "song", itemId: ids[sortOrder], artistId: song?.artistId ?? null, sortOrder, customTitle: typeof item.customTitle === "string" ? item.customTitle : null, customSubtitle: typeof item.customSubtitle === "string" ? item.customSubtitle : null, customDescription: typeof item.customDescription === "string" ? item.customDescription : null, customImage: typeof item.customImage === "string" ? item.customImage : null, customHref: typeof item.customHref === "string" ? item.customHref : null, active: true }; }));
+  await db.insert(editorialSlotItems).values(items.map((item, sortOrder) => ({ slotId: slot.id, itemType: "song", itemId: ids[sortOrder], artistId: null, sortOrder, customTitle: typeof item.customTitle === "string" ? item.customTitle : null, customSubtitle: typeof item.customSubtitle === "string" ? item.customSubtitle : null, customDescription: typeof item.customDescription === "string" ? item.customDescription : null, customImage: typeof item.customImage === "string" ? item.customImage : null, customHref: typeof item.customHref === "string" ? item.customHref : null, active: true })));
   return c.json({ ok: true });
 });
 

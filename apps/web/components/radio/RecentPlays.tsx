@@ -14,7 +14,6 @@ export default function RecentPlays({ items }: { items: HistoryItem[] }) {
           <p className="text-xs uppercase tracking-[0.28em] text-fog">Recently Played</p>
           <h2 className="mt-2 text-2xl font-semibold text-white">Track History</h2>
         </div>
-        <p className="text-xs uppercase tracking-[0.18em] text-fog">Live from D1</p>
       </div>
 
       <div className="space-y-3">

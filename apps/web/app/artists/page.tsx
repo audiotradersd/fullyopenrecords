@@ -12,9 +12,10 @@ export const metadata = pageMetadata({ title: "Discover Independent Artists Acro
 
 export default async function ArtistsPage() {
   const editorial = await getArtistsEditorial().catch(() => null);
-  if (editorial?.hero && editorial.artists.length >= 6) {
+  if (editorial?.hero) {
     const hero = editorial.hero;
-    return <Section><h1 className="font-display text-5xl">Featured Artists</h1><div className="mt-10"><FeaturedArtistHero artist={{ slug: hero.artist.slug, name: hero.artist.name, backgroundImage: hero.backgroundImage, foregroundImage: hero.foregroundImage }} badge={hero.badge} genres={hero.artist.genres} description={hero.description} editorialNote={hero.editorialNote} featuredTrack={hero.track} /></div><div className="mt-12 grid gap-6 md:grid-cols-3">{editorial.artists.map((artist) => <ArtistCard key={artist.slug} artist={artist} />)}</div></Section>;
+    const grid = editorial.artists.length >= 6 ? editorial.artists : await getArtists().then((rows) => buildFeaturedArtistList(rows).filter((artist) => String(artist.slug) !== hero.artist.slug));
+    return <Section><h1 className="font-display text-5xl">Featured Artists</h1><div className="mt-10"><FeaturedArtistHero artist={{ slug: hero.artist.slug, name: hero.artist.name, backgroundImage: hero.backgroundImage, foregroundImage: hero.foregroundImage }} badge={hero.badge} genres={hero.artist.genres} description={hero.description} editorialNote={hero.editorialNote} featuredTrack={hero.track} /></div><div className="mt-12 grid gap-6 md:grid-cols-3">{grid.map((artist) => <ArtistCard key={artist.slug} artist={artist} />)}</div></Section>;
   }
   const [artists, heroArtistData, heroArtistContent] = await Promise.all([
     getArtists()

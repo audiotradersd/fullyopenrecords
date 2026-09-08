@@ -41,7 +41,7 @@ export async function getRadioStatus(env: Env) {
   if (env.RADIO_METADATA_URL) {
     try {
       const response = await fetch(env.RADIO_METADATA_URL, {
-        cf: { cacheTtl: 10, cacheEverything: true }
+        cf: { cacheTtl: 5, cacheEverything: true }
       });
 
       if (response.ok) {

@@ -1625,7 +1625,7 @@ publicRouter.post("/artist/me/media", requireArtist, async (c) => {
 publicRouter.get("/radio", async (c) => {
   try {
     const radio = await getRadioStatus(c.env);
-    c.header("Cache-Control", "public, max-age=30, s-maxage=60, stale-while-revalidate=300");
+    c.header("Cache-Control", "no-store, max-age=0");
     return c.json(radio);
   } catch (error) {
     console.error("radio route failed", error);

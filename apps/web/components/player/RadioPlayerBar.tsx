@@ -90,7 +90,7 @@ export default function RadioPlayerBar() {
     }
 
     void loadRadio();
-    const timer = window.setInterval(loadRadio, 60_000);
+    const timer = window.setInterval(loadRadio, 10_000);
     return () => {
       active = false;
       window.clearInterval(timer);

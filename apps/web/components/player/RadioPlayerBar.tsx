@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { Heart, Pause, Play } from "lucide-react";
 import { useAuth } from "../auth/AuthProvider";
 import { trackEvent } from "../../lib/analytics";
+import ForRecordPlayer from "./ForRecordPlayer";
 
 type RadioPayload = {
   streamUrl?: string;
@@ -255,14 +256,7 @@ export default function RadioPlayerBar() {
         <div className="min-w-0 flex-1">
           <p className="font-meta text-[10px] uppercase tracking-[0.26em] text-fog">Now Playing</p>
           <div className="mt-1 flex min-w-0 items-center gap-3">
-            <div className="relative hidden h-10 w-10 shrink-0 md:block" aria-hidden="true">
-              <div className={`absolute inset-0 rounded-full border border-white/15 bg-[repeating-radial-gradient(circle_at_center,#090a12_0_3px,#25202e_4px,#080911_5px,#080911_7px)] shadow-[inset_0_0_0_5px_rgba(0,0,0,0.34),0_2px_8px_rgba(0,0,0,0.42)] ${isPlaying ? "animate-[spin_2.4s_linear_infinite]" : ""}`}>
-                <span className="absolute left-1/2 top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/40 bg-[#69b5f5] shadow-[0_0_6px_rgba(105,181,245,0.8)]" />
-              </div>
-              <span className={`absolute -right-1 top-0 h-[21px] w-px origin-top bg-[#c8d7e8] shadow-[0_0_3px_rgba(255,255,255,0.7)] transition-transform duration-300 ${isPlaying ? "-rotate-[35deg]" : "-rotate-[58deg]"}`}>
-                <span className="absolute -bottom-1 -left-1 h-2 w-2 rounded-full bg-[#dbe8f4] shadow-[0_0_3px_rgba(255,255,255,0.65)]" />
-              </span>
-            </div>
+            <ForRecordPlayer playing={isPlaying} />
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold text-white">{track.artist}</p>
               <p className="truncate text-sm text-fog">{track.title}</p>

@@ -1,7 +1,7 @@
 import { Section } from "@fully-open-records/ui";
 import FeaturedArtistHero from "../../components/artists/FeaturedArtistHero";
 import { ArtistCard } from "../../components/Cards";
-import { getArtist, getArtistContent, getArtists } from "../../lib/api";
+import { getArtist, getArtistContent, getArtists, getArtistsEditorial } from "../../lib/api";
 import { mergeArtistPageContent } from "../../lib/artistPageContent";
 import { buildFeaturedArtistList, featuredArtistSlugs } from "../../lib/artistProfiles";
 import { featuredArtistHero } from "../../lib/featuredArtistHero";
@@ -11,6 +11,11 @@ import { artistAssets } from "../../lib/assets";
 export const metadata = pageMetadata({ title: "Discover Independent Artists Across Every Genre", description: "Meet independent artists from around the world. Fully Open connects listeners with music beyond genre gatekeeping.", path: "/artists" });
 
 export default async function ArtistsPage() {
+  const editorial = await getArtistsEditorial().catch(() => null);
+  if (editorial?.hero && editorial.artists.length >= 6) {
+    const hero = editorial.hero;
+    return <Section><h1 className="font-display text-5xl">Featured Artists</h1><div className="mt-10"><FeaturedArtistHero artist={{ slug: hero.artist.slug, name: hero.artist.name, backgroundImage: hero.backgroundImage, foregroundImage: hero.foregroundImage }} badge={hero.badge} genres={hero.artist.genres} description={hero.description} editorialNote={hero.editorialNote} featuredTrack={hero.track} /></div><div className="mt-12 grid gap-6 md:grid-cols-3">{editorial.artists.map((artist) => <ArtistCard key={artist.slug} artist={artist} />)}</div></Section>;
+  }
   const [artists, heroArtistData, heroArtistContent] = await Promise.all([
     getArtists()
       .then((rows) => buildFeaturedArtistList(rows))

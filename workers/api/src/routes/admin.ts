@@ -115,6 +115,29 @@ adminRouter.put("/editorial/home/:slotKey", async (c) => {
   return c.json({ ok: true });
 });
 
+adminRouter.get("/editorial/artists", async (c) => {
+  const db = getDb(c.env);
+  const [songRows, slots] = await Promise.all([
+    db.select({ id: songs.id, title: songs.title, artistId: songs.artistId, artistName: songs.artistName, audioUrl: songs.audioUrl, artistSlug: artists.slug, image: artists.profileImage, heroImage: artists.heroImage }).from(songs).leftJoin(artists, eq(songs.artistId, artists.id)).where(isNotNull(songs.audioUrl)).orderBy(asc(songs.artistName), asc(songs.title)),
+    db.select().from(editorialSlots).where(inArray(editorialSlots.slotKey, ["artists_hero", "artists_grid"]))
+  ]);
+  const ids = slots.map((slot) => slot.id); const selected = ids.length ? await db.select().from(editorialSlotItems).where(inArray(editorialSlotItems.slotId, ids)).orderBy(asc(editorialSlotItems.sortOrder)) : [];
+  return c.json({ songs: songRows.map((song) => ({ ...song, image: resolveArtistImage(song.artistSlug, song.image, song.heroImage) })), hero: selected.find((item) => item.slotId === slots.find((slot) => slot.slotKey === "artists_hero")?.id) ?? null, artists: selected.filter((item) => item.slotId === slots.find((slot) => slot.slotKey === "artists_grid")?.id) });
+});
+
+adminRouter.put("/editorial/artists/:slotKey", async (c) => {
+  const key = c.req.param("slotKey"); if (key !== "artists_hero" && key !== "artists_grid") return c.json({ error: "Unknown artists slot." }, 404);
+  const payload = await c.req.json<{ items?: Array<Record<string, unknown>> }>(); const items = payload.items ?? [];
+  if ((key === "artists_hero" && items.length !== 1) || (key === "artists_grid" && (items.length < 6 || items.length > 30))) return c.json({ error: key === "artists_hero" ? "Choose one hero artist track." : "Choose between 6 and 30 artists." }, 400);
+  const ids = items.map((item) => Number(item.itemId)); if (ids.some((id) => !Number.isInteger(id)) || new Set(ids).size !== ids.length) return c.json({ error: "Selections must be unique." }, 400);
+  const db = getDb(c.env); const selectedSongs = await db.select({ id: songs.id, artistId: songs.artistId }).from(songs).where(inArray(songs.id, ids));
+  if (selectedSongs.length !== ids.length || (key === "artists_grid" && new Set(selectedSongs.map((song) => song.artistId)).size !== selectedSongs.length)) return c.json({ error: "Each supporting artist must be selected once, with a valid track." }, 400);
+  let [slot] = await db.select().from(editorialSlots).where(eq(editorialSlots.slotKey, key)).limit(1); if (!slot) [slot] = await db.insert(editorialSlots).values({ slotKey: key, title: key, active: true }).returning();
+  await db.delete(editorialSlotItems).where(eq(editorialSlotItems.slotId, slot.id));
+  await db.insert(editorialSlotItems).values(items.map((item, sortOrder) => { const song = selectedSongs.find((entry) => entry.id === ids[sortOrder]); return { slotId: slot.id, itemType: "song", itemId: ids[sortOrder], artistId: song?.artistId ?? null, sortOrder, customTitle: typeof item.customTitle === "string" ? item.customTitle : null, customSubtitle: typeof item.customSubtitle === "string" ? item.customSubtitle : null, customDescription: typeof item.customDescription === "string" ? item.customDescription : null, customImage: typeof item.customImage === "string" ? item.customImage : null, customHref: typeof item.customHref === "string" ? item.customHref : null, active: true }; }));
+  return c.json({ ok: true });
+});
+
 adminRouter.get("/artists", (c) => c.json(fallbackContent.artists));
 adminRouter.post("/artists", zValidator("json", artistSchema), (c) => {
   const entry = { ...c.req.valid("json"), id: Date.now() };

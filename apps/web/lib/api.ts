@@ -47,3 +47,7 @@ export function getRadioHistory() {
 export function getHome() {
   return apiFetch<Record<string, unknown>>("/home");
 }
+
+export function getArtistsEditorial() {
+  return apiFetch<{ hero: any; artists: any[] }>("/artists-page");
+}

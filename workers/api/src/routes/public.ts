@@ -50,6 +50,7 @@ import { logFlowEvent } from "../lib/events";
 import { sendAccountWelcomeEmail } from "../lib/email";
 import { getRadioStatus } from "../lib/radio";
 import { getHomePayload } from "../lib/home";
+import { getArtistsEditorialPayload } from "../lib/artists-editorial";
 import { getStripe } from "../lib/stripe";
 import { rateLimit } from "../middleware/rate-limit";
 import { optionalUser, requireArtist, requireUser } from "../middleware/auth";
@@ -1639,6 +1640,8 @@ publicRouter.get("/radio", async (c) => {
     });
   }
 });
+
+publicRouter.get("/artists-page", async (c) => c.json(await getArtistsEditorialPayload(c.env)));
 
 publicRouter.get("/radio/history", async (c) => {
   try {

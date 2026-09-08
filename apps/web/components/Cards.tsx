@@ -18,7 +18,7 @@ export function ArtistCard({ artist }: { artist: Record<string, any> }) {
 
   return (
     <Panel className="h-full border-glow/30 bg-white/5 transition-transform duration-300 hover:-translate-y-1 hover:border-rose/40">
-      <Link href={`/featured/${artistSlug}` as Route}>
+      <Link href={`/artist/${artistSlug}` as Route}>
         {typeof artist.image === "string" && artist.image.length > 0 ? (
           <div className="relative mb-5 aspect-[4/5] overflow-hidden rounded-[1.5rem] border border-white/10">
             <Image

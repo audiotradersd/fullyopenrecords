@@ -1,0 +1,5 @@
+Hi {{#first_name}}{{.}}{{/first_name}}{{^first_name}}there{{/first_name}},
+
+The email address on your Fully Open Records account is now {{new_email}}.
+
+If you did not make this change, contact us straight away at hello@fullyopenrecords.com.

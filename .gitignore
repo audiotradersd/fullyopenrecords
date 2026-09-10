@@ -11,3 +11,15 @@ coverage
 apps/web/.vercel
 apps/cms/.vercel
 
+# Machine-local credentials and tooling state
+api.txt
+ftp
+.hg/
+.hgignore
+/.vercel/
+
+# Locally downloaded or processed media is stored outside Git.
+workers/api/downloads/
+Grzzly/
+jack_issues/
+radio tracks/

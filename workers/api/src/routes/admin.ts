@@ -61,7 +61,8 @@ adminRouter.use("/*", requireAdmin);
 
 const homepageSlotRules = {
   home_featured_artists: { itemType: "artist", count: 4 },
-  home_latest_releases: { itemType: "song", count: 3 }
+  home_latest_releases: { itemType: "song", count: 3 },
+  home_our_pick: { itemType: "mixed", count: 1 }
 } as const;
 
 adminRouter.get("/editorial/home", async (c) => {
@@ -69,8 +70,8 @@ adminRouter.get("/editorial/home", async (c) => {
   const slotKeys = Object.keys(homepageSlotRules) as Array<keyof typeof homepageSlotRules>;
   const [slotRows, artistCandidates, songCandidates, imageMedia] = await Promise.all([
     db.select().from(editorialSlots).where(inArray(editorialSlots.slotKey, slotKeys)),
-    db.select({ id: artists.id, name: artists.name, slug: artists.slug, image: artists.profileImage, heroImage: artists.heroImage, genres: artists.genres }).from(artists).orderBy(asc(artists.name)),
-    db.select({ id: songs.id, title: songs.title, artistName: songs.artistName, artistId: songs.artistId, audioUrl: songs.audioUrl, image: songs.coverImage, artistImage: artists.profileImage, heroImage: artists.heroImage, artistSlug: artists.slug }).from(songs).leftJoin(artists, eq(songs.artistId, artists.id)).where(isNotNull(songs.audioUrl)).orderBy(desc(songs.id)),
+    db.select({ id: artists.id, name: artists.name, slug: artists.slug, bio: artists.bio, image: artists.profileImage, heroImage: artists.heroImage, genres: artists.genres }).from(artists).orderBy(asc(artists.name)),
+    db.select({ id: songs.id, title: songs.title, artistName: songs.artistName, artistId: songs.artistId, artistBio: artists.bio, audioUrl: songs.audioUrl, image: songs.coverImage, artistImage: artists.profileImage, heroImage: artists.heroImage, artistSlug: artists.slug }).from(songs).leftJoin(artists, eq(songs.artistId, artists.id)).where(isNotNull(songs.audioUrl)).orderBy(desc(songs.id)),
     db.select({ id: media.id, fileName: media.fileName, url: media.url }).from(media).where(like(media.mimeType, "image/%")).orderBy(desc(media.id)).limit(150)
   ]);
   const slotIds = slotRows.map((slot) => slot.id);
@@ -81,7 +82,7 @@ adminRouter.get("/editorial/home", async (c) => {
     images: imageMedia,
     slots: Object.fromEntries(slotKeys.map((key) => {
       const slot = slotRows.find((entry) => entry.slotKey === key);
-      return [key, items.filter((item) => item.slotId === slot?.id).map((item) => ({ itemId: item.itemId, artistId: item.artistId, customImage: item.customImage ?? "" }))];
+      return [key, items.filter((item) => item.slotId === slot?.id).map((item) => ({ itemId: item.itemId, itemType: item.itemType, artistId: item.artistId, customTitle: item.customTitle ?? "", customSubtitle: item.customSubtitle ?? "", customDescription: item.customDescription ?? "", customImage: item.customImage ?? "" }))];
     }))
   });
 });
@@ -90,12 +91,14 @@ adminRouter.put("/editorial/home/:slotKey", async (c) => {
   const slotKey = c.req.param("slotKey") as keyof typeof homepageSlotRules;
   const rule = homepageSlotRules[slotKey];
   if (!rule) return c.json({ error: "Unknown homepage slot" }, 404);
-  const payload = await c.req.json<{ items?: Array<{ itemId?: unknown; customImage?: unknown }> }>();
+  const payload = await c.req.json<{ items?: Array<{ itemId?: unknown; itemType?: unknown; customTitle?: unknown; customSubtitle?: unknown; customDescription?: unknown; customImage?: unknown }> }>();
   if (!Array.isArray(payload.items) || payload.items.length !== rule.count) return c.json({ error: `Select exactly ${rule.count} ${rule.itemType === "artist" ? "artists" : "songs"}.` }, 400);
   const itemIds = payload.items.map((item) => Number(item.itemId));
   if (itemIds.some((id) => !Number.isInteger(id)) || new Set(itemIds).size !== itemIds.length) return c.json({ error: "Selections must be unique." }, 400);
   const db = getDb(c.env);
-  const candidates = rule.itemType === "artist"
+  const selectedType = rule.itemType === "mixed" ? payload.items[0]?.itemType : rule.itemType;
+  if (selectedType !== "artist" && selectedType !== "song") return c.json({ error: "Choose an artist or a song." }, 400);
+  const candidates = selectedType === "artist"
     ? await db.select({ id: artists.id, artistId: artists.id, slug: artists.slug, profileImage: artists.profileImage, heroImage: artists.heroImage }).from(artists).where(inArray(artists.id, itemIds))
     : await db.select({ id: songs.id, artistId: songs.artistId, coverImage: songs.coverImage, artistSlug: artists.slug, artistProfileImage: artists.profileImage, artistHeroImage: artists.heroImage }).from(songs).leftJoin(artists, eq(songs.artistId, artists.id)).where(inArray(songs.id, itemIds));
   if (candidates.length !== rule.count) return c.json({ error: "One or more selected items no longer exist." }, 400);
@@ -105,27 +108,29 @@ adminRouter.put("/editorial/home/:slotKey", async (c) => {
   await db.insert(editorialSlotItems).values(payload.items.map((item, sortOrder) => {
     const candidate: any = candidates.find((entry) => entry.id === itemIds[sortOrder]);
     const suppliedImage = typeof item.customImage === "string" && item.customImage.trim() ? item.customImage.trim() : "";
-    const defaultImage = candidate && rule.itemType === "artist"
+    const defaultImage = candidate && selectedType === "artist"
       ? resolveArtistImage(candidate.slug, candidate.profileImage, candidate.heroImage)
       : candidate && rule.itemType === "song"
         ? candidate.coverImage || resolveArtistImage(candidate.artistSlug, candidate.artistProfileImage, candidate.artistHeroImage)
         : "";
-    return { slotId: slot.id, itemType: rule.itemType, itemId: itemIds[sortOrder], artistId: candidate?.artistId ?? null, sortOrder, customImage: suppliedImage || defaultImage || null, active: true };
+    return { slotId: slot.id, itemType: selectedType, itemId: itemIds[sortOrder], artistId: candidate?.artistId ?? (selectedType === "artist" ? candidate?.id ?? null : null), sortOrder, customTitle: typeof item.customTitle === "string" && item.customTitle.trim() ? item.customTitle.trim() : null, customSubtitle: typeof item.customSubtitle === "string" && item.customSubtitle.trim() ? item.customSubtitle.trim() : null, customDescription: typeof item.customDescription === "string" && item.customDescription.trim() ? item.customDescription.trim() : null, customImage: suppliedImage || defaultImage || null, active: true };
   }));
   return c.json({ ok: true });
 });
 
 adminRouter.get("/editorial/artists", async (c) => {
   const db = getDb(c.env);
-  const [songRows, slots] = await Promise.all([
-    db.select({ id: songs.id, title: songs.title, artistId: songs.artistId, artistName: songs.artistName, audioUrl: songs.audioUrl, artistSlug: artists.slug, image: artists.profileImage, heroImage: artists.heroImage }).from(songs).leftJoin(artists, eq(songs.artistId, artists.id)).where(isNotNull(songs.audioUrl)).orderBy(asc(songs.artistName), asc(songs.title)),
-    db.select().from(editorialSlots).where(inArray(editorialSlots.slotKey, ["artists_hero", "artists_grid"]))
+  const [songRows, slots, imageMedia] = await Promise.all([
+    db.select({ id: songs.id, title: songs.title, artistId: songs.artistId, artistName: songs.artistName, audioUrl: songs.audioUrl, artistSlug: artists.slug, genres: artists.genres, image: artists.profileImage, heroImage: artists.heroImage }).from(songs).leftJoin(artists, eq(songs.artistId, artists.id)).where(isNotNull(songs.audioUrl)).orderBy(asc(songs.artistName), asc(songs.title)),
+    db.select().from(editorialSlots).where(inArray(editorialSlots.slotKey, ["artists_hero", "artists_grid"])),
+    db.select({ id: media.id, fileName: media.fileName, url: media.url }).from(media).where(like(media.mimeType, "image/%")).orderBy(desc(media.id)).limit(150)
   ]);
   const ids = slots.map((slot) => slot.id); const selected = ids.length ? await db.select().from(editorialSlotItems).where(inArray(editorialSlotItems.slotId, ids)).orderBy(asc(editorialSlotItems.sortOrder)) : [];
-  return c.json({ songs: songRows.map((song) => ({ ...song, image: resolveArtistImage(song.artistSlug, song.image, song.heroImage) })), hero: selected.find((item) => item.slotId === slots.find((slot) => slot.slotKey === "artists_hero")?.id) ?? null, artists: selected.filter((item) => item.slotId === slots.find((slot) => slot.slotKey === "artists_grid")?.id) });
+  return c.json({ songs: songRows.map((song) => ({ ...song, image: resolveArtistImage(song.artistSlug, song.image, song.heroImage) })), images: imageMedia, hero: selected.find((item) => item.slotId === slots.find((slot) => slot.slotKey === "artists_hero")?.id) ?? null, artists: selected.filter((item) => item.slotId === slots.find((slot) => slot.slotKey === "artists_grid")?.id) });
 });
 
 adminRouter.put("/editorial/artists/:slotKey", async (c) => {
+  try {
   const key = c.req.param("slotKey"); if (key !== "artists_hero" && key !== "artists_grid") return c.json({ error: "Unknown artists slot." }, 404);
   const payload = await c.req.json<{ items?: Array<Record<string, unknown>> }>(); const items = payload.items ?? [];
   if ((key === "artists_hero" && items.length !== 1) || (key === "artists_grid" && (items.length < 6 || items.length > 30))) return c.json({ error: key === "artists_hero" ? "Choose one hero artist track." : "Choose between 6 and 30 artists." }, 400);
@@ -133,8 +138,18 @@ adminRouter.put("/editorial/artists/:slotKey", async (c) => {
   const db = getDb(c.env);
   let [slot] = await db.select().from(editorialSlots).where(eq(editorialSlots.slotKey, key)).limit(1); if (!slot) [slot] = await db.insert(editorialSlots).values({ slotKey: key, title: key, active: true }).returning();
   await db.delete(editorialSlotItems).where(eq(editorialSlotItems.slotId, slot.id));
-  await db.insert(editorialSlotItems).values(items.map((item, sortOrder) => ({ slotId: slot.id, itemType: "song", itemId: ids[sortOrder], artistId: null, sortOrder, customTitle: typeof item.customTitle === "string" ? item.customTitle : null, customSubtitle: typeof item.customSubtitle === "string" ? item.customSubtitle : null, customDescription: typeof item.customDescription === "string" ? item.customDescription : null, customImage: typeof item.customImage === "string" ? item.customImage : null, customHref: typeof item.customHref === "string" ? item.customHref : null, active: true })));
+  const rows = items.map((item, sortOrder) => ({ slotId: slot.id, itemType: "song" as const, itemId: ids[sortOrder], artistId: null, sortOrder, customTitle: typeof item.customTitle === "string" ? item.customTitle : null, customSubtitle: typeof item.customSubtitle === "string" ? item.customSubtitle : null, customDescription: typeof item.customDescription === "string" ? item.customDescription : null, customImage: typeof item.customImage === "string" ? item.customImage : null, customHref: typeof item.customHref === "string" ? item.customHref : null, active: true }));
+  // D1 limits the number of bound SQL variables in a single statement. Each row
+  // has eleven values, so inserting the full 6–30 item grid at once can exceed it.
+  const insertBatchSize = 8;
+  for (let start = 0; start < rows.length; start += insertBatchSize) {
+    await db.insert(editorialSlotItems).values(rows.slice(start, start + insertBatchSize));
+  }
   return c.json({ ok: true });
+  } catch (error) {
+    console.error("artists editorial save failed", error);
+    return c.json({ error: error instanceof Error ? error.message : "Could not save artists editorial selections." }, 500);
+  }
 });
 
 adminRouter.get("/artists", (c) => c.json(fallbackContent.artists));

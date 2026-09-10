@@ -8,6 +8,7 @@ import {
   useState,
   type ReactNode
 } from "react";
+import Link from "next/link";
 import { X } from "lucide-react";
 import { Button } from "../ui/button";
 import { trackEvent } from "../../lib/analytics";
@@ -200,6 +201,8 @@ function AuthModal({
               className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white outline-none placeholder:text-fog/70"
             />
           </label>
+
+          {mode === "login" ? <p className="text-center text-sm text-fog">New to Fully Open? <Link href="/signup" onClick={onClose} className="text-pink hover:text-white">Sign up here</Link></p> : null}
 
           {error ? <p className="text-sm text-pink">{error}</p> : null}
 

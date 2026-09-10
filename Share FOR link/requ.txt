@@ -1,0 +1,470 @@
+TASK: Add "Invite Artist" sharing to the Fully Open Records artist dashboard
+
+PURPOSE
+
+Add an "Invite Artist" feature that makes it extremely easy for an existing Fully Open Records artist to invite another artist, band, producer or musician to join FOR.
+
+The basic experience is:
+
+ARTIST
+→ INVITE ARTIST
+→ SHARE FOR
+→ RECIPIENT OPENS INVITE
+→ RECIPIENT JOINS FULLY OPEN RECORDS
+
+Artists should be able to share an invitation through:
+
+- Email
+- WhatsApp
+- Facebook
+- X / Twitter
+- Bluesky
+- Messenger where practical
+- Native device sharing
+- Copy link
+
+The feature should work particularly well on mobile.
+
+The invitation should use a unique referral/invite URL belonging to the logged-in artist so that FOR can identify where a new signup came from.
+
+Example:
+
+https://fullyopenrecords.com/join?ref=ABC123
+
+Do not expose database IDs or sensitive information in referral URLs.
+
+-----------------------------------
+DASHBOARD ENTRY POINT
+-----------------------------------
+
+Add an:
+
+INVITE ARTIST
+
+option to an appropriate location in the existing artist dashboard.
+
+It could appear in the main navigation, account menu or as a prominent dashboard action depending on the existing UI structure.
+
+Use the existing Fully Open Records design system.
+
+The feature should feel like part of FOR rather than a third-party referral widget.
+
+-----------------------------------
+INVITE ARTIST UI
+-----------------------------------
+
+Create a compact Invite Artist page/modal.
+
+Heading:
+
+Invite an artist
+
+Supporting copy:
+
+"Know someone making great music? Invite them to Fully Open Records."
+
+Then provide the artist's unique invite link.
+
+Example:
+
+[ fullyopenrecords.com/join?ref=XXXXXX ] [ COPY ]
+
+Below this provide sharing options.
+
+EMAIL
+WHATSAPP
+FACEBOOK
+X
+BLUESKY
+COPY LINK
+MORE...
+
+Where the browser/device supports the Web Share API, "More..." should open the native device share sheet.
+
+Use recognisable icons but keep them visually consistent with the FOR interface.
+
+-----------------------------------
+DEFAULT SHARE MESSAGE
+-----------------------------------
+
+Use a concise message that sounds like something one musician could realistically send to another.
+
+Suggested:
+
+"I've been using Fully Open Records to organise and share my music. Thought you might like it too."
+
+Followed by the unique invitation URL.
+
+Avoid marketing-heavy wording such as:
+
+"Join the revolutionary music platform today!"
+
+The invitation should feel personal.
+
+-----------------------------------
+EMAIL INVITATION
+-----------------------------------
+
+Provide two ways to share by email.
+
+OPTION 1 — QUICK SHARE
+
+Clicking Email should open the user's normal email client with:
+
+Subject:
+
+Check out Fully Open Records
+
+Body:
+
+I've been using Fully Open Records to organise and share my music. Thought you might like it too.
+
+[INVITE URL]
+
+
+OPTION 2 — SEND FROM FOR
+
+If the existing FOR infrastructure supports transactional email, allow the user to enter an email address and send the invitation directly.
+
+UI:
+
+Email address
+[________________]
+
+[ SEND INVITE ]
+
+Suggested email:
+
+Subject:
+[Artist Name] invited you to Fully Open Records
+
+Body:
+
+[Artist Name] thinks you should check out Fully Open Records.
+
+A place for independent artists to organise their music, document their creative process and get heard.
+
+[CHECK OUT FULLY OPEN RECORDS]
+
+Include normal FOR branding and appropriate transactional email/footer requirements.
+
+Do not reveal unnecessary information about the inviting artist.
+
+-----------------------------------
+SOCIAL SHARING
+-----------------------------------
+
+Implement platform-appropriate share URLs/actions where supported.
+
+WhatsApp should pre-populate the invitation message and URL.
+
+X should pre-populate a short message and URL.
+
+Facebook should use its supported sharing mechanism.
+
+Bluesky should use its supported compose/share mechanism if available.
+
+Do not require users to connect their social accounts to FOR simply to share an invitation.
+
+Where a platform does not support reliable direct sharing, fall back to:
+
+COPY LINK
+
+or the native Web Share API.
+
+-----------------------------------
+COPY LINK
+-----------------------------------
+
+Copy Link should copy the unique referral URL to the clipboard.
+
+After clicking:
+
+✓ Link copied
+
+Show temporary confirmation rather than an intrusive alert.
+
+-----------------------------------
+NATIVE MOBILE SHARING
+-----------------------------------
+
+Use the Web Share API where supported.
+
+This is particularly important on mobile.
+
+It should allow the user to share through any compatible app installed on their device, for example:
+
+Messages
+WhatsApp
+Messenger
+Telegram
+Email
+Discord
+etc.
+
+Fall back gracefully to Copy Link where Web Share is unavailable.
+
+-----------------------------------
+REFERRAL LINKS
+-----------------------------------
+
+Each artist/account should have a stable, unique invitation identifier.
+
+Example conceptual model:
+
+artist_invite_code
+
+id
+artist_id
+code
+created_at
+
+Or use an equivalent structure consistent with the existing FOR database.
+
+The public URL should use an opaque token/code rather than artist_id.
+
+Example:
+
+/join?ref=K7M4PQ
+
+The code should remain stable so an artist can share the same link repeatedly.
+
+-----------------------------------
+REFERRAL TRACKING
+-----------------------------------
+
+When someone visits FOR using an invite link:
+
+1. Record the referral code.
+2. Preserve attribution while they browse the site.
+3. If they subsequently create an account, associate that signup with the referring artist.
+
+Do not require them to register immediately after clicking the link.
+
+Use an appropriate first-party cookie/session/local storage mechanism consistent with the application's privacy approach.
+
+Suggested future-compatible relationship:
+
+artist_referrals
+
+id
+referrer_artist_id
+referred_user_id
+invite_code
+created_at
+
+Do not create duplicate referral records if the same person revisits the invite link.
+
+-----------------------------------
+INVITE STATUS
+-----------------------------------
+
+If direct email invitations are implemented, optionally show a small invitation history:
+
+INVITES
+
+alex@example.com     Joined
+sam@example.com      Sent
+jamie@example.com    Joined
+
+However:
+
+Do NOT make referral statistics the dominant part of the initial feature.
+
+The primary purpose is simply:
+
+"Tell another artist about FOR."
+
+-----------------------------------
+JOIN EXPERIENCE
+-----------------------------------
+
+An invitation link should take the recipient to an appropriate FOR landing/signup experience.
+
+Where practical, display a subtle acknowledgement:
+
+"You've been invited to Fully Open Records."
+
+Then introduce FOR normally.
+
+Do not create an intrusive referral landing page that prevents the recipient from exploring the website.
+
+The existing registration flow should continue to work normally.
+
+-----------------------------------
+SHARING FOR BANDS / ARTIST ACCOUNTS
+-----------------------------------
+
+The invitation belongs to the artist/account rather than an individual browser session.
+
+If FOR supports bands or multi-member artist accounts, all authorised members should be able to access the same artist invite link unless the existing permissions architecture suggests otherwise.
+
+Referral attribution should be to the FOR artist/account.
+
+Example:
+
+STONE!?
+invited
+ANOTHER ARTIST
+
+rather than exposing which individual band member happened to click Share.
+
+-----------------------------------
+PRIVACY & SECURITY
+-----------------------------------
+
+Invite codes must:
+
+- be non-sequential
+- be difficult to guess
+- reveal no internal IDs
+- contain no email addresses or personal information
+- be safe to expose publicly
+
+Referral links are intended to be shareable publicly.
+
+Do not expose the referrer's private account information when the URL is opened.
+
+Email addresses entered into Send Invite should only be used for sending the requested invitation and handled according to the site's existing privacy/data policies.
+
+Add reasonable rate limiting/abuse protection to FOR-sent email invitations.
+
+-----------------------------------
+ANALYTICS
+-----------------------------------
+
+Structure the feature so FOR can eventually understand:
+
+Invites shared
+Invite links opened
+Signups generated
+Artists who joined through invitations
+
+Useful future events might include:
+
+invite_opened
+invite_link_copied
+invite_shared
+invite_email_sent
+invite_signup_completed
+
+Use the project's existing analytics/event system if one exists.
+
+Do not add a new analytics provider purely for this feature.
+
+-----------------------------------
+FUTURE DEVELOPMENT
+-----------------------------------
+
+Do not build a rewards programme as part of this task.
+
+However, preserve referral attribution so it could later support features such as:
+
+- Artist referral counts
+- Community badges
+- Early access
+- Referral rewards
+- Invitations to special FOR programmes
+
+The initial feature should remain simple.
+
+-----------------------------------
+UX PRINCIPLE
+-----------------------------------
+
+The entire process should take seconds.
+
+Ideal flow:
+
+Dashboard
+→ Invite Artist
+→ WhatsApp
+→ Send
+
+or:
+
+Dashboard
+→ Invite Artist
+→ Copy Link
+→ Done
+
+Do not require the artist to complete forms before getting their invite link.
+
+-----------------------------------
+DESIGN
+-----------------------------------
+
+Use the existing Fully Open Records visual language:
+
+- dark background
+- current blue accent colour
+- white/off-white typography
+- subtle borders
+- restrained glow
+- existing button styles
+- existing modal/card components
+
+Keep the interface clean.
+
+The social platforms themselves should not dictate the page's colour scheme. Avoid a row of brightly coloured Facebook/WhatsApp/X branded buttons if this clashes with the FOR design.
+
+-----------------------------------
+IMPLEMENTATION
+-----------------------------------
+
+Before coding:
+
+1. Inspect the existing authentication/account structure.
+2. Determine how artists/bands are represented.
+3. Inspect dashboard navigation.
+4. Identify existing modal/card/button components.
+5. Identify the signup flow.
+6. Identify existing email infrastructure.
+7. Identify any existing analytics/event tracking.
+8. Identify existing database and migration conventions.
+
+Reuse the current architecture.
+
+Implement:
+
+- Invite Artist dashboard UI
+- Unique invite codes
+- Shareable invitation URLs
+- Copy-to-clipboard
+- Email sharing
+- WhatsApp sharing
+- supported social sharing
+- Web Share API
+- referral attribution
+- signup association
+- appropriate privacy/security handling
+
+Do not introduce unnecessary dependencies.
+
+-----------------------------------
+DELIVERY
+-----------------------------------
+
+Implement the feature rather than only describing it.
+
+Run the project's existing:
+
+- lint
+- typecheck
+- tests
+- build
+
+Fix errors introduced by the changes.
+
+At completion report:
+
+- routes created/changed
+- database changes/migrations
+- components created
+- sharing methods implemented
+- referral attribution implementation
+- email implementation
+- mobile/native sharing behaviour
+- security/rate limiting
+- tests/build results
+- anything intentionally deferred

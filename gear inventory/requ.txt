@@ -1,0 +1,700 @@
+TASK: Add Gear Inventory to the Fully Open Records artist dashboard
+
+Build a new "Gear" area within the existing Fully Open Records artist dashboard.
+
+PURPOSE
+
+Gear Inventory gives artists a permanent record of the instruments, equipment, software and other tools they use to create music.
+
+Initially this is an inventory/organisation feature.
+
+In future, individual gear items will be assignable to:
+- Tracks
+- Track versions
+- Recording sessions
+- Rehearsals
+- Live performances
+
+This future relationship is important.
+
+The data model must therefore treat gear as reusable artist-owned entities rather than simply text fields attached to a track.
+
+For example:
+
+ARTIST
+  ↓
+GEAR INVENTORY
+  ├── Fender Telecaster
+  ├── Roland Juno-106
+  ├── Shure SM57
+  ├── Ableton Live
+  └── Boss DS-1
+
+Later:
+
+TRACK
+  ↓
+VERSION: First Jam
+  ↓
+GEAR USED
+  ├── Fender Telecaster
+  └── Boss DS-1
+
+VERSION: Demo
+  ↓
+GEAR USED
+  ├── Fender Telecaster
+  ├── Shure SM57
+  └── Logic Pro
+
+This will eventually allow Fully Open Records to build a genuine historical record of HOW a piece of music was created.
+
+IMPORTANT
+
+Do not design this feature specifically around rock bands.
+
+"Gear" needs to encompass the equipment used across essentially every type of music creation:
+
+- Rock/pop bands
+- Electronic music
+- DJs
+- Hip-hop
+- Classical music
+- Orchestral music
+- Folk
+- Jazz
+- Experimental music
+- Bedroom producers
+- Vocalists
+- Recording engineers
+- Live performers
+
+-----------------------------------
+DASHBOARD NAVIGATION
+-----------------------------------
+
+Add:
+
+GEAR
+
+to the artist dashboard navigation.
+
+Main page:
+
+/dashboard/gear
+
+Page heading:
+
+Your Gear
+
+Supporting copy:
+
+"Keep a record of the instruments, equipment and tools behind your music."
+
+Primary CTA:
+
++ Add Gear
+
+-----------------------------------
+GEAR DASHBOARD
+-----------------------------------
+
+The Gear page should provide a visual inventory of everything the artist has added.
+
+Desktop:
+Responsive card/grid layout.
+
+Mobile:
+Single/two-column responsive layout as appropriate.
+
+Each card should show:
+
+IMAGE
+ITEM NAME
+BRAND / MAKER
+CATEGORY
+OPTIONAL MODEL
+OPTIONAL SHORT DESCRIPTION
+
+Example:
+
+[IMAGE]
+
+Fender Telecaster
+Fender
+
+Electric Guitar
+
+1996 American Standard
+Main recording guitar
+
+
+Allow:
+
+- Search
+- Category filtering
+- Sorting
+- Add gear
+- Edit gear
+- Archive gear
+- Delete gear
+
+Do not require every field to be completed.
+
+Adding gear should be quick.
+
+-----------------------------------
+GEAR CATEGORIES
+-----------------------------------
+
+The category system needs to be broad and extensible.
+
+Do NOT hard-code assumptions such as every item having a brand/model.
+
+Initial categories should include:
+
+INSTRUMENTS
+
+- Electric Guitar
+- Acoustic Guitar
+- Bass Guitar
+- Piano
+- Electric Piano
+- Keyboard
+- Synthesizer
+- Organ
+- Drum Kit
+- Percussion
+- Drum Machine
+- Sampler
+- Violin
+- Viola
+- Cello
+- Double Bass
+- Harp
+- Flute
+- Clarinet
+- Oboe
+- Bassoon
+- Saxophone
+- Trumpet
+- Trombone
+- French Horn
+- Tuba
+- Harmonica
+- Accordion
+- Banjo
+- Mandolin
+- Ukulele
+- Other String Instrument
+- Other Wind Instrument
+- Other Brass Instrument
+- Other Percussion
+- Other Instrument
+
+
+VOCALS
+
+- Microphone
+- Vocal Processor
+- Vocal Effects
+- Pop Filter / Vocal Accessory
+
+
+AMPLIFICATION
+
+- Guitar Amp
+- Bass Amp
+- Keyboard Amp
+- Amplifier Head
+- Speaker Cabinet
+- Combo Amp
+- PA / Live Amplification
+
+
+EFFECTS
+
+- Effects Pedal
+- Multi Effects
+- Effects Processor
+- Rack Effects
+- Pedalboard
+
+
+ELECTRONIC MUSIC / PRODUCTION
+
+- Synthesizer
+- Drum Machine
+- Sampler
+- Sequencer
+- Groovebox
+- MIDI Controller
+- Pad Controller
+- Modular Synth
+- Eurorack Module
+- Hardware Sequencer
+
+
+DJ EQUIPMENT
+
+- Turntable
+- DJ Controller
+- DJ Mixer
+- Media Player
+- DJ Effects
+- DJ Software
+
+
+RECORDING
+
+- Microphone
+- Audio Interface
+- Microphone Preamp
+- Mixer
+- Mixing Console
+- Channel Strip
+- Compressor
+- EQ
+- Hardware Processor
+- Recorder
+- Portable Recorder
+- Monitor Speakers
+- Headphones
+
+
+COMPUTERS & SOFTWARE
+
+- Computer
+- DAW
+- Plugin
+- Virtual Instrument
+- Software Synth
+- Sample Library
+- Mobile App
+
+
+LIVE EQUIPMENT
+
+- PA System
+- Mixer
+- Monitor
+- In-Ear Monitor
+- Wireless System
+- DI Box
+- Lighting / Visual Equipment
+
+
+ACCESSORIES
+
+- Bow
+- Mouthpiece
+- Pickups
+- Strings
+- Drum Sticks
+- Cymbals
+- Cases
+- Stands
+- Cables
+- Power Supplies
+- Other Accessories
+
+
+OTHER
+
+Allow a completely custom gear type/category.
+
+The category architecture should be data-driven and easy to extend.
+
+Avoid creating database logic dependent upon this initial list.
+
+-----------------------------------
+ADD GEAR
+-----------------------------------
+
+Clicking "+ Add Gear" should open an Add Gear form/modal/page consistent with the existing dashboard UI.
+
+CORE FIELDS
+
+Category *
+Item Name *
+Brand / Maker
+Model
+Variant
+Year
+Serial Number
+
+Image / Photos
+
+Description / Notes
+
+Status:
+- Currently Used
+- Owned / Not Currently Used
+- Sold
+- Borrowed
+- Rented
+- Previously Owned
+
+All except Category and Item Name should initially be optional.
+
+-----------------------------------
+CATEGORY-SPECIFIC DETAILS
+-----------------------------------
+
+Allow additional structured information where useful, but do not force irrelevant fields onto users.
+
+For example:
+
+GUITAR
+
+Brand
+Model
+Year
+Colour
+Pickups
+Tuning
+Strings
+Modifications
+
+
+SYNTHESIZER
+
+Brand
+Model
+Hardware/Software
+Patch notes
+MIDI configuration
+
+
+DRUM KIT
+
+Brand
+Model
+Shell configuration
+Snare
+Cymbals
+Heads
+Tuning notes
+
+
+MICROPHONE
+
+Brand
+Model
+Type
+Polar pattern
+
+
+DJ EQUIPMENT
+
+Brand
+Model
+Configuration
+
+
+SOFTWARE
+
+Developer
+Product
+Version
+Plugin format
+
+
+CLASSICAL INSTRUMENT
+
+Maker
+Instrument
+Year/period
+Bow
+Strings
+Setup notes
+
+
+However:
+
+Do NOT attempt to create a huge rigid schema containing every possible property of every musical instrument.
+
+Use a flexible attribute system.
+
+Suggested model:
+
+gear_items
+gear_item_attributes
+
+For example:
+
+gear_item:
+
+id
+artist_id
+category_id
+name
+brand
+model
+year
+serial_number
+description
+status
+created_at
+updated_at
+
+
+gear_item_attribute:
+
+gear_item_id
+attribute_key
+attribute_label
+attribute_value
+
+This allows:
+
+"Pickup" → "Seymour Duncan JB"
+
+or:
+
+"Mouthpiece" → "Vandoren B45"
+
+without database schema changes.
+
+-----------------------------------
+PHOTOS
+-----------------------------------
+
+Allow multiple photos per gear item.
+
+One image can be selected as the primary image.
+
+Images are particularly important because this feature will eventually form part of the artist's creative diary.
+
+Examples:
+
+- Guitar
+- Pedalboard
+- Amp control settings
+- Synth patch
+- Drum setup
+- Microphone position
+- Mixing desk
+- Modular synth patching
+- DJ setup
+- Orchestra/instrument setup
+
+-----------------------------------
+GEAR SETTINGS
+-----------------------------------
+
+This is important for the future Track Version Control integration.
+
+An artist may want to remember not only WHICH piece of equipment they used but HOW it was configured.
+
+However, do not store a single permanent "settings" value against the gear item.
+
+A Marshall amp might be used differently on every recording.
+
+Instead distinguish between:
+
+GEAR
+"What is it?"
+
+and later:
+
+GEAR USAGE
+"How was it configured for this particular track/version?"
+
+For example:
+
+GEAR
+
+Marshall DSL40
+
+TRACK VERSION
+
+Kodiak — Demo 2
+
+GEAR USAGE
+
+Marshall DSL40
+
+Gain: 7
+Bass: 5
+Middle: 8
+Treble: 4
+Presence: 6
+Master: 3
+
+Photo:
+[photo of amplifier controls]
+
+Notes:
+"Recorded with the amp facing into the hallway."
+
+This relationship should be anticipated in the database architecture now even if Gear Usage is implemented later.
+
+-----------------------------------
+FUTURE TRACK VERSION INTEGRATION
+-----------------------------------
+
+Design the schema so we can later create:
+
+track_version_gear
+
+Suggested relationship:
+
+id
+track_version_id
+gear_item_id
+notes
+created_at
+
+And potentially:
+
+track_version_gear_settings
+
+track_version_gear_id
+setting_name
+setting_value
+
+Plus images specific to that usage/session.
+
+Do NOT build the complete Track Version integration unless it is trivial and already fits the current implementation.
+
+The important requirement in this task is that the Gear architecture does not prevent it later.
+
+-----------------------------------
+GEAR HISTORY
+-----------------------------------
+
+Do not delete the historical identity of equipment simply because an artist no longer owns it.
+
+This is important.
+
+If an artist records an album using a guitar in 2026 and sells the guitar in 2028, the historical album record should still show that guitar.
+
+Therefore provide statuses such as:
+
+Currently Used
+Owned
+Previously Owned
+Sold
+Borrowed
+Rented
+
+Archived/sold gear should remain available to historical track/version relationships.
+
+Hard deletion should only be possible where doing so will not destroy historical relationships, or appropriate referential handling should be implemented.
+
+-----------------------------------
+UX PRINCIPLE
+-----------------------------------
+
+Adding gear must not feel like cataloguing an insurance inventory.
+
+The emphasis is:
+
+"These are the tools you make music with."
+
+The UI should feel visual, creative and personal.
+
+Use photographs prominently.
+
+An artist's Gear page should eventually feel almost like looking around their studio.
+
+-----------------------------------
+EMPTY STATE
+-----------------------------------
+
+For an artist with no gear:
+
+Headline:
+
+Add the tools behind your music.
+
+Copy:
+
+"From guitars and synths to microphones, software, turntables and orchestral instruments — build a record of the equipment you create with."
+
+CTA:
+
++ Add Your First Item
+
+-----------------------------------
+FUTURE PRODUCT DIRECTION
+-----------------------------------
+
+Keep the implementation extensible.
+
+Eventually Fully Open Records should be able to answer questions such as:
+
+"What guitar did I use on this demo?"
+
+"What synth patch did I use on the original version?"
+
+"What microphone did we use for these vocals?"
+
+"What pedals were on the board at this rehearsal?"
+
+"What version of this plugin was used?"
+
+"What equipment appears most frequently across my recordings?"
+
+"Show every track I recorded with this guitar."
+
+"How did the setup change between the demo and final recording?"
+
+The current Gear Inventory is the foundation for this.
+
+-----------------------------------
+IMPLEMENTATION
+-----------------------------------
+
+Before coding:
+
+1. Inspect the existing Fully Open Records application.
+2. Identify the dashboard architecture and routes.
+3. Identify authentication/artist ownership patterns.
+4. Identify existing database conventions.
+5. Identify image/file upload infrastructure.
+6. Identify existing cards, modals, forms, buttons and filtering components.
+7. Reuse existing design tokens and components wherever practical.
+
+Do not create a parallel design system.
+
+Implement using the project's existing stack and conventions.
+
+Ensure:
+- gear belongs securely to the authenticated artist/account
+- users cannot access another artist's private gear inventory
+- responsive design
+- accessible forms
+- sensible image optimisation
+- validation
+- appropriate database indexes
+- referential integrity
+- no unnecessary dependencies
+
+-----------------------------------
+DELIVERY
+-----------------------------------
+
+Implement the Gear Inventory feature.
+
+Run the project's existing:
+- lint
+- typecheck
+- tests
+- build
+
+Fix errors introduced by the implementation.
+
+At completion report:
+
+- routes created
+- database/schema changes
+- migrations added
+- components created
+- files modified
+- image/storage implementation
+- API/endpoints added
+- security/ownership checks
+- tests/build results
+- any deferred elements intended for Track Version Control

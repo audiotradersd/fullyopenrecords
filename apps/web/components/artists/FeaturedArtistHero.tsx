@@ -22,11 +22,14 @@ type FeaturedArtistHeroProps = {
   featuredTrack: HeroTrack | null;
 };
 
+function EditorialCopy({ value, className }: { value: string; className: string }) {
+  return <>{value.split(/\n\s*\n/).filter(Boolean).map((paragraph, index) => <p key={index} className={className}>{paragraph}</p>)}</>;
+}
+
 export default function FeaturedArtistHero({
   artist,
   badge,
   genres,
-  description,
   editorialNote,
   featuredTrack
 }: FeaturedArtistHeroProps) {
@@ -69,12 +72,7 @@ export default function FeaturedArtistHero({
           <p className="mt-4 text-sm uppercase tracking-[0.18em] text-fog md:text-base">
             {genres.join(" / ")}
           </p>
-          <p className="mt-6 max-w-3xl text-base leading-8 text-white/90 md:text-lg">
-            {description}
-          </p>
-          <p className="mt-5 max-w-3xl text-sm leading-7 text-fog md:text-base">
-            {editorialNote}
-          </p>
+          <div className="mt-6 space-y-4"><EditorialCopy value={editorialNote} className="max-w-3xl text-sm leading-7 text-fog md:text-base" /></div>
           <div className="mt-8 flex flex-wrap gap-3">
             {featuredTrack?.audioUrl ? (
               <StreamButton

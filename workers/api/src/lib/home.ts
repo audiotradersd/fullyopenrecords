@@ -33,6 +33,18 @@ type HomeRelease = {
   audioUrl: string | null;
 };
 
+type HomeOurPick = {
+  itemType: "artist" | "song";
+  artistName: string;
+  artistSlug: string;
+  title: string;
+  image: string;
+  writeup: string;
+  reason: string;
+  href: string;
+  audioUrl: string | null;
+};
+
 async function getSlotItems(env: Env, slotKey: string) {
   const db = getDb(env);
   return db
@@ -49,6 +61,7 @@ async function getSlotItems(env: Env, slotKey: string) {
       customHref: editorialSlotItems.customHref,
       artistName: itemArtists.name,
       artistSlug: itemArtists.slug,
+      artistBio: itemArtists.bio,
       artistProfileImage: itemArtists.profileImage,
       artistHeroImage: itemArtists.heroImage,
       artistGenres: itemArtists.genres,
@@ -61,6 +74,7 @@ async function getSlotItems(env: Env, slotKey: string) {
       songCoverImage: songs.coverImage,
       songArtistName: songs.artistName,
       songArtistSlug: songArtists.slug,
+      songArtistBio: songArtists.bio,
       songArtistProfileImage: songArtists.profileImage,
       songArtistHeroImage: songArtists.heroImage,
       songId: songs.id
@@ -77,11 +91,12 @@ async function getSlotItems(env: Env, slotKey: string) {
 
 export async function getHomePayload(env: Env) {
   const db = getDb(env);
-  const [featuredReleaseItems, featuredArtistItems, latestReleaseItems, featuredArtistsFallback, releaseFallback, latestSongsFallback] =
+  const [featuredReleaseItems, featuredArtistItems, latestReleaseItems, ourPickItems, featuredArtistsFallback, releaseFallback, latestSongsFallback] =
     await Promise.all([
       getSlotItems(env, "home_featured_release"),
       getSlotItems(env, "home_featured_artists"),
       getSlotItems(env, "home_latest_releases"),
+      getSlotItems(env, "home_our_pick"),
       db.select().from(artists).orderBy(desc(artists.featured), asc(artists.name)).limit(4),
       db.select({
         id: releases.id,
@@ -178,10 +193,41 @@ export async function getHomePayload(env: Env) {
           audioUrl: song.audioUrl
         }));
 
+  const pick = ourPickItems[0];
+  const ourPick: HomeOurPick | null = pick
+    ? (() => {
+        const isSong = pick.itemType === "song";
+        const artistName = isSong
+          ? pick.songArtistName ?? "Artist"
+          : pick.artistName ?? "Artist";
+        const artistSlug = isSong
+          ? pick.songArtistSlug ?? ""
+          : pick.artistSlug ?? "";
+        const title = pick.customTitle ?? (isSong ? pick.songTitle : pick.artistName) ?? "Our Pick";
+        const defaultWriteup = isSong
+          ? pick.songArtistBio ?? ""
+          : pick.artistBio ?? "";
+        return {
+          itemType: isSong ? "song" : "artist",
+          artistName,
+          artistSlug,
+          title,
+          image: pick.customImage || (isSong
+            ? pick.songCoverImage || resolveArtistImage(pick.songArtistSlug, pick.songArtistProfileImage, pick.songArtistHeroImage)
+            : resolveArtistImage(pick.artistSlug, pick.artistProfileImage, pick.artistHeroImage)),
+          writeup: pick.customDescription ?? defaultWriteup,
+          reason: pick.customSubtitle ?? "",
+          href: pick.customHref ?? (artistSlug ? `/artist/${artistSlug}` : "/artists"),
+          audioUrl: isSong ? pick.songAudioUrl : null
+        };
+      })()
+    : null;
+
   return {
     featuredRelease,
     featuredArtists,
-    latestReleases
+    latestReleases,
+    ourPick
   };
 }
 

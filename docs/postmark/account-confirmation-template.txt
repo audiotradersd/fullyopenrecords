@@ -1,0 +1,10 @@
+Hi {{#first_name}}{{.}}{{/first_name}}{{^first_name}}there{{/first_name}},
+
+Thanks for creating an account with Fully Open Records. Confirm your email address to finish setting up your account and begin discovering music without algorithms.
+
+Confirm your email: {{confirmation_url}}
+
+If you did not create this account, you can safely ignore this email.
+
+Fully Open Records
+Music Without Algorithms.

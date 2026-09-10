@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import type { Route } from "next";
 import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
 import { useState } from "react";
@@ -82,14 +81,9 @@ export default function Navbar() {
                   </Button>
                 </>
               ) : (
-                <>
-                  <Button variant="outline" onClick={() => openAuth("login")}>
-                    Log in
-                  </Button>
-                  <Link href={"/signup" as Route}>
-                    <Button>Sign up</Button>
-                  </Link>
-                </>
+                <Button variant="outline" onClick={() => openAuth("login")}>
+                  Log in
+                </Button>
               )}
             </div>
           </div>
@@ -106,9 +100,7 @@ export default function Navbar() {
                 </a>
               )
             ) : (
-              <Link href={"/signup" as Route}>
-                <Button size="sm">Join</Button>
-              </Link>
+              <Button size="sm" onClick={() => openAuth("login")}>Log in</Button>
             )}
             <Button type="button" variant="outline" aria-label={mobileMenuOpen ? "Close navigation menu" : "Open navigation menu"} aria-expanded={mobileMenuOpen} onClick={() => setMobileMenuOpen((open) => !open)} className="h-9 w-9 p-0">
               {mobileMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}

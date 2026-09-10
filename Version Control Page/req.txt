@@ -1,0 +1,332 @@
+TASK: Build and deploy a new Fully Open Records marketing/hero page for "Track Version Control"
+
+Use the attached design/reference image as the visual direction for this page. The new page must fit seamlessly into the existing Fully Open Records website: reuse the existing site header/navigation, typography, spacing conventions, responsive breakpoints, button components and overall dark/cosmic design language wherever possible.
+
+Do not redesign the rest of the website or change global components unnecessarily.
+
+PAGE PURPOSE
+
+Fully Open Records has a Track Version Control feature.
+
+The central idea is that a musician can assign every version created during the life of a song to ONE track.
+
+Instead of the first phone recording, rehearsal recording, demo, revised mix and final master becoming disconnected files, they form a chronological history of the same track.
+
+Each version can contain:
+- Audio
+- Date/stage
+- Notes
+- Images
+- Recording/setup information
+- Guitar/instrument used
+- Amplifier and settings
+- Pedals/effects and settings
+- Recording equipment
+- Production/mix notes
+
+This creates a permanent creative diary showing how a song evolved from its first idea to the finished master.
+
+The page should communicate that Fully Open Records is unique in treating version history as part of the creative record rather than simply providing storage for finished songs.
+
+ROUTE
+
+Create this as a dedicated public-facing feature page.
+
+Preferred route:
+
+/track-version-control
+
+Add an appropriate link/CTA from the existing site where sensible, but do not substantially alter the current homepage.
+
+DESIGN
+
+Follow the supplied mockup closely.
+
+Use the current Fully Open Records header at the top.
+
+Overall appearance:
+- very dark navy/black background
+- subtle cosmic/textured background consistent with the existing site
+- white/off-white typography
+- use the site's current blue accent colour rather than the previous pink accent
+- subtle borders/glows
+- premium but underground/independent music aesthetic
+- avoid generic SaaS styling
+
+SECTION 1 — HERO
+
+Eyebrow:
+TRACK VERSION CONTROL
+
+Headline:
+Every idea has a journey.
+Capture it all.
+
+Body copy:
+
+"Keep a complete diary of your track's evolution — from the first jam to the final master. Store every version, add notes, photos and settings, and preserve the ideas and decisions that shaped the finished track."
+
+Primary CTA:
+Start Your Journey
+
+Secondary CTA:
+See How It Works
+
+The right-hand side should use a dark/gritty musician/studio image treatment similar to the supplied concept.
+
+Do not bake text into an image. All headings, descriptions and buttons must be real HTML.
+
+SECTION 2 — FEATURE STRIP
+
+Create four compact feature blocks:
+
+ORGANISE IDEAS
+Keep every version of a track in one place.
+
+ADD NOTES
+Record what you tried, what worked and what to try next.
+
+ATTACH IMAGES
+Save photos of your setup, pedals, amp settings, lyrics, chords and more.
+
+TRACK PROGRESS
+See the complete creative journey from the first idea to the mastered track.
+
+Use simple line icons consistent with the site's existing visual language.
+
+SECTION 3 — INTERACTIVE/VISUAL TIMELINE
+
+Heading:
+
+From idea to release.
+
+Subheading:
+
+A visual timeline of your track's evolution.
+
+This is the most important visual component on the page.
+
+Build an actual responsive HTML/CSS timeline rather than using a static image.
+
+Desktop should show a horizontal line/arrow moving through:
+
+FIRST JAM
+↓
+REHEARSAL
+↓
+DEMO
+↓
+PRE-MASTER
+↓
+MASTER
+
+Each stage should have a node on the timeline and a card beneath it.
+
+Example content:
+
+1. FIRST JAM
+"A spark of an idea"
+
+Description:
+Capture the raw idea. Voice memos, riffs, anything goes.
+
+Example image:
+Guitar/amp/rehearsal setup
+
+Notes:
+Riff idea in E. Rough drums recorded on phone. Needs a heavier middle section.
+
+Setup:
+Fender Telecaster
+Orange Crush 20
+No pedals
+
+
+2. REHEARSAL
+"Finding the sound"
+
+Description:
+Experiment and develop the arrangement.
+
+Example image:
+Pedalboard
+
+Notes:
+Tried the new fuzz. Works well in the chorus. Tempo up to 128bpm.
+
+Setup:
+Gibson Les Paul
+Marshall DSL40
+Big Muff / Boss DD-7
+
+
+3. DEMO
+"Taking shape"
+
+Description:
+Record a focused demo to capture the full song structure.
+
+Example image:
+DAW/audio waveform
+
+Notes:
+Full take with scratch vocals. Need to tighten the bridge and rework the lyrics.
+
+Setup:
+Gibson Les Paul
+Universal Audio Apollo
+Logic Pro
+
+
+4. PRE-MASTER
+"Polishing the detail"
+
+Description:
+Refine the mix and finalise the performance.
+
+Example image:
+Mixing console/studio equipment
+
+Notes:
+New drum take. Vocals doubled. Added plate reverb. Feeling close now.
+
+Setup:
+Neve 1073
+API 2500
+Pro Tools
+
+
+5. MASTER
+"Ready for the world"
+
+Description:
+The final version, ready for release.
+
+Example image:
+Mastering equipment/meters
+
+Notes:
+Final master approved. Loud but dynamic. Ready to release.
+
+Setup:
+Waves L2
+iZotope Ozone
+24bit / 48kHz
+
+
+VISUAL TIMELINE DETAILS
+
+Make the timeline visually tell a story.
+
+Above the line, use small handwritten-style annotations/arrows similar to the supplied design:
+
+A SPARK OF AN IDEA
+↓
+FINDING THE SOUND
+↓
+TAKING SHAPE
+↓
+POLISHING THE DETAIL
+↓
+READY FOR THE WORLD
+
+Do not overdo the handwritten treatment. It should feel like annotations in a musician's notebook rather than a novelty font.
+
+On mobile, convert the timeline into a VERTICAL timeline rather than squeezing the five stages horizontally.
+
+Each version should clearly look as though it belongs to the same track.
+
+Consider a subtle continuous line connecting every version.
+
+SECTION 4 — THE KEY MESSAGE
+
+Create a strong closing section.
+
+Eyebrow:
+MORE THAN A RELEASE
+
+Headline:
+A RECORD OF YOUR CREATIVITY
+
+Copy:
+
+"Most platforms only care about the finished track. Fully Open Records preserves everything that came before it.
+
+Track Version Control gives every recording, experiment, setup and decision a place in the history of the song — creating a permanent creative diary from the first idea to the final master."
+
+CTA:
+Start Your Journey
+
+Secondary link:
+Explore Fully Open Records
+
+IMPORTANT PRODUCT POSITIONING
+
+Do not describe this simply as "file versioning".
+
+The important concept is:
+
+ONE TRACK
+→ MANY VERSIONS
+→ ONE CREATIVE HISTORY
+
+It is effectively a diary/journal of the creation of a piece of music.
+
+The musician should be able to look back years later and hear the first riff, see a photograph of the pedalboard they used, read their original notes, inspect their amp settings and then follow the song through rehearsals, demos, mixes and mastering.
+
+That emotional/archival value should come through in the page.
+
+IMPLEMENTATION REQUIREMENTS
+
+Before coding:
+1. Inspect the existing project structure.
+2. Identify the framework/router being used.
+3. Identify existing header/navigation components.
+4. Identify existing button, typography and layout components.
+5. Identify the current Fully Open Records colour variables/design tokens.
+6. Reuse these wherever possible.
+
+Do not introduce a second design system.
+
+Build the page using the project's existing framework and conventions.
+
+Requirements:
+- fully responsive
+- desktop/tablet/mobile
+- accessible semantic HTML
+- sensible heading hierarchy
+- keyboard-accessible CTAs
+- appropriate alt text
+- no text embedded in generated images
+- optimise all imagery
+- avoid layout shift
+- preserve existing site functionality
+- do not introduce unnecessary dependencies
+
+If suitable existing site imagery/assets are available, reuse them. Otherwise create the image areas so suitable assets can easily be substituted later.
+
+Where possible, make the timeline data-driven so the five stages are generated from a single data structure rather than five independently hard-coded layouts.
+
+SEO
+
+Page title:
+Track Version Control | Fully Open Records
+
+Meta description:
+"Document every stage of a song, from the first jam to the final master. Keep recordings, notes, images, instruments and studio settings together in one creative timeline."
+
+DELIVERY
+
+Implement the page rather than merely describing how to build it.
+
+Run the project's existing lint/typecheck/test/build commands after implementation.
+
+Fix any errors caused by the changes.
+
+Then report:
+- files created
+- files modified
+- route created
+- reusable components added
+- any assets/placeholders that still need replacing
+- build/test results

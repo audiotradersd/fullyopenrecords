@@ -1,0 +1,7 @@
+Hi {{#first_name}}{{.}}{{/first_name}}{{^first_name}}there{{/first_name}},
+
+You asked to use {{new_email}} for your Fully Open Records account. Confirm it here:
+
+{{email_change_url}}
+
+If you did not request this change, you can safely ignore this email.

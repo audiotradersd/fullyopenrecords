@@ -1,0 +1,7 @@
+Hi {{#first_name}}{{.}}{{/first_name}}{{^first_name}}there{{/first_name}},
+
+Your email is confirmed and your account is ready. Discover independent music, build your artist page, and keep things open.
+
+Open Fully Open Records: {{dashboard_url}}
+
+Music Without Algorithms.

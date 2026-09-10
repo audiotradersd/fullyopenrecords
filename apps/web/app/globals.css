@@ -108,6 +108,7 @@ body::after {
   min-height: 100vh;
 }
 
+
 .hero-noise {
   position: relative;
   overflow: hidden;

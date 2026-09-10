@@ -15,10 +15,11 @@ export function ArtistCard({ artist }: { artist: Record<string, any> }) {
   const sampleTitle = typeof sampleTrack?.title === "string" ? sampleTrack.title : "";
   const sampleAudioUrl = typeof sampleTrack?.audioUrl === "string" ? sampleTrack.audioUrl : "";
   const artistSlug = String(artist.slug);
+  const artistHref = typeof artist.href === "string" ? artist.href : `/artist/${artistSlug}`;
 
   return (
     <Panel className="h-full border-glow/30 bg-white/5 transition-transform duration-300 hover:-translate-y-1 hover:border-rose/40">
-      <Link href={`/artist/${artistSlug}` as Route}>
+      <Link href={artistHref as Route}>
         {typeof artist.image === "string" && artist.image.length > 0 ? (
           <div className="relative mb-5 aspect-[4/5] overflow-hidden rounded-[1.5rem] border border-white/10">
             <Image
@@ -32,9 +33,6 @@ export function ArtistCard({ artist }: { artist: Record<string, any> }) {
         ) : null}
         <p className="text-xs uppercase tracking-[0.3em] text-fog">{genres.join(" / ")}</p>
         <h3 className="mt-3 font-display text-2xl text-sand">{String(artist.name)}</h3>
-        <p className="mt-3 line-clamp-3 text-sm text-fog">
-          {String(artist.shortDescription ?? artist.bio)}
-        </p>
       </Link>
       <div className="mt-5 flex flex-wrap gap-2">
         {sampleAudioUrl ? (
@@ -45,7 +43,7 @@ export function ArtistCard({ artist }: { artist: Record<string, any> }) {
             size="sm"
           />
         ) : null}
-        <Link href={`/artist/${artistSlug}` as Route}>
+        <Link href={artistHref as Route}>
           <span className="inline-flex h-11 items-center rounded-full border border-white/10 px-4 text-xs uppercase tracking-[0.18em] text-fog transition hover:border-pink/40 hover:text-white">
             Artist Page
           </span>

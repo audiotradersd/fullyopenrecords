@@ -4,6 +4,7 @@ node_modules
 .wrangler
 dist
 build
+*.tsbuildinfo
 .DS_Store
 coverage
 .env

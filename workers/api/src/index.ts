@@ -5,6 +5,7 @@ import { csrfGuard } from "./middleware/csrf";
 import { syncRadioHistory } from "./lib/radio";
 import { adminRouter } from "./routes/admin";
 import { publicRouter } from "./routes/public";
+import { mediaWorkerRouter } from "./routes/media-worker";
 import type { AppVariables, Env } from "./types";
 
 const app = new Hono<{ Bindings: Env; Variables: AppVariables }>();
@@ -29,6 +30,7 @@ app.get("/", (c) =>
 
 app.route("/", publicRouter);
 app.route("/admin", adminRouter);
+app.route("/media-worker", mediaWorkerRouter);
 
 export default {
   fetch: app.fetch,

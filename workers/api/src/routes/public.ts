@@ -26,6 +26,7 @@ import {
   favouriteSongs,
   gigs,
   media,
+  mediaJobs,
   pages,
   pressItems,
   products,
@@ -84,6 +85,10 @@ function slugify(value: string) {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 60);
+}
+
+function encodedAudioKey(artistSlug: string, songId: number, title: string) {
+  return `artists/${artistSlug}/songs/audio/encoded/${songId}-${slugify(title) || "track"}.mp3`;
 }
 
 function reserveLegacySlug(value: string, id: number) {
@@ -1148,6 +1153,11 @@ publicRouter.post("/artist/me/songs", requireArtist, zValidator("json", songSche
     return c.json({ error: "Artist profile not found" }, 404);
   }
 
+  const artistPath = slugify(artist.slug || artist.name) || `artist-${artist.id}`;
+  if (payload.masterKey && !payload.masterKey.startsWith(`artists/${artistPath}/songs/audio/`)) {
+    return c.json({ error: "Invalid private audio upload." }, 400);
+  }
+
   const usage = await getArtistUsage(db, artist.id);
 
   if (isFreePlanArtist(artist) && payload.radioSelected && limitsExceeded(usage.radioTracks, FREE_PLAN_LIMITS.radioTracks)) {
@@ -1175,7 +1185,9 @@ publicRouter.post("/artist/me/songs", requireArtist, zValidator("json", songSche
       trackNumber: payload.trackNumber ?? null,
       title: payload.title,
       slug: slugify(`${artist.name}-${payload.title}`),
-      audioUrl: payload.audioUrl ?? null,
+      audioUrl: payload.masterKey ? null : payload.audioUrl ?? null,
+      masterKey: payload.masterKey ?? null,
+      processingStatus: payload.masterKey ? "queued" : "ready",
       duration: payload.duration ?? null,
       coverImage: payload.coverImage ?? null,
       albumId: payload.albumId ?? null,
@@ -1186,12 +1198,23 @@ publicRouter.post("/artist/me/songs", requireArtist, zValidator("json", songSche
     })
     .returning();
 
+  if (payload.masterKey) {
+    await db.insert(mediaJobs).values({
+      songId: created[0].id,
+      jobType: "encode",
+      sourceBucket: "masters",
+      sourceKey: payload.masterKey,
+      masterKey: payload.masterKey,
+      outputKey: encodedAudioKey(artistPath, created[0].id, payload.title)
+    });
+  }
+
   await logFlowEvent(c.env, c.req.raw, "artist.song.created", {
     user,
     artistId: artist.id,
     meta: { songId: created[0].id, title: payload.title, radioSelected: payload.radioSelected, enabled }
   });
-  return c.json({ song: created[0], warning }, 201);
+  return c.json({ song: created[0], warning, processing: Boolean(payload.masterKey) }, 201);
 });
 
 publicRouter.put("/artist/me/songs/:id", requireArtist, zValidator("json", songSchema.partial()), async (c) => {
@@ -1296,6 +1319,12 @@ publicRouter.delete("/artist/me/songs/:id", requireArtist, async (c) => {
     } catch (error) {
       console.error("song media delete failed", { key, error });
     }
+  }
+
+  if (existingSong.masterKey) {
+    await c.env.MASTER_BUCKET.delete(existingSong.masterKey).catch((error) => {
+      console.error("song master delete failed", { key: existingSong.masterKey, error });
+    });
   }
 
   if (managedKeys.length) {
@@ -1606,6 +1635,19 @@ publicRouter.post("/artist/me/media", requireArtist, async (c) => {
     }
 
     const artistPath = slugify(artist.slug || artist.name) || `artist-${artist.id}`;
+    if (kind === "songs/audio") {
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]+/g, "-");
+      const key = `artists/${artistPath}/songs/audio/${Date.now()}-${safeName}`;
+      await c.env.MASTER_BUCKET.put(key, await file.arrayBuffer(), {
+        httpMetadata: { contentType: file.type || "application/octet-stream" }
+      });
+      await logFlowEvent(c.env, c.req.raw, "artist.master_audio.uploaded", {
+        user,
+        artistId: artist.id,
+        meta: { key, fileName: file.name }
+      });
+      return c.json({ key, url: "", masterKey: key, processing: true }, 201);
+    }
     const uploaded = await uploadMediaObject(c, file, `artists/${artistPath}/${kind}`, alt);
     await logFlowEvent(c.env, c.req.raw, "artist.media.uploaded", {
       user,

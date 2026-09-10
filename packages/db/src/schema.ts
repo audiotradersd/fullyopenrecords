@@ -1,6 +1,7 @@
 import { relations, sql } from "drizzle-orm";
 import {
   integer,
+  index,
   sqliteTable,
   text,
   uniqueIndex
@@ -298,6 +299,10 @@ export const songs = sqliteTable("songs", {
   title: text("title").notNull(),
   slug: text("slug"),
   audioUrl: text("audio_url"),
+  // The original upload is held in the private masters bucket. It must never
+  // be returned to a public player or used as a public media URL.
+  masterKey: text("master_key"),
+  processingStatus: text("processing_status").notNull().default("ready"),
   duration: integer("duration"),
   coverImage: text("cover_image"),
   description: text("description"),
@@ -308,6 +313,29 @@ export const songs = sqliteTable("songs", {
   playCount: integer("play_count").notNull().default(0),
   ...timestamps
 });
+
+export const mediaJobs = sqliteTable(
+  "media_jobs",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    songId: integer("song_id").notNull().references(() => songs.id, { onDelete: "cascade" }),
+    jobType: text("job_type").notNull(),
+    status: text("status").notNull().default("queued"),
+    sourceBucket: text("source_bucket").notNull(),
+    sourceKey: text("source_key").notNull(),
+    masterKey: text("master_key"),
+    outputKey: text("output_key"),
+    error: text("error"),
+    attempts: integer("attempts").notNull().default(0),
+    claimedAt: text("claimed_at"),
+    completedAt: text("completed_at"),
+    ...timestamps
+  },
+  (table) => [
+    index("media_jobs_status_created_idx").on(table.status, table.createdAt),
+    index("media_jobs_song_type_idx").on(table.songId, table.jobType)
+  ]
+);
 
 export const trackVersions = sqliteTable(
   "track_versions",

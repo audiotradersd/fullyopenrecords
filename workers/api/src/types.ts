@@ -15,6 +15,7 @@ export type AppVariables = {
 export type Env = {
   DB: D1Database;
   MEDIA_BUCKET: R2Bucket;
+  MASTER_BUCKET: R2Bucket;
   JWT_SECRET: string;
   POSTMARK_SERVER_TOKEN: string;
   POSTMARK_FROM_EMAIL: string;
@@ -24,6 +25,7 @@ export type Env = {
   STRIPE_WEBHOOK_SECRET: string;
   SITE_URL: string;
   R2_PUBLIC_URL?: string;
+  MEDIA_PROCESSOR_TOKEN: string;
   RADIO_STREAM_URL: string;
   RADIO_METADATA_URL?: string;
   RADIO_EMBED_URL?: string;

@@ -12,6 +12,10 @@ database_id = "43433791-04c7-497d-88c3-6f32edce8f59"
 binding = "MEDIA_BUCKET"
 bucket_name = "fully-open-records-media"
 
+[[r2_buckets]]
+binding = "MASTER_BUCKET"
+bucket_name = "fully-open-records-masters"
+
 [vars]
 SITE_URL = "https://fullyopenrecords.com"
 ADMIN_EMAIL = "sbdownes@gmail.com"

@@ -8,8 +8,8 @@ import {
   productSchema,
   releaseSchema
 } from "@fully-open-records/api/src/contracts";
-import { artists, editorialSlotItems, editorialSlots, favouriteSongs, flowEvents, media, sessions, songs, trackingItems, users } from "@fully-open-records/db/src/schema";
-import { asc, count, desc, eq, inArray, isNotNull, like } from "drizzle-orm";
+import { artists, editorialSlotItems, editorialSlots, favouriteSongs, flowEvents, media, mediaJobs, sessions, songs, trackingItems, users } from "@fully-open-records/db/src/schema";
+import { and, asc, count, desc, eq, inArray, isNotNull, isNull, like, or } from "drizzle-orm";
 import { Hono } from "hono";
 import { getDb } from "../lib/db";
 import { signAdminJwt } from "../lib/auth";
@@ -19,6 +19,35 @@ import { requireAdmin } from "../middleware/auth";
 import type { AppVariables, Env } from "../types";
 
 export const adminRouter = new Hono<{ Bindings: Env; Variables: AppVariables }>();
+
+function slugify(value: string) {
+  return value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60);
+}
+
+function managedPublicMediaKey(url: string | null) {
+  if (!url) return null;
+  try {
+    const path = new URL(url).pathname;
+    return path.startsWith("/media/") ? decodeURIComponent(path.slice("/media/".length)) : null;
+  } catch {
+    return null;
+  }
+}
+
+function encodedAudioKey(artistName: string, songId: number, title: string) {
+  return `artists/${slugify(artistName) || `artist-${songId}`}/songs/audio/encoded/${songId}-${slugify(title) || "track"}.mp3`;
+}
+
+async function queueRadioUpload(db: ReturnType<typeof getDb>, song: typeof songs.$inferSelect) {
+  const sourceKey = managedPublicMediaKey(song.audioUrl);
+  if (!sourceKey) return { queued: false, error: "This track is not stored in Fully Open Records media." };
+  const [existing] = await db.select({ id: mediaJobs.id }).from(mediaJobs)
+    .where(and(eq(mediaJobs.songId, song.id), eq(mediaJobs.jobType, "radio_upload"), or(eq(mediaJobs.status, "queued"), eq(mediaJobs.status, "processing"))))
+    .limit(1);
+  if (existing) return { queued: true, duplicate: true };
+  await db.insert(mediaJobs).values({ songId: song.id, jobType: "radio_upload", sourceBucket: "media", sourceKey });
+  return { queued: true, duplicate: false };
+}
 
 function updateById<T extends { id?: number }>(
   collection: T[],
@@ -324,13 +353,45 @@ adminRouter.put("/songs/:id/radio", async (c) => {
   }
 
   const db = getDb(c.env);
+  const songId = Number(c.req.param("id"));
+  const [song] = await db.select().from(songs).where(eq(songs.id, songId)).limit(1);
+  if (!song) return c.json({ error: "Not found" }, 404);
+  if (payload.enabled && !song.audioUrl) return c.json({ error: "This track is still processing and cannot be sent to radio yet." }, 409);
   const updated = await db
     .update(songs)
     .set({ approvedForRadio: payload.enabled, updatedAt: new Date().toISOString() })
-    .where(eq(songs.id, Number(c.req.param("id"))))
+    .where(eq(songs.id, songId))
     .returning();
 
-  return updated[0] ? c.json(updated[0]) : c.json({ error: "Not found" }, 404);
+  const radioUpload = payload.enabled && updated[0] ? await queueRadioUpload(db, updated[0]) : null;
+  if (radioUpload && !radioUpload.queued) return c.json({ error: radioUpload.error }, 409);
+  return updated[0] ? c.json({ ...updated[0], radioUploadQueued: Boolean(radioUpload?.queued) }) : c.json({ error: "Not found" }, 404);
+});
+
+// Queues every existing public media object for archival and 128 kbps encoding.
+// It is idempotent: songs already linked to a private master are skipped.
+adminRouter.post("/media/backfill", async (c) => {
+  const db = getDb(c.env);
+  const candidates = await db.select().from(songs).where(and(isNotNull(songs.audioUrl), isNull(songs.masterKey)));
+  let queued = 0;
+  let skipped = 0;
+  const now = new Date().toISOString();
+  for (const song of candidates) {
+    const sourceKey = managedPublicMediaKey(song.audioUrl);
+    if (!sourceKey) { skipped += 1; continue; }
+    const masterKey = `archive/legacy/${song.id}/${sourceKey}`;
+    await db.update(songs).set({ masterKey, processingStatus: "queued", updatedAt: now }).where(eq(songs.id, song.id));
+    await db.insert(mediaJobs).values({
+      songId: song.id,
+      jobType: "encode",
+      sourceBucket: "media",
+      sourceKey,
+      masterKey,
+      outputKey: encodedAudioKey(song.artistName, song.id, song.title)
+    });
+    queued += 1;
+  }
+  return c.json({ queued, skipped, total: candidates.length });
 });
 
 adminRouter.get("/favourites/stats", async (c) => {

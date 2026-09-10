@@ -267,7 +267,7 @@ export default function ArtistDashboard() {
     setUploading(label);
     setUploadPercent(0);
 
-    return await new Promise<{ key: string; url: string }>((resolve, reject) => {
+    return await new Promise<{ key: string; url: string; masterKey?: string; processing?: boolean }>((resolve, reject) => {
       const xhr = new XMLHttpRequest();
       xhr.open("POST", "/api/artist/me/media");
 
@@ -408,10 +408,13 @@ export default function ArtistDashboard() {
       const coverFile = formData.get("coverFile");
 
       let audioUrl = String(formData.get("audioUrl") ?? "");
+      let masterKey = "";
       let coverImage = String(formData.get("coverImage") ?? "");
 
       if (audioFile instanceof File && audioFile.size > 0) {
-        audioUrl = (await uploadAsset(audioFile, "songs/audio", title, "Uploading audio…")).url;
+        const uploadedAudio = await uploadAsset(audioFile, "songs/audio", title, "Uploading audio…");
+        audioUrl = uploadedAudio.url ?? "";
+        masterKey = uploadedAudio.masterKey ?? "";
       }
 
       if (coverFile instanceof File && coverFile.size > 0) {
@@ -430,6 +433,7 @@ export default function ArtistDashboard() {
         body: JSON.stringify({
           title,
           audioUrl,
+          masterKey: masterKey || undefined,
           coverImage,
           albumId: albumIdValue ? Number(albumIdValue) : null,
           trackNumber: Number.isInteger(trackNumber) && (trackNumber ?? 0) > 0 ? trackNumber : null,
@@ -574,7 +578,8 @@ export default function ArtistDashboard() {
           body: JSON.stringify({
             title: parsed.title,
             trackNumber: parsed.trackNumber,
-            audioUrl: uploadedAudio.url,
+            audioUrl: uploadedAudio.url ?? "",
+            masterKey: uploadedAudio.masterKey,
             coverImage: "",
             albumId: null,
             description: "",

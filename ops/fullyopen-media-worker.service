@@ -1,0 +1,10 @@
+[Unit]
+Description=Fully Open Records media processing job
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=ubuntu
+Environment=MEDIA_WORKER_CONFIG=/etc/fullyopen-media-worker.env
+ExecStart=/usr/local/bin/fullyopen-media-worker

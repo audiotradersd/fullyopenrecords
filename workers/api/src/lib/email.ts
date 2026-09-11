@@ -65,10 +65,9 @@ export async function sendNewAccountNotification(env: Env, account: NewAccountNo
           username: account.username,
           email: account.email,
           account_type: account.accountType,
-          is_artist: account.accountType === "artist",
-          artist_name: account.artist?.name ?? "",
-          artist_slug: account.artist?.slug ?? "",
-          artist_page_url: artistPageUrl ?? ""
+          artist: account.artist
+            ? { name: account.artist.name, slug: account.artist.slug, page_url: artistPageUrl }
+            : null
         }
       })
     });

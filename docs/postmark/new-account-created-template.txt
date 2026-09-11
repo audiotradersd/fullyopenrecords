@@ -4,11 +4,11 @@ Username: {{username}}
 Email: {{email}}
 Account type: {{account_type}}
 
-{{#is_artist}}
+{{#artist}}
 Artist details
-Artist name: {{artist_name}}
-Artist page: {{artist_page_url}}
-{{/is_artist}}
-{{^is_artist}}
+Artist name: {{name}}
+Artist page: {{page_url}}
+{{/artist}}
+{{^artist}}
 This is a listener account. The username is shown above.
-{{/is_artist}}
+{{/artist}}

@@ -48,7 +48,7 @@ import { fallbackContent } from "../lib/content";
 import { generateRandomToken, hashPassword, hashSessionToken, SESSION_COOKIE_NAME, SESSION_MAX_AGE_SECONDS, verifyPassword } from "../lib/auth";
 import { getDb } from "../lib/db";
 import { logFlowEvent } from "../lib/events";
-import { sendAccountWelcomeEmail } from "../lib/email";
+import { sendAccountWelcomeEmail, sendNewAccountNotification } from "../lib/email";
 import { getRadioStatus } from "../lib/radio";
 import { getHomePayload } from "../lib/home";
 import { getArtistsEditorialPayload } from "../lib/artists-editorial";
@@ -674,6 +674,12 @@ publicRouter.post("/auth/register", rateLimit, zValidator("json", registerSchema
       .limit(1);
 
     c.executionCtx.waitUntil(sendAccountWelcomeEmail(c.env, { email: user.email, username: user.username }));
+    c.executionCtx.waitUntil(sendNewAccountNotification(c.env, {
+      email: user.email,
+      username: user.username,
+      accountType: user.accountType === "artist" ? "artist" : "listener",
+      artist: artist ? { name: payload.username, slug: artist.slug } : undefined
+    }));
 
     return c.json({
       sessionToken,

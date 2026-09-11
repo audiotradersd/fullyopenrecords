@@ -1,0 +1,14 @@
+New {{account_type}} account created
+
+Username: {{username}}
+Email: {{email}}
+Account type: {{account_type}}
+
+{{#is_artist}}
+Artist details
+Artist name: {{artist_name}}
+Artist page: {{artist_page_url}}
+{{/is_artist}}
+{{^is_artist}}
+This is a listener account. The username is shown above.
+{{/is_artist}}

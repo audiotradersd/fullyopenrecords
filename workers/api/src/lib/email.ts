@@ -72,10 +72,21 @@ export async function sendNewAccountNotification(env: Env, account: NewAccountNo
       })
     });
 
+    const body = await response.text();
     if (!response.ok) {
       console.error("new account notification failed", response.status);
+      return { ok: false as const, error: `Postmark returned ${response.status}.` };
     }
+    let messageId: string | null = null;
+    try {
+      const parsed = JSON.parse(body) as { MessageID?: unknown };
+      messageId = typeof parsed.MessageID === "string" ? parsed.MessageID : null;
+    } catch {
+      // Postmark accepted the message even if a proxy returned no JSON body.
+    }
+    return { ok: true as const, messageId };
   } catch (error) {
     console.error("new account notification failed", error);
+    return { ok: false as const, error: error instanceof Error ? error.message.slice(0, 1000) : "Postmark request failed." };
   }
 }

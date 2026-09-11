@@ -8,14 +8,15 @@ import {
   productSchema,
   releaseSchema
 } from "@fully-open-records/api/src/contracts";
-import { artists, editorialSlotItems, editorialSlots, favouriteSongs, flowEvents, media, mediaJobs, sessions, songs, trackingItems, users } from "@fully-open-records/db/src/schema";
-import { and, asc, count, desc, eq, inArray, isNotNull, isNull, like, or } from "drizzle-orm";
+import { accountEmailNotifications, artists, editorialSlotItems, editorialSlots, favouriteSongs, flowEvents, media, mediaJobs, sessions, songs, trackingItems, users } from "@fully-open-records/db/src/schema";
+import { and, asc, count, desc, eq, inArray, isNotNull, isNull, like, ne, or } from "drizzle-orm";
 import { Hono } from "hono";
 import { getDb } from "../lib/db";
 import { signAdminJwt } from "../lib/auth";
 import { fallbackContent } from "../lib/content";
 import { resolveArtistImage } from "../lib/artist-images";
 import { requireAdmin } from "../middleware/auth";
+import { sendAndRecordNewAccountNotification } from "../lib/account-notifications";
 import type { AppVariables, Env } from "../types";
 
 export const adminRouter = new Hono<{ Bindings: Env; Variables: AppVariables }>();
@@ -271,13 +272,44 @@ adminRouter.get("/users", async (c) => {
       createdAt: users.createdAt,
       artistName: artists.name,
       artistSlug: artists.slug,
-      artistPlan: artists.plan
+      artistPlan: artists.plan,
+      accountNotificationStatus: accountEmailNotifications.status,
+      accountNotificationSentAt: accountEmailNotifications.sentAt
     })
     .from(users)
     .leftJoin(artists, eq(artists.userId, users.id))
+    .leftJoin(accountEmailNotifications, and(eq(accountEmailNotifications.userId, users.id), eq(accountEmailNotifications.notificationType, "new_account_created")))
     .orderBy(desc(users.createdAt));
 
   return c.json(rows);
+});
+
+// Sends at most 25 unsent account notifications per request. The dashboard
+// repeats this endpoint until it reports no remaining records.
+adminRouter.post("/account-notifications/backfill", async (c) => {
+  const db = getDb(c.env);
+  const pending = await db
+    .select({ user: users, artist: artists })
+    .from(users)
+    .leftJoin(artists, eq(artists.userId, users.id))
+    .leftJoin(accountEmailNotifications, and(eq(accountEmailNotifications.userId, users.id), eq(accountEmailNotifications.notificationType, "new_account_created")))
+    .where(and(eq(users.active, true), or(isNull(accountEmailNotifications.id), ne(accountEmailNotifications.status, "sent"))))
+    .orderBy(asc(users.id))
+    .limit(25);
+
+  let sent = 0;
+  let failed = 0;
+  for (const row of pending) {
+    const result = await sendAndRecordNewAccountNotification(c.env, {
+      userId: row.user.id,
+      email: row.user.email,
+      username: row.user.username,
+      accountType: row.user.accountType === "artist" ? "artist" : "listener",
+      artist: row.artist ? { name: row.artist.name, slug: row.artist.slug } : undefined
+    });
+    if (result.ok) sent += 1; else failed += 1;
+  }
+  return c.json({ attempted: pending.length, sent, failed, hasMore: pending.length === 25 });
 });
 
 adminRouter.put("/users/:id/active", async (c) => {

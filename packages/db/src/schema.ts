@@ -78,6 +78,22 @@ export const sessions = sqliteTable(
   (table) => [uniqueIndex("sessions_token_hash_idx").on(table.tokenHash)]
 );
 
+export const accountEmailNotifications = sqliteTable(
+  "account_email_notifications",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    notificationType: text("notification_type").notNull(),
+    status: text("status").notNull(),
+    postmarkMessageId: text("postmark_message_id"),
+    error: text("error"),
+    attempts: integer("attempts").notNull().default(0),
+    sentAt: text("sent_at"),
+    ...timestamps
+  },
+  (table) => [uniqueIndex("account_email_notifications_user_type_idx").on(table.userId, table.notificationType)]
+);
+
 export const releases = sqliteTable("releases", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   title: text("title").notNull(),

@@ -1,15 +1,18 @@
-<p style="margin:0 0 10px; color:#e36a9c; font-size:12px; font-weight:700; letter-spacing:2px; text-transform:uppercase;">Account notification</p>
-<h1 style="margin:0 0 22px; color:#ffffff; font-family:Arial, Helvetica, sans-serif; font-size:32px; font-weight:700; letter-spacing:-0.8px; line-height:1.15;">A new {{account_type}} account has been created.</h1>
-<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width:100%; margin:0 0 26px; border-collapse:collapse; font-size:15px; line-height:1.55;">
-  <tr><td style="padding:8px 14px; color:#c9b6d9; border-bottom:1px solid #3a2944; width:130px;">Username</td><td style="padding:8px 14px; color:#ffffff; border-bottom:1px solid #3a2944;">{{username}}</td></tr>
-  <tr><td style="padding:8px 14px; color:#c9b6d9; border-bottom:1px solid #3a2944;">Email</td><td style="padding:8px 14px; color:#ffffff; border-bottom:1px solid #3a2944;"><a href="mailto:{{email}}" style="color:#f19dc1;">{{email}}</a></td></tr>
-  <tr><td style="padding:8px 14px; color:#c9b6d9;">Account type</td><td style="padding:8px 14px; color:#ffffff;">{{account_type}}</td></tr>
+<p style="margin:0 0 10px; color:#e36a9c; font-size:12px; font-weight:700; letter-spacing:2px; text-transform:uppercase;">Fully Open Records</p>
+<h1 style="margin:0 0 22px; color:#ffffff; font-family:Arial, Helvetica, sans-serif; font-size:32px; font-weight:700; letter-spacing:-0.8px; line-height:1.15;">Someone new has joined the music.</h1>
+<p style="margin:0 0 18px;">Hi Si and Rich,</p>
+<p style="margin:0 0 24px;">A new {{account_type}} account has been created on Fully Open Records. Here are the account details.</p>
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width:100%; margin:0 0 28px; border-collapse:separate; border-spacing:0; border:1px solid #3a2944; border-radius:10px; overflow:hidden; font-family:Arial, Helvetica, sans-serif; font-size:14px; line-height:1.5;">
+  <tr><td style="padding:11px 14px; color:#c9b6d9; border-bottom:1px solid #3a2944; width:120px;">Username</td><td style="padding:11px 14px; color:#ffffff; border-bottom:1px solid #3a2944;">{{username}}</td></tr>
+  <tr><td style="padding:11px 14px; color:#c9b6d9; border-bottom:1px solid #3a2944;">Email</td><td style="padding:11px 14px; color:#ffffff; border-bottom:1px solid #3a2944;"><a href="mailto:{{email}}" style="color:#f19dc1; text-decoration:none;">{{email}}</a></td></tr>
+  <tr><td style="padding:11px 14px; color:#c9b6d9;">Account type</td><td style="padding:11px 14px; color:#ffffff;">{{account_type}}</td></tr>
 </table>
 {{#is_artist}}
-<p style="margin:0 0 12px; color:#ffffff; font-size:17px; font-weight:700;">Artist details</p>
-<p style="margin:0 0 20px; color:#c9b6d9; line-height:1.6;">Artist name: <strong style="color:#ffffff;">{{artist_name}}</strong></p>
-<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td style="border-radius:10px; background-color:#d14a8b;"><a href="{{artist_page_url}}" target="_blank" style="display:inline-block; padding:13px 22px; color:#ffffff; font-family:Arial, Helvetica, sans-serif; font-size:15px; font-weight:700; line-height:1; text-decoration:none;">View artist page</a></td></tr></table>
+<p style="margin:0 0 10px; color:#ffffff; font-size:17px; font-weight:700;">Artist details</p>
+<p style="margin:0 0 22px; color:#c9b6d9; font-size:14px; line-height:1.6;">Artist name: <strong style="color:#ffffff;">{{artist_name}}</strong></p>
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 28px;"><tr><td style="border-radius:10px; background-color:#d14a8b; background-image:linear-gradient(135deg, #a12c6a, #d14a8b);"><a href="{{artist_page_url}}" target="_blank" style="display:inline-block; padding:13px 22px; color:#ffffff; font-family:Arial, Helvetica, sans-serif; font-size:15px; font-weight:700; line-height:1; text-decoration:none;">View artist page</a></td></tr></table>
 {{/is_artist}}
 {{^is_artist}}
-<p style="margin:0; color:#c9b6d9; line-height:1.6;">This is a listener account. The username is shown above.</p>
+<p style="margin:0 0 28px; color:#c9b6d9; font-size:14px; line-height:1.6;">This is a listener account. The username is shown above.</p>
 {{/is_artist}}
+<p style="margin:0; color:#c9b6d9; font-size:14px; line-height:1.6;">Fully Open Records<br>Music Without Algorithms.</p>

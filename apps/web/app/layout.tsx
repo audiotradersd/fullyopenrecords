@@ -5,6 +5,7 @@ import { AuthProvider } from "../components/auth/AuthProvider";
 import Footer from "../components/layout/Footer";
 import Navbar from "../components/layout/Navbar";
 import RadioPlayerBar from "../components/player/RadioPlayerBar";
+import { TrackPlayerProvider } from "../components/audio/TrackPlayerProvider";
 import "./globals.css";
 import { siteConfig } from "../lib/site";
 
@@ -54,10 +55,12 @@ gtag("config", "G-X10VP8P30J");`}
       </head>
       <body className={`${inter.variable} ${spaceGrotesk.variable} flex min-h-screen flex-col`}>
         <AuthProvider>
-          <Navbar />
-          <main className="flex-1">{children}</main>
-          <Footer />
-          <RadioPlayerBar />
+          <TrackPlayerProvider>
+            <Navbar />
+            <main className="flex-1">{children}</main>
+            <Footer />
+            <RadioPlayerBar />
+          </TrackPlayerProvider>
         </AuthProvider>
       </body>
     </html>

@@ -109,6 +109,15 @@ export default function RadioPlayerBar() {
     };
   }, [radio.streamUrl]);
 
+  useEffect(() => {
+    const stopForTrack = () => {
+      audioRef.current?.pause();
+      setIsPlaying(false);
+    };
+    window.addEventListener("fullyopen:track-play", stopForTrack);
+    return () => window.removeEventListener("fullyopen:track-play", stopForTrack);
+  }, []);
+
   async function attachAnalyzer(audio: HTMLAudioElement) {
     if (!eqContainerRef.current || typeof window === "undefined") {
       setAnalyzerReady(false);
@@ -207,6 +216,7 @@ export default function RadioPlayerBar() {
       }
 
       audioRef.current?.pause();
+      window.dispatchEvent(new Event("fullyopen:radio-play"));
       const liveAudio = createLiveAudio();
       if (!liveAudio) return;
       void attachAnalyzer(liveAudio);

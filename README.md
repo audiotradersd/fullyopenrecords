@@ -59,6 +59,7 @@ See `.env.example` for required keys.
 
 ## Notes
 
+- Local integration credentials, including Postmark template access, are stored in the gitignored `api.txt` file. Never commit its contents.
 - Seed data is included to provide a usable first deployment.
 - `packages/db/src/scripts/squarespace-migrate.ts` is an optional migration scaffold for Squarespace exports.
 - The current worker includes fallback seed-backed content for local-first development before D1 is fully wired.

@@ -1,5 +1,5 @@
 import { accountEmailNotifications, artists, users } from "@fully-open-records/db/src/schema";
-import { and, asc, eq, isNull, ne, or } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, ne, or } from "drizzle-orm";
 import { getDb } from "./db";
 import { sendAccountWelcomeEmail, sendNewAccountNotification } from "./email";
 import type { Env } from "../types";
@@ -115,4 +115,46 @@ export async function sendPendingArtistGettingStartedEmails(env: Env, limit = 25
     if (result.ok) sent += 1; else failed += 1;
   }
   return { attempted: pending.length, sent, failed, hasMore: pending.length === limit };
+}
+
+type PostmarkBounce = {
+  ID?: unknown;
+  MessageID?: unknown;
+  Description?: unknown;
+  Details?: unknown;
+};
+
+/** Mirrors Postmark hard bounces into the campaign record for future outreach decisions. */
+export async function syncArtistGettingStartedHardBounces(env: Env) {
+  const db = getDb(env);
+  const sent = await db.select({ id: accountEmailNotifications.id, postmarkMessageId: accountEmailNotifications.postmarkMessageId })
+    .from(accountEmailNotifications)
+    .where(and(
+      eq(accountEmailNotifications.notificationType, GETTING_STARTED_NOTIFICATION_TYPE),
+      eq(accountEmailNotifications.status, "sent"),
+      ne(accountEmailNotifications.deliveryStatus, "hard_bounced")
+    ));
+  const messageIds = sent.map((item) => item.postmarkMessageId).filter((value): value is string => Boolean(value));
+  if (!messageIds.length) return { checked: 0, hardBounced: 0 };
+
+  const response = await fetch("https://api.postmarkapp.com/bounces?type=HardBounce&count=500&offset=0", {
+    headers: { Accept: "application/json", "X-Postmark-Server-Token": env.POSTMARK_SERVER_TOKEN }
+  });
+  if (!response.ok) throw new Error(`Postmark hard-bounce lookup returned ${response.status}.`);
+  const data = await response.json() as { Bounces?: PostmarkBounce[] };
+  const bounces = (data.Bounces ?? []).filter((bounce) => typeof bounce.MessageID === "string" && messageIds.includes(bounce.MessageID));
+  const now = new Date().toISOString();
+
+  for (const bounce of bounces) {
+    const details = [bounce.Description, bounce.Details].filter((value): value is string => typeof value === "string").join(" ").slice(0, 2000) || null;
+    await db.update(accountEmailNotifications).set({
+      deliveryStatus: "hard_bounced",
+      postmarkBounceId: typeof bounce.ID === "number" ? bounce.ID : null,
+      deliveryDetails: details,
+      deliveryCheckedAt: now,
+      updatedAt: now
+    }).where(eq(accountEmailNotifications.postmarkMessageId, bounce.MessageID as string));
+  }
+
+  return { checked: messageIds.length, hardBounced: bounces.length };
 }

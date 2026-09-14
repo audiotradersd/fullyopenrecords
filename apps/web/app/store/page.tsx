@@ -4,7 +4,7 @@ import Container from "../../components/layout/Container";
 import { Button } from "../../components/ui/button";
 import { pageMetadata } from "../../lib/seo";
 
-const storeImage = "https://images.unsplash.com/photo-1511379938547-c1f69419868d";
+const storeImage = "/store/record-store-background.png";
 
 export const metadata = pageMetadata({
   title: "Fully Open Records Store — Coming Soon",

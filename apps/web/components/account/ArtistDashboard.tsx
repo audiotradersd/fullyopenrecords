@@ -207,6 +207,16 @@ export default function ArtistDashboard() {
   ] as const;
   const completedSeoChecks = seoChecks.filter(([, complete]) => complete).length;
 
+  useEffect(() => {
+    const setTabFromHash = () => {
+      const tab = window.location.hash.slice(1) as DashboardTab;
+      if (tabs.some((item) => item.key === tab)) setActiveTab(tab);
+    };
+    setTabFromHash();
+    window.addEventListener("hashchange", setTabFromHash);
+    return () => window.removeEventListener("hashchange", setTabFromHash);
+  }, []);
+
   async function loadData() {
     const requestId = ++latestLoadRequest.current;
     const [artistRes, contentRes, diaryRes] = await Promise.all([

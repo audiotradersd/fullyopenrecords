@@ -674,7 +674,12 @@ publicRouter.post("/auth/register", rateLimit, zValidator("json", registerSchema
       .where(eq(artists.userId, user.id))
       .limit(1);
 
-    c.executionCtx.waitUntil(sendAccountWelcomeEmail(c.env, { email: user.email, username: user.username }));
+    c.executionCtx.waitUntil(sendAccountWelcomeEmail(c.env, {
+      email: user.email,
+      username: user.username,
+      accountType: user.accountType === "artist" ? "artist" : "listener",
+      artistSlug: artist?.slug
+    }));
     c.executionCtx.waitUntil(sendAndRecordNewAccountNotification(c.env, {
       userId: user.id,
       email: user.email,

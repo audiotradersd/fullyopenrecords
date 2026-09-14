@@ -3,6 +3,8 @@ import type { Env } from "../types";
 type AccountWelcomeRecipient = {
   email: string;
   username: string;
+  accountType: "artist" | "listener";
+  artistSlug?: string;
 };
 
 type NewAccountNotification = {
@@ -27,10 +29,18 @@ export async function sendAccountWelcomeEmail(env: Env, recipient: AccountWelcom
       body: JSON.stringify({
         From: env.POSTMARK_FROM_EMAIL,
         To: recipient.email,
-        TemplateAlias: "account-verified",
+        TemplateAlias: recipient.accountType === "artist" ? "get-started" : "account-verified",
         TemplateModel: {
           first_name: recipient.username,
-          dashboard_url: new URL("/dashboard", env.SITE_URL).toString()
+          dashboard_url: new URL(recipient.accountType === "artist" ? "/artist/dashboard" : "/account", env.SITE_URL).toString(),
+          getting_started_url: new URL("/dashboard/getting-started", env.SITE_URL).toString(),
+          artist_page_url: recipient.artistSlug ? new URL(`/artist/${encodeURIComponent(recipient.artistSlug)}`, env.SITE_URL).toString() : null,
+          upload_url: new URL("/dashboard/getting-started#upload", env.SITE_URL).toString(),
+          bulk_upload_url: new URL("/dashboard/getting-started#bulk-upload", env.SITE_URL).toString(),
+          releases_url: new URL("/dashboard/getting-started#releases", env.SITE_URL).toString(),
+          video_url: new URL("/dashboard/getting-started#video", env.SITE_URL).toString(),
+          versions_url: new URL("/dashboard/getting-started#versions", env.SITE_URL).toString(),
+          gigs_url: new URL("/dashboard/getting-started#gigs", env.SITE_URL).toString()
         }
       })
     });

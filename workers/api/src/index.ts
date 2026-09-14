@@ -3,7 +3,6 @@ import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { csrfGuard } from "./middleware/csrf";
 import { syncRadioHistory } from "./lib/radio";
-import { sendPendingArtistGettingStartedEmails } from "./lib/account-notifications";
 import { adminRouter } from "./routes/admin";
 import { publicRouter } from "./routes/public";
 import { mediaWorkerRouter } from "./routes/media-worker";
@@ -38,7 +37,6 @@ export default {
   async scheduled(_: ScheduledController, env: Env) {
     try {
       await syncRadioHistory(env);
-      await sendPendingArtistGettingStartedEmails(env);
     } catch (error) {
       console.error("scheduled task failed", error);
     }

@@ -48,8 +48,8 @@ import { fallbackContent } from "../lib/content";
 import { generateRandomToken, hashPassword, hashSessionToken, SESSION_COOKIE_NAME, SESSION_MAX_AGE_SECONDS, verifyPassword } from "../lib/auth";
 import { getDb } from "../lib/db";
 import { logFlowEvent } from "../lib/events";
+import { sendAndRecordArtistGettingStartedEmail, sendAndRecordNewAccountNotification } from "../lib/account-notifications";
 import { sendAccountWelcomeEmail } from "../lib/email";
-import { sendAndRecordNewAccountNotification } from "../lib/account-notifications";
 import { getRadioStatus } from "../lib/radio";
 import { getHomePayload } from "../lib/home";
 import { getArtistsEditorialPayload } from "../lib/artists-editorial";
@@ -674,12 +674,21 @@ publicRouter.post("/auth/register", rateLimit, zValidator("json", registerSchema
       .where(eq(artists.userId, user.id))
       .limit(1);
 
-    c.executionCtx.waitUntil(sendAccountWelcomeEmail(c.env, {
-      email: user.email,
-      username: user.username,
-      accountType: user.accountType === "artist" ? "artist" : "listener",
-      artistSlug: artist?.slug
-    }));
+    if (user.accountType === "artist") {
+      c.executionCtx.waitUntil(sendAndRecordArtistGettingStartedEmail(c.env, {
+        userId: user.id,
+        email: user.email,
+        username: user.username,
+        accountType: "artist",
+        artist: artist ? { name: payload.username, slug: artist.slug } : undefined
+      }));
+    } else {
+      c.executionCtx.waitUntil(sendAccountWelcomeEmail(c.env, {
+        email: user.email,
+        username: user.username,
+        accountType: "listener"
+      }));
+    }
     c.executionCtx.waitUntil(sendAndRecordNewAccountNotification(c.env, {
       userId: user.id,
       email: user.email,

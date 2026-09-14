@@ -27,7 +27,9 @@ export async function sendAccountWelcomeEmail(env: Env, recipient: AccountWelcom
         "X-Postmark-Server-Token": env.POSTMARK_SERVER_TOKEN
       },
       body: JSON.stringify({
-        From: env.POSTMARK_FROM_EMAIL,
+        From: recipient.accountType === "artist"
+          ? (env.POSTMARK_ARTIST_EMAIL_FROM ?? env.POSTMARK_FROM_EMAIL)
+          : env.POSTMARK_FROM_EMAIL,
         To: recipient.email,
         TemplateAlias: recipient.accountType === "artist" ? "get-started" : "account-verified",
         TemplateModel: {
@@ -45,11 +47,22 @@ export async function sendAccountWelcomeEmail(env: Env, recipient: AccountWelcom
       })
     });
 
+    const body = await response.text();
     if (!response.ok) {
       console.error("account welcome email failed", response.status);
+      return { ok: false as const, error: `Postmark returned ${response.status}.` };
     }
+    let messageId: string | null = null;
+    try {
+      const parsed = JSON.parse(body) as { MessageID?: unknown };
+      messageId = typeof parsed.MessageID === "string" ? parsed.MessageID : null;
+    } catch {
+      // Postmark accepted the message even if a proxy returned no JSON body.
+    }
+    return { ok: true as const, messageId };
   } catch (error) {
     console.error("account welcome email failed", error);
+    return { ok: false as const, error: error instanceof Error ? error.message.slice(0, 1000) : "Postmark request failed." };
   }
 }
 

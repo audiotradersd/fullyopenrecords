@@ -19,6 +19,7 @@ export type Env = {
   JWT_SECRET: string;
   POSTMARK_SERVER_TOKEN: string;
   POSTMARK_FROM_EMAIL: string;
+  POSTMARK_ARTIST_EMAIL_FROM?: string;
   ADMIN_EMAIL: string;
   ADMIN_PASSWORD: string;
   STRIPE_SECRET_KEY: string;

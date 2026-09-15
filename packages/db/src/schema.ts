@@ -43,6 +43,18 @@ export const artists = sqliteTable(
   ]
 );
 
+export const artistTiers = sqliteTable("artist_tiers", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  slug: text("slug").notNull(),
+  name: text("name").notNull(),
+  trackLimit: integer("track_limit"),
+  albumLimit: integer("album_limit"),
+  photoLimit: integer("photo_limit"),
+  videoLimit: integer("video_limit"),
+  radioTrackLimit: integer("radio_track_limit"),
+  ...timestamps
+}, (table) => [uniqueIndex("artist_tiers_slug_idx").on(table.slug)]);
+
 export const users = sqliteTable(
   "users",
   {

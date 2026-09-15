@@ -8,7 +8,7 @@ import {
   productSchema,
   releaseSchema
 } from "@fully-open-records/api/src/contracts";
-import { accountEmailNotifications, artists, editorialSlotItems, editorialSlots, favouriteSongs, flowEvents, media, mediaJobs, sessions, songs, trackingItems, users } from "@fully-open-records/db/src/schema";
+import { accountEmailNotifications, artists, artistTiers, editorialSlotItems, editorialSlots, favouriteSongs, flowEvents, media, mediaJobs, sessions, songs, trackingItems, users } from "@fully-open-records/db/src/schema";
 import { and, asc, count, desc, eq, inArray, isNotNull, isNull, like, ne, or } from "drizzle-orm";
 import { Hono } from "hono";
 import { getDb } from "../lib/db";
@@ -88,6 +88,18 @@ adminRouter.post("/login", zValidator("json", loginSchema), async (c) => {
 });
 
 adminRouter.use("/*", requireAdmin);
+
+adminRouter.get("/artist-tiers", async (c) => c.json(await getDb(c.env).select().from(artistTiers).orderBy(asc(artistTiers.id))));
+adminRouter.post("/artist-tiers", async (c) => {
+  const payload = await c.req.json<Record<string, unknown>>(); const slug = typeof payload.slug === "string" ? slugify(payload.slug) : "";
+  if (!slug || typeof payload.name !== "string" || !payload.name.trim()) return c.json({ error: "A tier name and slug are required." }, 400);
+  const limit = (key: string) => payload[key] === null ? null : Number.isInteger(payload[key]) && Number(payload[key]) >= 0 ? Number(payload[key]) : null;
+  const [tier] = await getDb(c.env).insert(artistTiers).values({ slug, name: payload.name.trim(), trackLimit: limit("trackLimit"), albumLimit: limit("albumLimit"), photoLimit: limit("photoLimit"), videoLimit: limit("videoLimit"), radioTrackLimit: limit("radioTrackLimit") }).returning(); return c.json(tier, 201);
+});
+adminRouter.put("/artist-tiers/:id", async (c) => {
+  const payload = await c.req.json<Record<string, unknown>>(); const limit = (key: string) => payload[key] === null ? null : Number.isInteger(payload[key]) && Number(payload[key]) >= 0 ? Number(payload[key]) : null;
+  const [tier] = await getDb(c.env).update(artistTiers).set({ ...(typeof payload.name === "string" ? { name: payload.name.trim() } : {}), ...(payload.trackLimit !== undefined ? { trackLimit: limit("trackLimit") } : {}), ...(payload.albumLimit !== undefined ? { albumLimit: limit("albumLimit") } : {}), ...(payload.photoLimit !== undefined ? { photoLimit: limit("photoLimit") } : {}), ...(payload.videoLimit !== undefined ? { videoLimit: limit("videoLimit") } : {}), ...(payload.radioTrackLimit !== undefined ? { radioTrackLimit: limit("radioTrackLimit") } : {}), updatedAt: new Date().toISOString() }).where(eq(artistTiers.id, Number(c.req.param("id")))).returning(); return tier ? c.json(tier) : c.json({ error: "Tier not found." }, 404);
+});
 
 const homepageSlotRules = {
   home_featured_artists: { itemType: "artist", count: 4 },

@@ -19,6 +19,7 @@ import {
 } from "@fully-open-records/api/src/contracts";
 import {
   albums,
+  artistTiers,
   artists,
   artistFollows,
   contacts,
@@ -60,8 +61,9 @@ import type { AppVariables, Env } from "../types";
 
 export const publicRouter = new Hono<{ Bindings: Env; Variables: AppVariables }>();
 
-const FREE_PLAN_LIMITS = {
-  songs: 5,
+const DEFAULT_FREE_LIMITS = {
+  songs: 200,
+  albums: 20,
   photos: 10,
   videos: 3,
   radioTracks: 1
@@ -176,6 +178,7 @@ async function getArtistUsage(db: ReturnType<typeof getDb>, artistId: number) {
     .where(and(eq(songs.artistId, artistId), eq(songs.enabled, true)));
   const [photoCountResult] = await db.select({ total: count() }).from(photos).where(eq(photos.artistId, artistId));
   const [videoCountResult] = await db.select({ total: count() }).from(videos).where(eq(videos.artistId, artistId));
+  const [albumCountResult] = await db.select({ total: count() }).from(albums).where(eq(albums.artistId, artistId));
   const [radioSelectedResult] = await db
     .select({ total: count() })
     .from(songs)
@@ -183,6 +186,7 @@ async function getArtistUsage(db: ReturnType<typeof getDb>, artistId: number) {
 
   return {
     songs: songCountResult?.total ?? 0,
+    albums: albumCountResult?.total ?? 0,
     photos: photoCountResult?.total ?? 0,
     videos: videoCountResult?.total ?? 0,
     radioTracks: radioSelectedResult?.total ?? 0
@@ -197,8 +201,12 @@ function isFreePlanArtist(artist: typeof artists.$inferSelect) {
   return artist.plan === "free" && !artist.adminOverride;
 }
 
-function getArtistLimits(artist: typeof artists.$inferSelect) {
-  return isFreePlanArtist(artist) ? FREE_PLAN_LIMITS : { songs: null, photos: null, videos: null, radioTracks: null };
+async function getArtistLimits(db: ReturnType<typeof getDb>, artist: typeof artists.$inferSelect) {
+  if (artist.adminOverride) return { songs: null, albums: null, photos: null, videos: null, radioTracks: null };
+  const [tier] = await db.select().from(artistTiers).where(eq(artistTiers.slug, artist.plan)).limit(1);
+  if (!tier && artist.plan !== "free") return { songs: null, albums: null, photos: null, videos: null, radioTracks: null };
+  const source = tier ? { songs: tier.trackLimit, albums: tier.albumLimit, photos: tier.photoLimit, videos: tier.videoLimit, radioTracks: tier.radioTrackLimit } : DEFAULT_FREE_LIMITS;
+  return source;
 }
 
 function songOrderBy() {
@@ -224,16 +232,17 @@ async function normalizeFreePlanActiveTracks(
       .where(eq(songs.artistId, artist.id))
       .orderBy(...songOrderBy()));
 
-  if (!isFreePlanArtist(artist)) {
+  const limits = await getArtistLimits(db, artist);
+  if (limits.songs === null) {
     return orderedSongs;
   }
 
   const enabledSongs = orderedSongs.filter((song) => song.enabled);
-  if (enabledSongs.length <= FREE_PLAN_LIMITS.songs) {
+  if (enabledSongs.length <= limits.songs) {
     return orderedSongs;
   }
 
-  const idsToDisable = enabledSongs.slice(FREE_PLAN_LIMITS.songs).map((song) => song.id);
+  const idsToDisable = enabledSongs.slice(limits.songs).map((song) => song.id);
   if (idsToDisable.length) {
     await db
       .update(songs)
@@ -924,7 +933,7 @@ publicRouter.get("/artist/me", requireArtist, async (c) => {
   return c.json({
     artist: mapArtistRecord(artist),
     usage,
-    limits: getArtistLimits(artist)
+    limits: await getArtistLimits(db, artist)
   });
 });
 
@@ -1085,7 +1094,7 @@ publicRouter.get("/artist/me/content", requireArtist, async (c) => {
       gigs: artistGigs.map(mapGigRecord),
       press: artistPress.map(mapPressRecord),
       usage,
-      limits: getArtistLimits(artist)
+      limits: await getArtistLimits(db, artist)
     });
   } catch (error) {
     console.error("artist content route failed", error);
@@ -1102,6 +1111,10 @@ publicRouter.post("/artist/me/albums", requireArtist, zValidator("json", albumSc
   if (!artist) {
     return c.json({ error: "Artist profile not found" }, 404);
   }
+
+  const limits = await getArtistLimits(db, artist);
+  const usage = await getArtistUsage(db, artist.id);
+  if (limits.albums !== null && limitsExceeded(usage.albums, limits.albums)) return c.json({ error: `Your ${artist.plan} tier allows up to ${limits.albums} albums.` }, 403);
 
   const created = await db
     .insert(albums)
@@ -1181,8 +1194,9 @@ publicRouter.post("/artist/me/songs", requireArtist, zValidator("json", songSche
   }
 
   const usage = await getArtistUsage(db, artist.id);
+  const limits = await getArtistLimits(db, artist);
 
-  if (isFreePlanArtist(artist) && payload.radioSelected && limitsExceeded(usage.radioTracks, FREE_PLAN_LIMITS.radioTracks)) {
+  if (limits.radioTracks !== null && payload.radioSelected && limitsExceeded(usage.radioTracks, limits.radioTracks)) {
     await logFlowEvent(c.env, c.req.raw, "artist.song.create.rejected", {
       user,
       artistId: artist.id,
@@ -1194,7 +1208,7 @@ publicRouter.post("/artist/me/songs", requireArtist, zValidator("json", songSche
   let enabled = payload.enabled;
   let warning: string | undefined;
 
-  if (isFreePlanArtist(artist) && payload.enabled && limitsExceeded(usage.songs, FREE_PLAN_LIMITS.songs)) {
+  if (limits.songs !== null && payload.enabled && limitsExceeded(usage.songs, limits.songs)) {
     enabled = false;
     warning = "Free plan allows only 5 active tracks. This track was uploaded as inactive.";
   }
@@ -1260,9 +1274,10 @@ publicRouter.put("/artist/me/songs/:id", requireArtist, zValidator("json", songS
     return c.json({ error: "Track not found" }, 404);
   }
 
-  if (isFreePlanArtist(artist) && payload.radioSelected === true && !existingSong.radioSelected) {
+  const limits = await getArtistLimits(db, artist);
+  if (limits.radioTracks !== null && payload.radioSelected === true && !existingSong.radioSelected) {
     const usage = await getArtistUsage(db, artist.id);
-    if (limitsExceeded(usage.radioTracks, FREE_PLAN_LIMITS.radioTracks)) {
+    if (limitsExceeded(usage.radioTracks, limits.radioTracks)) {
       await logFlowEvent(c.env, c.req.raw, "artist.song.update.rejected", {
         user,
         artistId: artist.id,
@@ -1275,9 +1290,9 @@ publicRouter.put("/artist/me/songs/:id", requireArtist, zValidator("json", songS
   let enabled = payload.enabled;
   let warning: string | undefined;
 
-  if (isFreePlanArtist(artist) && payload.enabled === true && !existingSong.enabled) {
+  if (limits.songs !== null && payload.enabled === true && !existingSong.enabled) {
     const usage = await getArtistUsage(db, artist.id);
-    if (limitsExceeded(usage.songs, FREE_PLAN_LIMITS.songs)) {
+    if (limitsExceeded(usage.songs, limits.songs)) {
       enabled = false;
       warning = "Free plan allows only 5 active tracks. Disable another track before enabling this one.";
     }
@@ -1408,7 +1423,7 @@ publicRouter.post("/artist/me/videos", requireArtist, zValidator("json", videoSc
   }
 
   const usage = await getArtistUsage(db, artist.id);
-  if (artist.plan === "free" && !artist.adminOverride && limitsExceeded(usage.videos, FREE_PLAN_LIMITS.videos)) {
+  if ((await getArtistLimits(db, artist)).videos !== null && limitsExceeded(usage.videos, (await getArtistLimits(db, artist)).videos!)) {
     return c.json({ error: "Free plan video upload limit reached" }, 403);
   }
 
@@ -1441,7 +1456,7 @@ publicRouter.post("/artist/me/photos", requireArtist, zValidator("json", photoSc
   }
 
   const usage = await getArtistUsage(db, artist.id);
-  if (artist.plan === "free" && !artist.adminOverride && limitsExceeded(usage.photos, FREE_PLAN_LIMITS.photos)) {
+  if ((await getArtistLimits(db, artist)).photos !== null && limitsExceeded(usage.photos, (await getArtistLimits(db, artist)).photos!)) {
     return c.json({ error: "Free plan photo upload limit reached" }, 403);
   }
 

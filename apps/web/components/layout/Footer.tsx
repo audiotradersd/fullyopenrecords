@@ -6,7 +6,6 @@ const listenerLinks = [
   ["About", "/about"],
   ["Radio", "/radio"],
   ["Artists", "/artists"],
-  ["Releases", "/releases"],
   ["Store", "/store"]
 ] as const;
 

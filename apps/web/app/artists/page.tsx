@@ -1,6 +1,5 @@
 import { Section } from "@fully-open-records/ui";
 import FeaturedArtistHero from "../../components/artists/FeaturedArtistHero";
-import { ArtistCard } from "../../components/Cards";
 import Link from "next/link";
 import CuratedArtistsGrid from "../../components/artists/CuratedArtistsGrid";
 import { getArtist, getArtistContent, getArtists, getArtistsEditorial } from "../../lib/api";
@@ -13,7 +12,7 @@ import { artistAssets } from "../../lib/assets";
 export const metadata = pageMetadata({ title: "Discover Independent Artists Across Every Genre", description: "Meet independent artists from around the world. Fully Open connects listeners with music beyond genre gatekeeping.", path: "/artists" });
 
 export default async function ArtistsPage() {
-  await getArtistsEditorial().catch(() => null);
+  const editorial = await getArtistsEditorial().catch(() => null);
   const [artists, heroArtistData, heroArtistContent] = await Promise.all([
     getArtists()
       .then((rows) => buildFeaturedArtistList(rows))
@@ -58,7 +57,9 @@ export default async function ArtistsPage() {
   const rawProfileImage = heroArtistRecord["profileImage"];
   const backgroundImage = approvedHeroImage || (typeof rawBannerImage === "string" && rawBannerImage) || heroImage;
   const foregroundImage = approvedHeroImage || (typeof rawHeroImage === "string" && rawHeroImage) || (typeof rawProfileImage === "string" && rawProfileImage) || heroImage;
-  const gridArtists = artists.filter((artist) => String(artist.slug) !== featuredArtistHero.slug);
+  const gridArtists = editorial?.artists?.length
+    ? editorial.artists
+    : artists.filter((artist) => String(artist.slug) !== featuredArtistHero.slug);
 
   return (
     <Section className="relative overflow-hidden py-10 md:py-14">

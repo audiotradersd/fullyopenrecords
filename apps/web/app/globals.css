@@ -209,6 +209,40 @@ body::after {
   animation-play-state: running;
 }
 
+.radio-page {
+  background:
+    radial-gradient(850px 390px at 72% 0%, rgba(31, 93, 155, 0.15), transparent 65%),
+    linear-gradient(180deg, rgba(3, 12, 23, 0.72), rgba(2, 9, 18, 0.5));
+}
+
+.radio-hero {
+  background:
+    radial-gradient(560px 260px at 68% 70%, rgba(50, 112, 178, 0.38), transparent 62%),
+    radial-gradient(460px 280px at 89% 55%, rgba(7, 39, 75, 0.78), transparent 68%),
+    linear-gradient(90deg, rgba(4, 12, 24, 0.98) 0%, rgba(4, 13, 25, 0.94) 46%, rgba(7, 27, 52, 0.57) 100%);
+}
+
+.radio-hero-glow {
+  position: absolute;
+  inset: 0;
+  opacity: .38;
+  background-image: radial-gradient(circle at 74% 43%, rgba(166, 216, 255, .68) 0 1px, transparent 2px), radial-gradient(circle at 83% 24%, rgba(166, 216, 255, .55) 0 1px, transparent 2px), radial-gradient(circle at 63% 65%, rgba(130, 196, 255, .4) 0 1px, transparent 2px);
+  background-size: 77px 69px, 113px 99px, 149px 131px;
+}
+
+.radio-editorial { background: linear-gradient(100deg, rgba(6, 17, 30, .98), rgba(4, 12, 23, .82)); }
+
+.radio-wave span {
+  width: 3px;
+  flex: 1 1 auto;
+  max-width: 4px;
+  border-radius: 999px;
+  background: linear-gradient(#63b6ff, #8d7cf6 56%, #ff6eae);
+  animation: radio-wave-pulse .85s ease-in-out infinite alternate;
+}
+
+@keyframes radio-wave-pulse { from { transform: scaleY(.45); opacity: .72; } to { transform: scaleY(1); opacity: 1; } }
+
 @media (prefers-reduced-motion: reduce) {
   .for-vinyl,
   .for-vinyl-playing {

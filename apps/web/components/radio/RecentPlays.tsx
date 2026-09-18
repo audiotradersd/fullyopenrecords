@@ -1,57 +1,7 @@
-type HistoryItem = {
-  id: number;
-  artistName: string;
-  title: string;
-  coverImage?: string | null;
-  playedAt: string;
-};
+import Link from "next/link";
+
+type HistoryItem = { id: number; artistName: string; title: string; coverImage?: string | null; playedAt: string };
 
 export default function RecentPlays({ items }: { items: HistoryItem[] }) {
-  return (
-    <div className="rounded-3xl border border-white/10 bg-[rgba(12,6,22,0.78)] p-6 shadow-[0_18px_42px_rgba(0,0,0,0.28)] backdrop-blur-md">
-      <div className="mb-5 flex items-end justify-between gap-4">
-        <div>
-          <p className="text-xs uppercase tracking-[0.28em] text-fog">Recently Played</p>
-          <h2 className="mt-2 text-2xl font-semibold text-white">Track History</h2>
-        </div>
-      </div>
-
-      <div className="space-y-3">
-        {items.length ? (
-          items.map((item, index) => (
-            <div
-              key={`${item.id}-${item.playedAt}`}
-              className="flex items-center gap-4 rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-3"
-            >
-              {item.coverImage ? (
-                <img
-                  src={item.coverImage}
-                  alt={`${item.artistName} cover`}
-                  className="h-14 w-14 rounded-xl object-cover"
-                />
-              ) : (
-                <div
-                  className="cosmic-artwork h-14 w-14 rounded-xl"
-                  style={{ filter: `hue-rotate(${index * 21}deg)` }}
-                  aria-hidden="true"
-                />
-              )}
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-white">{item.artistName}</p>
-                <p className="truncate text-sm text-fog">{item.title}</p>
-              </div>
-              <p className="hidden text-xs uppercase tracking-[0.18em] text-fog sm:block">
-                {new Date(item.playedAt).toLocaleTimeString([], {
-                  hour: "2-digit",
-                  minute: "2-digit"
-                })}
-              </p>
-            </div>
-          ))
-        ) : (
-          <p className="text-sm text-fog">Track history will appear here as the station plays.</p>
-        )}
-      </div>
-    </div>
-  );
+  return <section><div className="mb-3 flex items-center justify-between"><h2 className="text-xl font-semibold uppercase tracking-[.04em] text-white">Just Played</h2><Link href="#history" className="text-sm text-[#94c8f5]">View full history&nbsp; →</Link></div>{items.length ? <div id="history" className="grid grid-flow-col auto-cols-[132px] gap-3 overflow-x-auto pb-2 md:auto-cols-[calc((100%-84px)/8)]">{items.map((item) => <article key={`${item.id}-${item.playedAt}`} className="min-w-0"><div className="aspect-square overflow-hidden rounded-md border border-[#24435e] bg-[#0b1929]">{item.coverImage ? <img src={item.coverImage} alt={`${item.artistName} artwork`} className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center bg-[radial-gradient(circle,#254e75,transparent_52%),linear-gradient(145deg,#091525,#102b45)]"><img src="/favicon.ico" alt="" className="h-9 w-9 object-contain opacity-80" /></div>}</div><p className="mt-2 truncate text-xs font-semibold text-white">{item.artistName}</p><p className="mt-0.5 truncate text-xs text-[#b9c9d7]">{item.title}</p><p className="mt-1 text-[10px] text-[#93a9bd]">{new Date(item.playedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</p></article>)}</div> : <p className="text-sm text-fog">Track history will appear here as the station plays.</p>}</section>;
 }

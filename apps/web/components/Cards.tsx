@@ -31,7 +31,7 @@ export function ArtistCard({ artist }: { artist: Record<string, any> }) {
             />
           </div>
         ) : null}
-        <p className="text-xs uppercase tracking-[0.3em] text-fog">{genres.join(" / ")}</p>
+        <p className="text-xs uppercase tracking-[0.3em] text-fog">{genres[0] ?? "Artist"}</p>
         <h3 className="mt-3 font-display text-2xl text-sand">{String(artist.name)}</h3>
       </Link>
       <div className="mt-5 flex flex-wrap gap-2">

@@ -9,7 +9,6 @@ const navLinks = [
   ["About", "/about"],
   ["Radio", "/radio"],
   ["Artists", "/artists"],
-  ["Releases", "/releases"],
   ["Get Heard", "/get-heard"]
 ] as const;
 

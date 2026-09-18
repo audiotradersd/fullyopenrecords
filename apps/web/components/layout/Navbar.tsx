@@ -13,7 +13,6 @@ const logoUrl = "/new-logo-v2.png";
 
 const links = [
   ["Artists", "/artists"],
-  ["Releases", "/releases"],
   ["Radio", "/radio"],
   ["Get Heard", "/get-heard"]
 ] as const;

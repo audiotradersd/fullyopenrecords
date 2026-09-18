@@ -2,6 +2,7 @@ import { Section } from "@fully-open-records/ui";
 import FeaturedArtistHero from "../../components/artists/FeaturedArtistHero";
 import { ArtistCard } from "../../components/Cards";
 import Link from "next/link";
+import CuratedArtistsGrid from "../../components/artists/CuratedArtistsGrid";
 import { getArtist, getArtistContent, getArtists, getArtistsEditorial } from "../../lib/api";
 import { mergeArtistPageContent } from "../../lib/artistPageContent";
 import { buildFeaturedArtistList, featuredArtistSlugs } from "../../lib/artistProfiles";
@@ -78,11 +79,7 @@ export default async function ArtistsPage() {
           featuredTrack={featuredTrack}
         />
       </div>
-      <section className="mt-12"><div className="flex flex-wrap items-end justify-between gap-5"><div><p className="font-meta text-xs uppercase tracking-[0.28em] text-[#76c5ff]">More from our curators</p><h2 className="mt-2 text-4xl font-semibold text-white md:text-5xl">Handpicked across Fully Open.</h2><p className="mt-3 max-w-2xl text-[#c5d5e7]">Different genres, different places, different reasons. Every artist below has been listened to and deliberately selected by the Fully Open team.</p></div><Link href="#all-artists" className="border-b border-[#74c8ff] pb-2 text-sm font-medium text-[#9bd8ff]">View All Featured Artists →</Link></div><div className="mt-7 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-        {gridArtists.map((artist) => (
-          <ArtistCard key={String(artist.id)} artist={artist} />
-        ))}
-      </div></section>
+      <section className="mt-12"><div className="flex flex-wrap items-end justify-between gap-5"><div><p className="font-meta text-xs uppercase tracking-[0.28em] text-[#76c5ff]">More from our curators</p><h2 className="mt-2 text-4xl font-semibold text-white md:text-5xl">Handpicked across Fully Open.</h2><p className="mt-3 max-w-2xl text-[#c5d5e7]">Different genres, different places, different reasons. Every artist below has been listened to and deliberately selected by the Fully Open team.</p></div></div><CuratedArtistsGrid artists={gridArtists as Array<Record<string, unknown>>} /></section>
       <section id="all-artists" className="relative mt-12 overflow-hidden rounded-2xl border border-[#4a83b4]/60 bg-[linear-gradient(100deg,rgba(7,24,42,0.95),rgba(5,13,25,0.94))] p-7 md:flex md:items-center md:justify-between md:p-10"><img src="/radio/for-vinyl-approved.png" alt="" className="pointer-events-none absolute -bottom-32 -left-24 hidden h-80 w-80 rounded-full object-cover opacity-70 md:block" /><div className="relative md:ml-64"><h2 className="text-3xl font-semibold text-white">There&apos;s more to find.</h2><p className="mt-3 max-w-xl text-[#c5d5e7]">Featured Artists are only a small selection of the incredible music being added to Fully Open. Explore the full artist community and discover your next favourite.</p></div><div className="relative mt-6 flex shrink-0 flex-wrap gap-3 md:mt-0 md:flex-col"><Link href="/artists"><span className="inline-flex rounded-full bg-[#58aef3] px-6 py-3 text-sm font-medium text-white">Explore All Artists</span></Link><Link href="/radio"><span className="inline-flex rounded-full border border-[#74a2ca] px-6 py-3 text-sm font-medium text-white">Listen to Fully Open Radio</span></Link></div></section>
     </Section>
   );

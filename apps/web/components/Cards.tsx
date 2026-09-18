@@ -41,6 +41,10 @@ export function ArtistCard({ artist }: { artist: Record<string, any> }) {
             label={sampleTitle ? `Play ${sampleTitle}` : "Play Sample"}
             pauseLabel="Pause"
             size="sm"
+            className="w-full"
+            buttonClassName="h-auto min-h-9 w-full whitespace-normal px-3 py-1.5 text-left leading-tight"
+            labelClassName="line-clamp-2 whitespace-normal break-words"
+            activeClassName="w-full min-w-0"
           />
         ) : null}
         <Link href={artistHref as Route}>

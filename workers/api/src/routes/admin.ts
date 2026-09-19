@@ -8,7 +8,7 @@ import {
   productSchema,
   releaseSchema
 } from "@fully-open-records/api/src/contracts";
-import { accountEmailNotifications, artists, artistTiers, editorialSlotItems, editorialSlots, favouriteSongs, flowEvents, media, mediaJobs, sessions, songs, trackingItems, users } from "@fully-open-records/db/src/schema";
+import { accountEmailNotifications, albums, artists, artistTiers, editorialSlotItems, editorialSlots, favouriteSongs, flowEvents, media, mediaJobs, photos, sessions, songs, trackingItems, users, videos } from "@fully-open-records/db/src/schema";
 import { and, asc, count, desc, eq, inArray, isNotNull, isNull, like, ne, or } from "drizzle-orm";
 import { Hono } from "hono";
 import { getDb } from "../lib/db";
@@ -282,6 +282,7 @@ adminRouter.get("/users", async (c) => {
       role: users.role,
       active: users.active,
       createdAt: users.createdAt,
+      artistId: artists.id,
       artistName: artists.name,
       artistSlug: artists.slug,
       artistPlan: artists.plan,
@@ -293,7 +294,26 @@ adminRouter.get("/users", async (c) => {
     .leftJoin(accountEmailNotifications, and(eq(accountEmailNotifications.userId, users.id), eq(accountEmailNotifications.notificationType, "new_account_created")))
     .orderBy(desc(users.createdAt));
 
-  return c.json(rows);
+  const artistIds = rows.flatMap((row) => row.artistId === null ? [] : [row.artistId]);
+  const [trackCounts, albumCounts, photoCounts, videoCounts] = artistIds.length ? await Promise.all([
+    db.select({ artistId: songs.artistId, total: count() }).from(songs).where(inArray(songs.artistId, artistIds)).groupBy(songs.artistId),
+    db.select({ artistId: albums.artistId, total: count() }).from(albums).where(inArray(albums.artistId, artistIds)).groupBy(albums.artistId),
+    db.select({ artistId: photos.artistId, total: count() }).from(photos).where(inArray(photos.artistId, artistIds)).groupBy(photos.artistId),
+    db.select({ artistId: videos.artistId, total: count() }).from(videos).where(inArray(videos.artistId, artistIds)).groupBy(videos.artistId)
+  ]) : [[], [], [], []];
+  const usage = (counts: Array<{ artistId: number | null; total: number }>) => new Map(counts.flatMap((row) => row.artistId === null ? [] : [[row.artistId, Number(row.total)]]));
+  const tracksByArtist = usage(trackCounts);
+  const albumsByArtist = usage(albumCounts);
+  const photosByArtist = usage(photoCounts);
+  const videosByArtist = usage(videoCounts);
+
+  return c.json(rows.map(({ artistId, ...row }) => ({
+    ...row,
+    trackCount: artistId === null ? 0 : tracksByArtist.get(artistId) ?? 0,
+    albumCount: artistId === null ? 0 : albumsByArtist.get(artistId) ?? 0,
+    photoCount: artistId === null ? 0 : photosByArtist.get(artistId) ?? 0,
+    videoCount: artistId === null ? 0 : videosByArtist.get(artistId) ?? 0
+  })));
 });
 
 // Sends at most 25 unsent account notifications per request. The dashboard

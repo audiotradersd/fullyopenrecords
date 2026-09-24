@@ -1006,8 +1006,8 @@ export default function ArtistDashboard() {
         ) : null}
 
         {showCreateAlbumModal ? (
-          <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm">
-            <Card className="w-full max-w-xl p-6">
+          <div className="fixed inset-0 z-[90] flex items-start justify-center overflow-y-auto bg-black/70 px-4 py-6 pb-28 backdrop-blur-sm">
+            <Card className="my-auto w-full max-w-xl p-6">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-xs uppercase tracking-[0.24em] text-pink">Albums</p>
@@ -1033,8 +1033,8 @@ export default function ArtistDashboard() {
         ) : null}
 
         {showCreateTrackModal ? (
-          <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm">
-            <Card className="w-full max-w-xl p-6">
+          <div className="fixed inset-0 z-[90] flex items-start justify-center overflow-y-auto bg-black/70 px-4 py-6 pb-28 backdrop-blur-sm">
+            <Card className="my-auto w-full max-w-xl p-6">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-xs uppercase tracking-[0.24em] text-pink">Tracks</p>
@@ -1107,8 +1107,8 @@ export default function ArtistDashboard() {
         ) : null}
 
         {showBulkTrackModal ? (
-          <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm">
-            <Card className="w-full max-w-xl p-6">
+          <div className="fixed inset-0 z-[90] flex items-start justify-center overflow-y-auto bg-black/70 px-4 py-6 pb-28 backdrop-blur-sm">
+            <Card className="my-auto w-full max-w-xl p-6">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-xs uppercase tracking-[0.24em] text-pink">Tracks</p>
@@ -1165,8 +1165,8 @@ export default function ArtistDashboard() {
         ) : null}
 
         {selectedAlbum ? (
-          <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm">
-            <Card className="w-full max-w-2xl p-6">
+          <div className="fixed inset-0 z-[90] flex items-start justify-center overflow-y-auto bg-black/70 px-4 py-6 pb-28 backdrop-blur-sm">
+            <Card className="my-auto w-full max-w-2xl p-6">
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
                   <p className="text-xs uppercase tracking-[0.24em] text-pink">Album View</p>

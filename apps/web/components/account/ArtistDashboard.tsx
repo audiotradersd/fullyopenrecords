@@ -10,9 +10,36 @@ import { getYouTubeThumbnail } from "../../lib/videoThumbnail";
 import { Card } from "../ui/card";
 import StreamButton from "../audio/StreamButton";
 import ShareFullyOpen from "../share/ShareFullyOpen";
-import { Bell, CalendarDays, ChevronLeft, ChevronRight, CirclePlus, Disc3, FileAudio, Menu, Music2, Radio, UserRound, Video, X } from "lucide-react";
+import {
+  Bell,
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  CirclePlus,
+  Disc3,
+  FileAudio,
+  Menu,
+  Music2,
+  Radio,
+  UserRound,
+  Video,
+  X,
+} from "lucide-react";
 
-const TRACK_VERSION_TYPES = ["First Jam", "Song Idea", "Demo", "Rehearsal", "Live Recording", "Home Recording", "Studio Recording", "Rough Mix", "Mix", "Pre-Master", "Master", "Final Master"] as const;
+const TRACK_VERSION_TYPES = [
+  "First Jam",
+  "Song Idea",
+  "Demo",
+  "Rehearsal",
+  "Live Recording",
+  "Home Recording",
+  "Studio Recording",
+  "Rough Mix",
+  "Mix",
+  "Pre-Master",
+  "Master",
+  "Final Master",
+] as const;
 
 type DashboardData = {
   artist: {
@@ -61,7 +88,12 @@ type ContentData = {
     albumId?: number | null;
     description?: string | null;
   }>;
-  videos: Array<{ id: number; title: string; videoUrl?: string | null; thumbnailUrl?: string | null }>;
+  videos: Array<{
+    id: number;
+    title: string;
+    videoUrl?: string | null;
+    thumbnailUrl?: string | null;
+  }>;
   photos: Array<{ id: number; imageUrl: string; alt?: string | null }>;
   gigs: Array<{
     id: number;
@@ -82,13 +114,28 @@ type ContentData = {
     featureImage?: string | null;
   }>;
   trackVersions: Array<{
-    id: number; songId: number; versionType: string; versionNumber?: number | null; label: string;
-    audioUrl: string; duration?: number | null; notes?: string | null; recordedAt?: string | null; createdAt: string;
+    id: number;
+    songId: number;
+    versionType: string;
+    versionNumber?: number | null;
+    label: string;
+    audioUrl: string;
+    duration?: number | null;
+    notes?: string | null;
+    recordedAt?: string | null;
+    createdAt: string;
     photos: Array<{ id?: number; imageUrl: string; sortOrder: number }>;
   }>;
 };
 
-type DashboardTab = "profile" | "albums" | "tracks" | "gigs" | "media" | "press" | "settings";
+type DashboardTab =
+  | "profile"
+  | "albums"
+  | "tracks"
+  | "gigs"
+  | "media"
+  | "press"
+  | "settings";
 
 const tabs: Array<{ key: DashboardTab; label: string }> = [
   { key: "profile", label: "Profile" },
@@ -97,7 +144,7 @@ const tabs: Array<{ key: DashboardTab; label: string }> = [
   { key: "gigs", label: "Gigs" },
   { key: "media", label: "Media" },
   { key: "press", label: "Press" },
-  { key: "settings", label: "Settings" }
+  { key: "settings", label: "Settings" },
 ];
 
 const initialProfile = {
@@ -116,7 +163,7 @@ const initialProfile = {
   soundcloud: "",
   bandcamp: "",
   spotify: "",
-  website: ""
+  website: "",
 };
 
 function slugifyArtistPath(value: string) {
@@ -149,7 +196,7 @@ function parseBulkTrackFilename(fileName: string) {
       return {
         trackNumber,
         title: parts.slice(0, -1).join(" - "),
-        albumTitle: parts.at(-1) ?? null
+        albumTitle: parts.at(-1) ?? null,
       };
     }
   }
@@ -158,14 +205,14 @@ function parseBulkTrackFilename(fileName: string) {
     return {
       trackNumber,
       title: withoutNumber,
-      albumTitle: null
+      albumTitle: null,
     };
   }
 
   return {
     trackNumber: null,
     title: withoutNumber,
-    albumTitle: null
+    albumTitle: null,
   };
 }
 
@@ -178,44 +225,91 @@ export default function ArtistDashboard() {
   const [message, setMessage] = useState<string | null>(null);
   const [uploading, setUploading] = useState<string | null>(null);
   const [uploadPercent, setUploadPercent] = useState(0);
-  const [albumCreated, setAlbumCreated] = useState<{ title: string; coverArt?: string | null } | null>(null);
+  const [albumCreated, setAlbumCreated] = useState<{
+    title: string;
+    coverArt?: string | null;
+  } | null>(null);
   const [showCreateAlbumModal, setShowCreateAlbumModal] = useState(false);
   const [showCreateTrackModal, setShowCreateTrackModal] = useState(false);
   const [trackDraft, setTrackDraft] = useState({ title: "", trackNumber: "" });
-  const [trackMetadataStatus, setTrackMetadataStatus] = useState<string | null>(null);
+  const [trackMetadataStatus, setTrackMetadataStatus] = useState<string | null>(
+    null,
+  );
   const [showBulkTrackModal, setShowBulkTrackModal] = useState(false);
   const [versionSongId, setVersionSongId] = useState<number | null>(null);
   const [bulkTrackFiles, setBulkTrackFiles] = useState<
-    Array<{ fileName: string; title: string; albumTitle: string | null; trackNumber: number | null }>
+    Array<{
+      fileName: string;
+      title: string;
+      albumTitle: string | null;
+      trackNumber: number | null;
+    }>
   >([]);
   const [editingAlbumId, setEditingAlbumId] = useState<number | null>(null);
   const [selectedAlbumId, setSelectedAlbumId] = useState<number | null>(null);
   const [editingAlbumTracks, setEditingAlbumTracks] = useState(false);
-  const [albumTrackDraft, setAlbumTrackDraft] = useState<ContentData["songs"]>([]);
+  const [albumTrackDraft, setAlbumTrackDraft] = useState<ContentData["songs"]>(
+    [],
+  );
   const [draggedTrackId, setDraggedTrackId] = useState<number | null>(null);
   const [selectedTrackIds, setSelectedTrackIds] = useState<number[]>([]);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileUploadStep, setMobileUploadStep] = useState<number | null>(null);
   const [mobileAudioFile, setMobileAudioFile] = useState<File | null>(null);
   const [mobileArtworkFile, setMobileArtworkFile] = useState<File | null>(null);
-  const [mobileUploadMode, setMobileUploadMode] = useState<"new" | "version">("new");
-  const [mobileVersionSongId, setMobileVersionSongId] = useState<number | null>(null);
-  const [mobileTrack, setMobileTrack] = useState({ title: "", genre: "", description: "", versionType: "Mix", versionName: "", notes: "" });
+  const [mobileUploadMode, setMobileUploadMode] = useState<"new" | "version">(
+    "new",
+  );
+  const [mobileVersionSongId, setMobileVersionSongId] = useState<number | null>(
+    null,
+  );
+  const [mobileTrack, setMobileTrack] = useState({
+    title: "",
+    genre: "",
+    description: "",
+    versionType: "Mix",
+    versionName: "",
+    notes: "",
+  });
   const [mobileUploadComplete, setMobileUploadComplete] = useState(false);
+  const [mobileUploadSubmitting, setMobileUploadSubmitting] = useState(false);
+  const [mobileEditor, setMobileEditor] = useState<
+    "album" | "gig" | "video" | null
+  >(null);
+  const [mobileEditorSubmitting, setMobileEditorSubmitting] = useState(false);
   const mobileAudioInput = useRef<HTMLInputElement>(null);
   const latestLoadRequest = useRef(0);
-  const [albumDraft, setAlbumDraft] = useState<{ title: string; description: string }>({
+  const [albumDraft, setAlbumDraft] = useState<{
+    title: string;
+    description: string;
+  }>({
     title: "",
-    description: ""
+    description: "",
   });
   const seoChecks = [
     ["A useful artist bio", profile.bio.trim().length >= 80],
-    ["At least one genre", profile.genres.split(",").some((genre) => genre.trim())],
+    [
+      "At least one genre",
+      profile.genres.split(",").some((genre) => genre.trim()),
+    ],
     ["A location", Boolean(profile.location.trim())],
-    ["A profile or hero image", Boolean(profile.profileImage || profile.heroImage)],
-    ["A public link", Boolean(profile.website || profile.bandcamp || profile.spotify || profile.soundcloud)]
+    [
+      "A profile or hero image",
+      Boolean(profile.profileImage || profile.heroImage),
+    ],
+    [
+      "A public link",
+      Boolean(
+        profile.website ||
+        profile.bandcamp ||
+        profile.spotify ||
+        profile.soundcloud,
+      ),
+    ],
   ] as const;
-  const completedSeoChecks = seoChecks.filter(([, complete]) => complete).length;
+  const completedSeoChecks = seoChecks.filter(
+    ([, complete]) => complete,
+  ).length;
 
   useEffect(() => {
     const setTabFromHash = () => {
@@ -232,7 +326,7 @@ export default function ArtistDashboard() {
     const [artistRes, contentRes, diaryRes] = await Promise.all([
       fetch("/api/artist/me", { cache: "no-store" }),
       fetch("/api/artist/me/content", { cache: "no-store" }),
-      fetch("/api/artist/me/track-versions", { cache: "no-store" })
+      fetch("/api/artist/me/track-versions", { cache: "no-store" }),
     ]);
 
     const artistPayload = await artistRes.json();
@@ -245,7 +339,9 @@ export default function ArtistDashboard() {
         name: artistPayload.artist.name ?? "",
         slug: artistPayload.artist.slug ?? "",
         bio: artistPayload.artist.bio ?? "",
-        genres: Array.isArray(artistPayload.artist.genres) ? artistPayload.artist.genres.join(", ") : "",
+        genres: Array.isArray(artistPayload.artist.genres)
+          ? artistPayload.artist.genres.join(", ")
+          : "",
         location: artistPayload.artist.location ?? "",
         heroImage: artistPayload.artist.heroImage ?? "",
         profileImage: artistPayload.artist.profileImage ?? "",
@@ -257,7 +353,7 @@ export default function ArtistDashboard() {
         soundcloud: artistPayload.artist.socialLinks?.soundcloud ?? "",
         bandcamp: artistPayload.artist.socialLinks?.bandcamp ?? "",
         spotify: artistPayload.artist.socialLinks?.spotify ?? "",
-        website: artistPayload.artist.socialLinks?.website ?? ""
+        website: artistPayload.artist.socialLinks?.website ?? "",
       });
     }
 
@@ -269,7 +365,9 @@ export default function ArtistDashboard() {
         photos: contentPayload.photos ?? [],
         gigs: contentPayload.gigs ?? [],
         press: contentPayload.press ?? [],
-        trackVersions: diaryRes.ok ? diaryPayload.trackVersions ?? [] : contentPayload.trackVersions ?? []
+        trackVersions: diaryRes.ok
+          ? (diaryPayload.trackVersions ?? [])
+          : (contentPayload.trackVersions ?? []),
       });
     }
   }
@@ -279,7 +377,13 @@ export default function ArtistDashboard() {
     void loadData();
   }, [user]);
 
-  async function uploadAsset(file: File, kind: string, alt = "", label = `Uploading ${file.name}…`) {
+  async function uploadAsset(
+    file: File,
+    kind: string,
+    alt = "",
+    label = `Uploading ${file.name}…`,
+  ) {
+    setMobileUploadSubmitting(true);
     const formData = new FormData();
     formData.append("file", file);
     formData.append("kind", kind);
@@ -287,13 +391,20 @@ export default function ArtistDashboard() {
     setUploading(label);
     setUploadPercent(0);
 
-    return await new Promise<{ key: string; url: string; masterKey?: string; processing?: boolean }>((resolve, reject) => {
+    return await new Promise<{
+      key: string;
+      url: string;
+      masterKey?: string;
+      processing?: boolean;
+    }>((resolve, reject) => {
       const xhr = new XMLHttpRequest();
       xhr.open("POST", "/api/artist/me/media");
 
       xhr.upload.onprogress = (event) => {
         if (!event.lengthComputable) return;
-        setUploadPercent(Math.max(1, Math.round((event.loaded / event.total) * 100)));
+        setUploadPercent(
+          Math.max(1, Math.round((event.loaded / event.total) * 100)),
+        );
       };
 
       xhr.onload = () => {
@@ -317,8 +428,13 @@ export default function ArtistDashboard() {
     });
   }
 
-  async function saveProfile(nextProfile = profile, successMessage = "Profile updated.") {
-    const normalizedSlug = slugifyArtistPath(nextProfile.slug || nextProfile.name);
+  async function saveProfile(
+    nextProfile = profile,
+    successMessage = "Profile updated.",
+  ) {
+    const normalizedSlug = slugifyArtistPath(
+      nextProfile.slug || nextProfile.name,
+    );
 
     const response = await fetch("/api/artist/me", {
       method: "PUT",
@@ -343,18 +459,23 @@ export default function ArtistDashboard() {
           soundcloud: nextProfile.soundcloud,
           bandcamp: nextProfile.bandcamp,
           spotify: nextProfile.spotify,
-          website: nextProfile.website
+          website: nextProfile.website,
         },
-        galleryImages: content?.photos?.map((photo) => photo.imageUrl) ?? []
-      })
+        galleryImages: content?.photos?.map((photo) => photo.imageUrl) ?? [],
+      }),
     });
 
-    const payload = (await response.json()) as { error?: string; artist?: { slug?: string } };
-    setMessage(response.ok ? successMessage : payload.error ?? "Update failed.");
+    const payload = (await response.json()) as {
+      error?: string;
+      artist?: { slug?: string };
+    };
+    setMessage(
+      response.ok ? successMessage : (payload.error ?? "Update failed."),
+    );
     if (response.ok) {
       setProfile((state) => ({
         ...nextProfile,
-        slug: payload.artist?.slug ?? normalizedSlug
+        slug: payload.artist?.slug ?? normalizedSlug,
       }));
       await loadData();
     }
@@ -362,9 +483,17 @@ export default function ArtistDashboard() {
     return response.ok;
   }
 
-  async function uploadProfileImage(file: File, field: "heroImage" | "profileImage" | "bannerImage") {
+  async function uploadProfileImage(
+    file: File,
+    field: "heroImage" | "profileImage" | "bannerImage",
+  ) {
     try {
-      const uploaded = await uploadAsset(file, `profile/${field}`, field, "Uploading image…");
+      const uploaded = await uploadAsset(
+        file,
+        `profile/${field}`,
+        field,
+        "Uploading image…",
+      );
       const nextProfile = { ...profile, [field]: uploaded.url };
       setProfile(nextProfile);
       setUploading("Saving profile…");
@@ -388,7 +517,14 @@ export default function ArtistDashboard() {
       let coverArt = String(formData.get("coverArt") ?? "");
 
       if (coverFile instanceof File && coverFile.size > 0) {
-        coverArt = (await uploadAsset(coverFile, "albums/covers", title, "Uploading album cover…")).url;
+        coverArt = (
+          await uploadAsset(
+            coverFile,
+            "albums/covers",
+            title,
+            "Uploading album cover…",
+          )
+        ).url;
       }
 
       setUploading(null);
@@ -401,8 +537,8 @@ export default function ArtistDashboard() {
           title,
           releaseDate: String(formData.get("releaseDate") ?? ""),
           description: String(formData.get("description") ?? ""),
-          coverArt
-        })
+          coverArt,
+        }),
       });
 
       const payload = await response.json();
@@ -411,13 +547,18 @@ export default function ArtistDashboard() {
         setAlbumCreated({ title, coverArt });
         setShowCreateAlbumModal(false);
         await loadData();
+        return true;
       } else {
         setMessage(payload.error ?? "Album creation failed.");
+        return false;
       }
     } catch (error) {
       setUploading(null);
       setUploadPercent(0);
-      setMessage(error instanceof Error ? error.message : "Album creation failed.");
+      setMessage(
+        error instanceof Error ? error.message : "Album creation failed.",
+      );
+      return false;
     }
   }
 
@@ -432,13 +573,25 @@ export default function ArtistDashboard() {
       let coverImage = String(formData.get("coverImage") ?? "");
 
       if (audioFile instanceof File && audioFile.size > 0) {
-        const uploadedAudio = await uploadAsset(audioFile, "songs/audio", title, "Uploading audio…");
+        const uploadedAudio = await uploadAsset(
+          audioFile,
+          "songs/audio",
+          title,
+          "Uploading audio…",
+        );
         audioUrl = uploadedAudio.url ?? "";
         masterKey = uploadedAudio.masterKey ?? "";
       }
 
       if (coverFile instanceof File && coverFile.size > 0) {
-        coverImage = (await uploadAsset(coverFile, "songs/covers", title, "Uploading cover art…")).url;
+        coverImage = (
+          await uploadAsset(
+            coverFile,
+            "songs/covers",
+            title,
+            "Uploading cover art…",
+          )
+        ).url;
       }
 
       setUploading(null);
@@ -456,12 +609,15 @@ export default function ArtistDashboard() {
           masterKey: masterKey || undefined,
           coverImage,
           albumId: albumIdValue ? Number(albumIdValue) : null,
-          trackNumber: Number.isInteger(trackNumber) && (trackNumber ?? 0) > 0 ? trackNumber : null,
+          trackNumber:
+            Number.isInteger(trackNumber) && (trackNumber ?? 0) > 0
+              ? trackNumber
+              : null,
           description: String(formData.get("description") ?? ""),
           enabled: formData.get("enabled") === "on",
           isRadioEligible: true,
-          radioSelected: formData.get("radioSelected") === "on"
-        })
+          radioSelected: formData.get("radioSelected") === "on",
+        }),
       });
 
       const payload = await response.json();
@@ -479,7 +635,9 @@ export default function ArtistDashboard() {
     } catch (error) {
       setUploading(null);
       setUploadPercent(0);
-      setMessage(error instanceof Error ? error.message : "Track upload failed.");
+      setMessage(
+        error instanceof Error ? error.message : "Track upload failed.",
+      );
       return false;
     }
   }
@@ -493,32 +651,65 @@ export default function ArtistDashboard() {
     }
     try {
       const versionType = String(formData.get("versionType") ?? "Demo");
-      const uploadedAudio = await uploadAsset(audioFile, "songs/versions/audio", versionType, "Uploading version audio…");
-      const photoFiles = formData.getAll("setupPhotos").filter((value): value is File => value instanceof File && value.size > 0);
+      const uploadedAudio = await uploadAsset(
+        audioFile,
+        "songs/versions/audio",
+        versionType,
+        "Uploading version audio…",
+      );
+      const photoFiles = formData
+        .getAll("setupPhotos")
+        .filter(
+          (value): value is File => value instanceof File && value.size > 0,
+        );
       const photoUrls: string[] = [];
       for (const photo of photoFiles) {
-        const uploaded = await uploadAsset(photo, "songs/versions/setup-photos", "Recording setup reference", `Uploading setup photo ${photoUrls.length + 1} of ${photoFiles.length}…`);
+        const uploaded = await uploadAsset(
+          photo,
+          "songs/versions/setup-photos",
+          "Recording setup reference",
+          `Uploading setup photo ${photoUrls.length + 1} of ${photoFiles.length}…`,
+        );
         photoUrls.push(uploaded.url);
       }
       const metadata = await getTrackDetailsFromAudio(audioFile);
       const response = await fetch("/api/artist/me/track-versions", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ songId, versionType, audioUrl: uploadedAudio.url, duration: metadata.duration, notes: String(formData.get("notes") ?? ""), recordedAt: String(formData.get("recordedAt") ?? "") || null, photoUrls })
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          songId,
+          versionType,
+          audioUrl: uploadedAudio.url,
+          duration: metadata.duration,
+          notes: String(formData.get("notes") ?? ""),
+          recordedAt: String(formData.get("recordedAt") ?? "") || null,
+          photoUrls,
+        }),
       });
-      const payload = await response.json() as { error?: string; version?: ContentData["trackVersions"][number] };
-      setMessage(response.ok ? `${payload.version?.label ?? versionType} added to the recording diary.` : payload.error ?? "Version upload failed.");
+      const payload = (await response.json()) as {
+        error?: string;
+        version?: ContentData["trackVersions"][number];
+      };
+      setMessage(
+        response.ok
+          ? `${payload.version?.label ?? versionType} added to the recording diary.`
+          : (payload.error ?? "Version upload failed."),
+      );
       if (response.ok && payload.version) {
         // Add the new entry before refreshing so a transient content request failure
         // never makes a successfully uploaded version appear to be missing.
-        setContent((current) => current
-          ? {
-              ...current,
-              trackVersions: [
-                ...current.trackVersions.filter((version) => version.id !== payload.version!.id),
-                payload.version!
-              ]
-            }
-          : current
+        setContent((current) =>
+          current
+            ? {
+                ...current,
+                trackVersions: [
+                  ...current.trackVersions.filter(
+                    (version) => version.id !== payload.version!.id,
+                  ),
+                  payload.version!,
+                ],
+              }
+            : current,
         );
         setVersionSongId(null);
         await loadData();
@@ -527,16 +718,32 @@ export default function ArtistDashboard() {
       return false;
       void metadata;
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Version upload failed.");
+      setMessage(
+        error instanceof Error ? error.message : "Version upload failed.",
+      );
       return false;
-    } finally { setUploading(null); setUploadPercent(0); }
+    } finally {
+      setUploading(null);
+      setUploadPercent(0);
+    }
   }
 
   async function deleteTrackVersion(versionId: number, label: string) {
-    if (!window.confirm(`Delete ${label}? This removes its audio and setup photos.`)) return;
-    const response = await fetch(`/api/artist/me/track-versions/${versionId}`, { method: "DELETE" });
+    if (
+      !window.confirm(
+        `Delete ${label}? This removes its audio and setup photos.`,
+      )
+    )
+      return;
+    const response = await fetch(`/api/artist/me/track-versions/${versionId}`, {
+      method: "DELETE",
+    });
     const payload = await response.json();
-    setMessage(response.ok ? `${label} deleted.` : payload.error ?? "Could not delete version.");
+    setMessage(
+      response.ok
+        ? `${label} deleted.`
+        : (payload.error ?? "Could not delete version."),
+    );
     if (response.ok) await loadData();
   }
 
@@ -545,13 +752,22 @@ export default function ArtistDashboard() {
 
     try {
       const { parseBlob } = await import("music-metadata-browser");
-      const metadata = await parseBlob(file, { duration: true, skipCovers: true });
+      const metadata = await parseBlob(file, {
+        duration: true,
+        skipCovers: true,
+      });
       return {
         title: metadata.common.title?.trim() || fallback.title,
         trackNumber: metadata.common.track.no ?? fallback.trackNumber,
         albumTitle: metadata.common.album?.trim() || fallback.albumTitle,
-        duration: metadata.format.duration ? Math.round(metadata.format.duration) : null,
-        foundEmbeddedMetadata: Boolean(metadata.common.title || metadata.common.track.no || metadata.common.album)
+        duration: metadata.format.duration
+          ? Math.round(metadata.format.duration)
+          : null,
+        foundEmbeddedMetadata: Boolean(
+          metadata.common.title ||
+          metadata.common.track.no ||
+          metadata.common.album,
+        ),
       };
     } catch {
       return { ...fallback, duration: null, foundEmbeddedMetadata: false };
@@ -563,9 +779,16 @@ export default function ArtistDashboard() {
     const details = await getTrackDetailsFromAudio(file);
     setTrackDraft({
       title: details.title,
-      trackNumber: details.trackNumber && details.trackNumber > 0 ? String(details.trackNumber) : ""
+      trackNumber:
+        details.trackNumber && details.trackNumber > 0
+          ? String(details.trackNumber)
+          : "",
     });
-    setTrackMetadataStatus(details.foundEmbeddedMetadata ? "Title and track number filled from the audio file." : "No embedded metadata found; filled from the filename.");
+    setTrackMetadataStatus(
+      details.foundEmbeddedMetadata
+        ? "Title and track number filled from the audio file."
+        : "No embedded metadata found; filled from the filename.",
+    );
   }
 
   async function submitMobileUpload() {
@@ -577,24 +800,52 @@ export default function ArtistDashboard() {
 
     const formData = new FormData();
     formData.set("audioFile", mobileAudioFile);
-    formData.set("title", mobileTrack.title || parseBulkTrackFilename(mobileAudioFile.name).title);
-    formData.set("description", [mobileTrack.genre && `Genre: ${mobileTrack.genre}`, mobileTrack.description].filter(Boolean).join("\n\n"));
+    formData.set(
+      "title",
+      mobileTrack.title || parseBulkTrackFilename(mobileAudioFile.name).title,
+    );
+    formData.set(
+      "description",
+      [
+        mobileTrack.genre && `Genre: ${mobileTrack.genre}`,
+        mobileTrack.description,
+      ]
+        .filter(Boolean)
+        .join("\n\n"),
+    );
     formData.set("enabled", "on");
     if (mobileArtworkFile) formData.set("coverFile", mobileArtworkFile);
 
     if (mobileUploadMode === "version") {
       formData.set("versionType", mobileTrack.versionType);
-      formData.set("notes", [mobileTrack.versionName && `Version name: ${mobileTrack.versionName}`, mobileTrack.notes].filter(Boolean).join("\n\n"));
+      formData.set(
+        "notes",
+        [
+          mobileTrack.versionName && `Version name: ${mobileTrack.versionName}`,
+          mobileTrack.notes,
+        ]
+          .filter(Boolean)
+          .join("\n\n"),
+      );
     }
-    const saved = mobileUploadMode === "version" && mobileVersionSongId
-      ? await addTrackVersion(formData, mobileVersionSongId)
-      : await uploadSong(formData);
+    try {
+      const saved =
+        mobileUploadMode === "version" && mobileVersionSongId
+          ? await addTrackVersion(formData, mobileVersionSongId)
+          : await uploadSong(formData);
 
-    if (saved) setMobileUploadComplete(true);
+      if (saved) setMobileUploadComplete(true);
+    } finally {
+      setMobileUploadSubmitting(false);
+    }
   }
 
   async function bulkUploadSongs(formData: FormData) {
-    const files = formData.getAll("audioFiles").filter((value): value is File => value instanceof File && value.size > 0);
+    const files = formData
+      .getAll("audioFiles")
+      .filter(
+        (value): value is File => value instanceof File && value.size > 0,
+      );
 
     if (!files.length) {
       setMessage("Select at least one audio file.");
@@ -612,15 +863,19 @@ export default function ArtistDashboard() {
         const parsed = await getTrackDetailsFromAudio(file);
 
         if (!parsed.title) {
-          throw new Error(`Could not derive a track title from "${file.name}".`);
+          throw new Error(
+            `Could not derive a track title from "${file.name}".`,
+          );
         }
 
-        setUploading(`Uploading ${index + 1} of ${files.length}: ${parsed.title}`);
+        setUploading(
+          `Uploading ${index + 1} of ${files.length}: ${parsed.title}`,
+        );
         const uploadedAudio = await uploadAsset(
           file,
           "songs/audio",
           parsed.title,
-          `Uploading ${index + 1} of ${files.length}: ${parsed.title}`
+          `Uploading ${index + 1} of ${files.length}: ${parsed.title}`,
         );
 
         const response = await fetch("/api/artist/me/songs", {
@@ -636,13 +891,15 @@ export default function ArtistDashboard() {
             description: "",
             enabled: true,
             isRadioEligible: true,
-            radioSelected: false
-          })
+            radioSelected: false,
+          }),
         });
 
         const payload = await response.json();
         if (!response.ok) {
-          throw new Error(payload.error ?? `Track upload failed for "${parsed.title}".`);
+          throw new Error(
+            payload.error ?? `Track upload failed for "${parsed.title}".`,
+          );
         }
 
         if (typeof payload.warning === "string" && payload.warning.length > 0) {
@@ -656,13 +913,15 @@ export default function ArtistDashboard() {
       setMessage(
         inactiveUploads > 0
           ? `Uploaded ${files.length} tracks. ${inactiveUploads} were saved as inactive because free plans can only have 5 active tracks.`
-          : `Uploaded ${files.length} tracks.`
+          : `Uploaded ${files.length} tracks.`,
       );
       await loadData();
     } catch (error) {
       setUploading(null);
       setUploadPercent(0);
-      setMessage(error instanceof Error ? error.message : "Bulk upload failed.");
+      setMessage(
+        error instanceof Error ? error.message : "Bulk upload failed.",
+      );
     }
   }
 
@@ -673,7 +932,7 @@ export default function ArtistDashboard() {
         fileName: file.name,
         title: result.title,
         albumTitle: result.albumTitle,
-        trackNumber: result.trackNumber
+        trackNumber: result.trackNumber,
       };
     });
 
@@ -684,11 +943,15 @@ export default function ArtistDashboard() {
     const response = await fetch("/api/artist/me/songs", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: trackId, albumId })
+      body: JSON.stringify({ id: trackId, albumId }),
     });
 
     const payload = await response.json();
-    setMessage(response.ok ? "Track assignment updated." : payload.error ?? "Could not update track assignment.");
+    setMessage(
+      response.ok
+        ? "Track assignment updated."
+        : (payload.error ?? "Could not update track assignment."),
+    );
     if (response.ok) {
       await loadData();
     }
@@ -701,47 +964,65 @@ export default function ArtistDashboard() {
       body: JSON.stringify({
         id: albumId,
         title: albumDraft.title,
-        description: albumDraft.description
-      })
+        description: albumDraft.description,
+      }),
     });
 
     const payload = await response.json();
-    setMessage(response.ok ? "Album updated." : payload.error ?? "Album update failed.");
+    setMessage(
+      response.ok
+        ? "Album updated."
+        : (payload.error ?? "Album update failed."),
+    );
     if (response.ok) {
       setEditingAlbumId(null);
       await loadData();
     }
   }
 
-  async function updateTrack(trackId: number, updates: Record<string, unknown>, successMessage = "Track updated.") {
+  async function updateTrack(
+    trackId: number,
+    updates: Record<string, unknown>,
+    successMessage = "Track updated.",
+  ) {
     const response = await fetch("/api/artist/me/songs", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         id: trackId,
-        ...updates
-      })
+        ...updates,
+      }),
     });
 
     const payload = await response.json();
-    setMessage(response.ok ? payload.warning ?? successMessage : payload.error ?? "Track update failed.");
+    setMessage(
+      response.ok
+        ? (payload.warning ?? successMessage)
+        : (payload.error ?? "Track update failed."),
+    );
     if (response.ok) {
       await loadData();
     }
   }
 
   async function deleteTrack(trackId: number, title: string) {
-    const confirmed = window.confirm(`Delete "${title}"? This cannot be undone.`);
+    const confirmed = window.confirm(
+      `Delete "${title}"? This cannot be undone.`,
+    );
     if (!confirmed) return;
 
     const response = await fetch("/api/artist/me/songs", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: trackId })
+      body: JSON.stringify({ id: trackId }),
     });
 
     const payload = await response.json();
-    setMessage(response.ok ? "Track deleted." : payload.error ?? "Track deletion failed.");
+    setMessage(
+      response.ok
+        ? "Track deleted."
+        : (payload.error ?? "Track deletion failed."),
+    );
     if (response.ok) {
       setSelectedTrackIds((current) => current.filter((id) => id !== trackId));
       await loadData();
@@ -761,12 +1042,12 @@ export default function ArtistDashboard() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             id: trackId,
-            albumId
-          })
+            albumId,
+          }),
         });
 
         return response.ok;
-      })
+      }),
     );
 
     if (results.every(Boolean)) {
@@ -786,12 +1067,12 @@ export default function ArtistDashboard() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             id: song.id,
-            trackNumber: index + 1
-          })
+            trackNumber: index + 1,
+          }),
         });
 
         return response.ok;
-      })
+      }),
     );
 
     if (updates.every(Boolean)) {
@@ -805,22 +1086,30 @@ export default function ArtistDashboard() {
   }
 
   async function createGig(formData: FormData) {
-    const response = await fetch("/api/artist/me/gigs", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        title: String(formData.get("title") ?? ""),
-        venue: String(formData.get("venue") ?? ""),
-        city: String(formData.get("city") ?? ""),
-        eventDate: String(formData.get("eventDate") ?? ""),
-        ticketUrl: String(formData.get("ticketUrl") ?? ""),
-        description: String(formData.get("description") ?? "")
-      })
-    });
+    try {
+      const response = await fetch("/api/artist/me/gigs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: String(formData.get("title") ?? ""),
+          venue: String(formData.get("venue") ?? ""),
+          city: String(formData.get("city") ?? ""),
+          eventDate: String(formData.get("eventDate") ?? ""),
+          ticketUrl: String(formData.get("ticketUrl") ?? ""),
+          description: String(formData.get("description") ?? ""),
+        }),
+      });
 
-    const payload = await response.json();
-    setMessage(response.ok ? "Gig added." : payload.error ?? "Gig creation failed.");
-    if (response.ok) await loadData();
+      const payload = await response.json();
+      setMessage(
+        response.ok ? "Gig added." : (payload.error ?? "Gig creation failed."),
+      );
+      if (response.ok) await loadData();
+      return response.ok;
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Gig creation failed.");
+      return false;
+    }
   }
 
   async function uploadPhoto(formData: FormData) {
@@ -832,7 +1121,12 @@ export default function ArtistDashboard() {
       }
 
       setUploading("Uploading photo…");
-      const uploaded = await uploadAsset(file, "photos", String(formData.get("alt") ?? ""), "Uploading photo…");
+      const uploaded = await uploadAsset(
+        file,
+        "photos",
+        String(formData.get("alt") ?? ""),
+        "Uploading photo…",
+      );
       setUploading(null);
       setUploadPercent(0);
 
@@ -841,12 +1135,14 @@ export default function ArtistDashboard() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           imageUrl: uploaded.url,
-          alt: String(formData.get("alt") ?? "")
-        })
+          alt: String(formData.get("alt") ?? ""),
+        }),
       });
 
       const payload = await response.json();
-      setMessage(response.ok ? "Photo uploaded." : payload.error ?? "Upload failed.");
+      setMessage(
+        response.ok ? "Photo uploaded." : (payload.error ?? "Upload failed."),
+      );
       if (response.ok) await loadData();
     } catch (error) {
       setUploading(null);
@@ -866,7 +1162,7 @@ export default function ArtistDashboard() {
             thumbnailFile,
             "videos/thumbnails",
             String(formData.get("title") ?? ""),
-            "Uploading video thumbnail…"
+            "Uploading video thumbnail…",
           )
         ).url;
         setUploading(null);
@@ -879,30 +1175,60 @@ export default function ArtistDashboard() {
         body: JSON.stringify({
           title: String(formData.get("title") ?? ""),
           videoUrl: String(formData.get("videoUrl") ?? ""),
-          thumbnailUrl
-        })
+          thumbnailUrl,
+        }),
       });
 
       const payload = await response.json();
-      setMessage(response.ok ? "Video added." : payload.error ?? "Upload failed.");
+      setMessage(
+        response.ok ? "Video added." : (payload.error ?? "Upload failed."),
+      );
       if (response.ok) await loadData();
+      return response.ok;
     } catch (error) {
       setUploading(null);
       setUploadPercent(0);
       setMessage(error instanceof Error ? error.message : "Upload failed.");
+      return false;
     }
   }
 
-  async function deleteMedia(kind: "photo" | "video", id: number, label: string) {
+  async function submitMobileEditor(formData: FormData) {
+    if (!mobileEditor) return;
+    setMobileEditorSubmitting(true);
+    try {
+      const saved =
+        mobileEditor === "album"
+          ? await createAlbum(formData)
+          : mobileEditor === "gig"
+            ? await createGig(formData)
+            : await addVideo(formData);
+      if (saved) setMobileEditor(null);
+    } finally {
+      setMobileEditorSubmitting(false);
+      setUploading(null);
+      setUploadPercent(0);
+    }
+  }
+
+  async function deleteMedia(
+    kind: "photo" | "video",
+    id: number,
+    label: string,
+  ) {
     if (!window.confirm(`Delete ${label}? This cannot be undone.`)) return;
 
     const response = await fetch(`/api/artist/me/${kind}s`, {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id })
+      body: JSON.stringify({ id }),
     });
     const payload = await response.json();
-    setMessage(response.ok ? `${kind === "photo" ? "Photo" : "Video"} deleted.` : payload.error ?? "Delete failed.");
+    setMessage(
+      response.ok
+        ? `${kind === "photo" ? "Photo" : "Video"} deleted.`
+        : (payload.error ?? "Delete failed."),
+    );
     if (response.ok) await loadData();
   }
 
@@ -917,7 +1243,7 @@ export default function ArtistDashboard() {
             featureFile,
             "press/images",
             String(formData.get("title") ?? ""),
-            "Uploading feature image…"
+            "Uploading feature image…",
           )
         ).url;
         setUploading(null);
@@ -933,12 +1259,16 @@ export default function ArtistDashboard() {
           date: String(formData.get("date") ?? ""),
           articleLink: String(formData.get("articleLink") ?? ""),
           excerpt: String(formData.get("excerpt") ?? ""),
-          featureImage
-        })
+          featureImage,
+        }),
       });
 
       const payload = await response.json();
-      setMessage(response.ok ? "Press item added." : payload.error ?? "Press item failed.");
+      setMessage(
+        response.ok
+          ? "Press item added."
+          : (payload.error ?? "Press item failed."),
+      );
       if (response.ok) await loadData();
     } catch (error) {
       setUploading(null);
@@ -948,9 +1278,13 @@ export default function ArtistDashboard() {
   }
 
   const selectedAlbumTitleById = useMemo(() => {
-    return new Map((content?.albums ?? []).map((album) => [album.id, album.title]));
+    return new Map(
+      (content?.albums ?? []).map((album) => [album.id, album.title]),
+    );
   }, [content?.albums]);
-  const selectedAlbum = (content?.albums ?? []).find((album) => album.id === selectedAlbumId) ?? null;
+  const selectedAlbum =
+    (content?.albums ?? []).find((album) => album.id === selectedAlbumId) ??
+    null;
   const selectedAlbumTracks = (content?.songs ?? [])
     .filter((song) => song.albumId === selectedAlbumId)
     .sort((left, right) => {
@@ -986,9 +1320,12 @@ export default function ArtistDashboard() {
       <Container>
         <section className="py-20">
           <Card className="p-8 text-center">
-            <h1 className="text-3xl font-semibold text-white">Artist accounts manage their own page</h1>
+            <h1 className="text-3xl font-semibold text-white">
+              Artist accounts manage their own page
+            </h1>
             <p className="mt-4 text-fog">
-              Create an artist account to manage albums, tracks, gigs, media, press, and radio-ready content.
+              Create an artist account to manage albums, tracks, gigs, media,
+              press, and radio-ready content.
             </p>
             <div className="mt-6 flex justify-center gap-3">
               <Link href={{ pathname: "/signup", query: { type: "artist" } }}>
@@ -1009,944 +1346,2762 @@ export default function ArtistDashboard() {
       <Container>
         <section className="py-20">
           <Card className="p-8 text-center">
-            <h1 className="text-3xl font-semibold text-white">This dashboard is for artist accounts</h1>
-            <p className="mt-4 text-fog">Your current account is set up as a listener.</p>
+            <h1 className="text-3xl font-semibold text-white">
+              This dashboard is for artist accounts
+            </h1>
+            <p className="mt-4 text-fog">
+              Your current account is set up as a listener.
+            </p>
           </Card>
         </section>
       </Container>
     );
   }
 
-  const mobileTrackTitle = mobileTrack.title || (mobileAudioFile ? parseBulkTrackFilename(mobileAudioFile.name).title : "Untitled track");
+  const mobileTrackTitle =
+    mobileTrack.title ||
+    (mobileAudioFile
+      ? parseBulkTrackFilename(mobileAudioFile.name).title
+      : "Untitled track");
   const mobileCloseUpload = () => {
-    setMobileUploadStep(null); setMobileUploadComplete(false); setMobileAudioFile(null); setMobileArtworkFile(null);
-    setMobileTrack({ title: "", genre: "", description: "", versionType: "Mix", versionName: "", notes: "" });
+    setMobileUploadStep(null);
+    setMobileUploadComplete(false);
+    setMobileAudioFile(null);
+    setMobileArtworkFile(null);
+    setMobileTrack({
+      title: "",
+      genre: "",
+      description: "",
+      versionType: "Mix",
+      versionName: "",
+      notes: "",
+    });
   };
 
   return (
     <>
       <div className="min-h-dvh pb-24 md:hidden">
         <header className="sticky top-0 z-30 flex items-center justify-between border-b border-sky-300/15 bg-[#040d1d]/90 px-4 py-3 backdrop-blur-xl">
-          <Link href="/" className="font-display text-sm font-bold tracking-[0.1em] text-white">◉ FULLY OPEN<span className="block text-[9px] tracking-[0.32em] text-sky-200">RECORDS</span></Link>
-          <div className="flex items-center gap-2"><button aria-label="Notifications" className="rounded-xl border border-white/10 p-2 text-sky-100"><Bell size={18} /></button><button aria-label="Open menu" onClick={() => setMobileMenuOpen(true)} className="rounded-xl border border-white/10 p-2 text-sky-100"><Menu size={18} /></button></div>
+          <Link
+            href="/"
+            className="font-display text-sm font-bold tracking-[0.1em] text-white"
+          >
+            ◉ FULLY OPEN
+            <span className="block text-[9px] tracking-[0.32em] text-sky-200">
+              RECORDS
+            </span>
+          </Link>
+          <div className="flex items-center gap-2">
+            <button
+              aria-label="Notifications"
+              className="rounded-xl border border-white/10 p-2 text-sky-100"
+            >
+              <Bell size={18} />
+            </button>
+            <button
+              aria-label="Open menu"
+              onClick={() => setMobileMenuOpen(true)}
+              className="rounded-xl border border-white/10 p-2 text-sky-100"
+            >
+              <Menu size={18} />
+            </button>
+          </div>
         </header>
         <main className="px-4 pt-5">
-          {activeTab !== "profile" ? <section><div className="flex items-center justify-between"><div><p className="text-xs uppercase tracking-[.2em] text-sky-300">Artist dashboard</p><h1 className="mt-1 text-2xl font-semibold text-white">{activeTab === "tracks" ? "Your Music" : activeTab === "albums" ? "Your Releases" : activeTab === "gigs" ? "Upcoming Gigs" : activeTab === "media" ? "Media" : "Your Profile"}</h1></div><button onClick={() => setActiveTab("profile")} className="text-sm text-sky-300">Home</button></div>{activeTab === "tracks" ? <><button onClick={() => setMobileUploadStep(1)} className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-sky-500 font-semibold"><CirclePlus size={18} /> Upload track</button><div className="mt-4 space-y-2">{content?.songs.map((song) => <div key={song.id} className="flex items-center gap-3 rounded-xl border border-sky-100/10 bg-[#07172c] p-3"><Music2 className="text-sky-300" /><div className="min-w-0 flex-1"><p className="truncate text-sm text-white">{song.title}</p><p className="text-xs text-sky-100/60">{song.enabled ? "Active" : "Inactive"}</p></div><ChevronRight size={17} className="text-sky-200" /></div>) || <p className="mt-4 text-sm text-sky-100/60">No tracks yet.</p>}</div></> : null}{activeTab === "albums" ? <><button onClick={() => setShowCreateAlbumModal(true)} className="mt-5 h-12 w-full rounded-xl bg-sky-500 font-semibold">+ New release</button><div className="mt-4 space-y-2">{content?.albums.map((album) => <div key={album.id} className="rounded-xl border border-sky-100/10 bg-[#07172c] p-3"><p className="text-sm text-white">{album.title}</p><p className="mt-1 text-xs text-sky-100/60">{formatDate(album.releaseDate)}</p></div>) || <p className="text-sm text-sky-100/60">No releases yet.</p>}</div></> : null}{activeTab === "gigs" ? <><button onClick={() => setActiveTab("profile")} className="mt-5 h-12 w-full rounded-xl bg-sky-500 font-semibold">+ Add gig</button><div className="mt-4 space-y-2">{content?.gigs.map((gig) => <div key={gig.id} className="rounded-xl border border-sky-100/10 bg-[#07172c] p-3"><p className="text-sm text-white">{gig.title}</p><p className="mt-1 text-xs text-sky-100/60">{formatDate(gig.eventDate)} · {gig.venue || gig.city || "Venue TBC"}</p></div>) || <p className="text-sm text-sky-100/60">No gigs yet.</p>}</div></> : null}{activeTab === "media" ? <div className="mt-5 rounded-xl border border-sky-100/10 bg-[#07172c] p-4 text-sm text-sky-100/60">{content?.photos.length ?? 0} photos and {content?.videos.length ?? 0} videos. Use the desktop editor for detailed media management.</div> : null}</section> : <>
-          <section className="rounded-3xl border border-sky-200/15 bg-[radial-gradient(circle_at_80%_20%,rgba(42,139,229,.25),transparent_35%),rgba(5,16,34,.88)] p-4 shadow-2xl">
-            <div className="flex items-center gap-3">
-              <div className="relative h-16 w-16 overflow-hidden rounded-full border border-sky-200/40 bg-sky-950">{profile.profileImage || profile.heroImage ? <Image src={profile.profileImage || profile.heroImage} alt="Artist" fill className="object-cover" unoptimized /> : <Music2 className="m-5 text-sky-200" />}</div>
-              <div className="min-w-0"><p className="text-xs text-sky-100">Hi {user.username}</p><h1 className="truncate text-2xl font-semibold text-white">{dashboard?.artist.name ?? user.username}</h1><a href={`/${dashboard?.artist.slug ?? profile.slug}`} className="text-xs text-sky-300">View public page →</a></div>
-            </div>
-            <button onClick={() => setMobileMenuOpen(true)} className="mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-sky-500 to-blue-500 text-sm font-semibold text-white shadow-[0_0_24px_rgba(54,159,255,.35)]"><CirclePlus size={19} /> ADD MUSIC</button>
-          </section>
-          <section className="mt-4 grid grid-cols-4 gap-2">
-            {[
-              [Music2, "Upload", () => setMobileMenuOpen(true)], [Disc3, "Release", () => { setActiveTab("albums"); }], [CalendarDays, "Gig", () => setActiveTab("gigs")], [Video, "Video", () => setActiveTab("media")]
-            ].map(([Icon, label, action]) => { const ActionIcon = Icon as ElementType; return <button key={String(label)} onClick={action as () => void} className="rounded-xl border border-sky-100/10 bg-[#07172c]/90 py-3 text-center text-[10px] text-sky-100"><ActionIcon className="mx-auto mb-1 text-sky-300" size={19} />{String(label)}</button>; })}
-          </section>
-          <section className="mt-6"><div className="flex items-center justify-between"><h2 className="text-lg font-semibold text-white">Your Music</h2><button onClick={() => setActiveTab("tracks")} className="text-xs text-sky-300">View all →</button></div><div className="mt-3 space-y-2">{content?.songs.slice(0, 3).map((song) => <button key={song.id} onClick={() => setActiveTab("tracks")} className="flex w-full items-center gap-3 rounded-xl border border-sky-100/10 bg-[#07172c]/90 p-2 text-left"><div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-sky-950">{song.coverImage ? <Image src={song.coverImage} alt="" fill className="object-cover" unoptimized /> : <Music2 className="m-3 text-sky-300" />}</div><span className="min-w-0 flex-1"><span className="block truncate text-sm text-white">{song.title}</span><span className="text-xs text-sky-100/60">{song.description || "Track"}</span></span><ChevronRight size={17} className="text-sky-200" /></button>) || <p className="rounded-xl border border-dashed border-white/10 p-4 text-sm text-sky-100/60">Your uploaded tracks will appear here.</p>}</div></section>
-          <section className="mt-6"><div className="flex items-center justify-between"><h2 className="text-lg font-semibold text-white">Upcoming Gigs</h2><button onClick={() => setActiveTab("gigs")} className="text-xs text-sky-300">View all →</button></div><div className="mt-3 space-y-2">{content?.gigs.slice(0, 2).map((gig) => <button key={gig.id} onClick={() => setActiveTab("gigs")} className="flex w-full items-center gap-3 rounded-xl border border-sky-100/10 bg-[#07172c]/90 p-3 text-left"><span className="rounded-lg bg-sky-400/15 px-2 py-1 text-center text-xs text-sky-200">{formatDate(gig.eventDate).slice(8)}<br />{formatDate(gig.eventDate).slice(5, 7)}</span><span><span className="block text-sm text-white">{gig.title}</span><span className="text-xs text-sky-100/60">{gig.venue || gig.city || "Venue TBC"}</span></span></button>) || <button onClick={() => setActiveTab("gigs")} className="w-full rounded-xl border border-dashed border-white/10 p-4 text-sm text-sky-100/60">Add your first gig</button>}</div></section></>}
-        </main>
-        <nav className="fixed inset-x-0 bottom-0 z-30 flex h-[72px] items-center justify-around border-t border-sky-100/15 bg-[#040d1d]/95 px-2 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl"><button onClick={() => setActiveTab("profile")} className="flex flex-col items-center text-[10px] text-sky-300"><UserRound size={19} />Home</button><button onClick={() => setActiveTab("tracks")} className="flex flex-col items-center text-[10px] text-sky-100"><Music2 size={19} />Music</button><button onClick={() => setMobileMenuOpen(true)} className="-mt-7 flex h-14 w-14 items-center justify-center rounded-full bg-sky-500 text-white shadow-[0_0_25px_rgba(54,159,255,.7)]"><CirclePlus size={28} /></button><a href="/radio" className="flex flex-col items-center text-[10px] text-sky-100"><Radio size={19} />Radio</a><button onClick={() => setMobileMenuOpen(true)} className="flex flex-col items-center text-[10px] text-sky-100"><Menu size={19} />Menu</button></nav>
-        {mobileMenuOpen ? <div className="fixed inset-0 z-40 flex items-end bg-black/65" onClick={() => setMobileMenuOpen(false)}><section onClick={(event) => event.stopPropagation()} className="w-full rounded-t-3xl border-t border-sky-200/20 bg-[#06162a] p-5 pb-8"><div className="mx-auto mb-5 h-1 w-10 rounded-full bg-white/30" /><div className="flex items-center justify-between"><h2 className="text-lg font-semibold text-white">Create something new</h2><button onClick={() => setMobileMenuOpen(false)}><X className="text-sky-100" /></button></div><div className="mt-4 space-y-3"><button onClick={() => { setMobileMenuOpen(false); setMobileUploadStep(1); }} className="flex w-full items-center gap-3 rounded-xl border border-sky-300/20 bg-sky-500/10 p-4 text-left"><FileAudio className="text-sky-300" /><span><b className="block text-sm text-white">Upload Track</b><small className="text-sky-100/60">Add a new track or version</small></span></button><button onClick={() => { setMobileMenuOpen(false); setActiveTab("albums"); }} className="flex w-full items-center gap-3 rounded-xl border border-white/10 p-4 text-left"><Disc3 className="text-sky-300" /><span className="text-sm text-white">Create Release</span></button><button onClick={() => { setMobileMenuOpen(false); setActiveTab("gigs"); }} className="flex w-full items-center gap-3 rounded-xl border border-white/10 p-4 text-left"><CalendarDays className="text-sky-300" /><span className="text-sm text-white">Add Gig</span></button></div></section></div> : null}
-        {mobileUploadStep ? <div className="fixed inset-0 z-[100] flex min-h-dvh flex-col bg-[#040d1d] text-white"><header className="flex items-center justify-between border-b border-sky-100/15 px-4 py-4"><button onClick={() => mobileUploadStep === 1 ? mobileCloseUpload() : setMobileUploadStep(mobileUploadStep - 1)}><ChevronLeft /></button><b>Add a Track</b><button onClick={mobileCloseUpload}><X /></button></header><div className="px-5 pt-4"><div className="flex items-start justify-between">{["Audio", "Details", "Version", "Review"].map((label, i) => <div key={label} className="flex flex-1 flex-col items-center gap-1 text-[10px] text-sky-100/70"><span className={`flex h-7 w-7 items-center justify-center rounded-full border ${mobileUploadStep === i + 1 ? "border-sky-300 bg-sky-500 text-white" : mobileUploadStep > i + 1 ? "border-sky-400 bg-sky-400 text-slate-950" : "border-sky-100/30"}`}>{i + 1}</span>{label}</div>)}</div></div><div className="flex-1 overflow-y-auto px-5 py-6 pb-28">{mobileUploadStep === 1 ? <><p className="text-xs text-sky-200">Step 1 of 4</p><h2 className="mt-1 text-2xl font-semibold">Add your audio</h2><p className="mt-2 text-sm text-sky-100/65">Upload your track. We support WAV, MP3, FLAC and more.</p><input ref={mobileAudioInput} type="file" accept="audio/*" className="sr-only" onChange={async (e) => { const file = e.target.files?.[0]; if (!file) return; setMobileAudioFile(file); const metadata = await getTrackDetailsFromAudio(file); setMobileTrack((track) => ({ ...track, title: metadata.title })); }} /><button onClick={() => mobileAudioInput.current?.click()} className="mt-7 flex min-h-40 w-full flex-col items-center justify-center rounded-xl border border-dashed border-sky-300/50 bg-sky-500/5 text-sky-200"><FileAudio size={30} /><b className="mt-3">Choose audio file</b><small className="mt-1 text-sky-100/60">Max file size 2GB</small></button>{mobileAudioFile ? <div className="mt-3 flex items-center gap-3 rounded-xl border border-sky-300/20 bg-sky-500/10 p-3"><FileAudio className="text-sky-300" /><span className="min-w-0 flex-1 truncate text-sm">{mobileAudioFile.name}</span><button onClick={() => setMobileAudioFile(null)}><X size={16} /></button></div> : null}</> : null}{mobileUploadStep === 2 ? <><p className="text-xs text-sky-200">Step 2 of 4</p><h2 className="mt-1 text-2xl font-semibold">Track details</h2><div className="mt-6 space-y-4"><input value={mobileTrack.title} onChange={(e) => setMobileTrack({ ...mobileTrack, title: e.target.value })} placeholder="Track title" className="w-full rounded-xl border border-sky-100/20 bg-white/5 px-4 py-3" /><input value={mobileTrack.genre} onChange={(e) => setMobileTrack({ ...mobileTrack, genre: e.target.value })} placeholder="Genre" className="w-full rounded-xl border border-sky-100/20 bg-white/5 px-4 py-3" /><textarea value={mobileTrack.description} onChange={(e) => setMobileTrack({ ...mobileTrack, description: e.target.value })} rows={4} placeholder="Description" className="w-full rounded-xl border border-sky-100/20 bg-white/5 px-4 py-3" /><label className="block text-sm text-sky-100">Track artwork<input type="file" accept="image/*" onChange={(e) => setMobileArtworkFile(e.target.files?.[0] ?? null)} className="mt-2 block w-full text-xs" /></label></div></> : null}{mobileUploadStep === 3 ? <><p className="text-xs text-sky-200">Step 3 of 4</p><h2 className="mt-1 text-2xl font-semibold">Version & release</h2><div className="mt-6 space-y-4"><label className="flex gap-3 rounded-xl border border-sky-300/30 bg-sky-500/10 p-4"><input type="radio" checked={mobileUploadMode === "new"} onChange={() => setMobileUploadMode("new")} /> <span><b className="block">Create new track</b><small className="text-sky-100/60">Add this as a new track</small></span></label><label className="flex gap-3 rounded-xl border border-white/10 p-4"><input type="radio" checked={mobileUploadMode === "version"} onChange={() => setMobileUploadMode("version")} /> <span><b className="block">Add as new version</b><small className="text-sky-100/60">Keep the recording history together</small></span></label>{mobileUploadMode === "version" ? <><select value={mobileVersionSongId ?? ""} onChange={(e) => setMobileVersionSongId(Number(e.target.value) || null)} className="w-full rounded-xl border border-sky-100/20 bg-[#07172c] px-4 py-3"><option value="">Choose existing track</option>{content?.songs.map((song) => <option key={song.id} value={song.id}>{song.title}</option>)}</select><select value={mobileTrack.versionType} onChange={(e) => setMobileTrack({ ...mobileTrack, versionType: e.target.value })} className="w-full rounded-xl border border-sky-100/20 bg-[#07172c] px-4 py-3">{TRACK_VERSION_TYPES.map((type) => <option key={type}>{type}</option>)}</select><input value={mobileTrack.versionName} onChange={(e) => setMobileTrack({ ...mobileTrack, versionName: e.target.value })} placeholder="Version name (optional)" className="w-full rounded-xl border border-sky-100/20 bg-white/5 px-4 py-3" /><textarea value={mobileTrack.notes} onChange={(e) => setMobileTrack({ ...mobileTrack, notes: e.target.value })} placeholder="Notes (optional)" className="w-full rounded-xl border border-sky-100/20 bg-white/5 px-4 py-3" /></> : null}</div></> : null}{mobileUploadStep === 4 ? <><p className="text-xs text-sky-200">Step 4 of 4</p><h2 className="mt-1 text-2xl font-semibold">Review & upload</h2><div className="mt-6 rounded-xl border border-sky-200/15 bg-sky-500/5 p-4"><p className="font-semibold">{mobileTrackTitle}</p><p className="mt-1 text-sm text-sky-100/65">{mobileTrack.genre || "No genre"} · {mobileAudioFile ? `${(mobileAudioFile.size / 1024 / 1024).toFixed(1)} MB` : "No audio"}</p><p className="mt-4 text-xs uppercase tracking-wider text-sky-300">{mobileUploadMode === "version" ? `${mobileTrack.versionType} version` : "New track"}</p>{mobileTrack.description ? <p className="mt-2 text-sm text-sky-100/70">{mobileTrack.description}</p> : null}</div></> : null}</div><footer className="fixed inset-x-0 bottom-0 flex gap-3 border-t border-sky-100/15 bg-[#040d1d]/95 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]"><button onClick={() => mobileUploadStep === 1 ? mobileCloseUpload() : setMobileUploadStep(mobileUploadStep - 1)} className="h-12 px-3 text-sm text-sky-100">{mobileUploadStep === 1 ? "Cancel" : "← Back"}</button><button disabled={(mobileUploadStep === 1 && !mobileAudioFile) || (mobileUploadStep === 3 && mobileUploadMode === "version" && !mobileVersionSongId)} onClick={() => mobileUploadStep === 4 ? void submitMobileUpload() : setMobileUploadStep(mobileUploadStep + 1)} className="ml-auto h-12 flex-1 rounded-xl bg-sky-500 text-sm font-semibold disabled:opacity-40">{mobileUploadStep === 4 ? "Upload to Fully Open" : "Continue →"}</button></footer></div> : null}
-        {mobileUploadComplete ? <div className="fixed inset-0 z-[110] flex items-center justify-center bg-[#040d1d] p-6 text-center"><div><div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border-2 border-sky-300 text-3xl text-sky-300">✓</div><h2 className="mt-5 text-2xl font-semibold text-white">Track uploaded</h2><p className="mt-2 text-sm text-sky-100/65">Your track has been added to your artist page.</p><button onClick={mobileCloseUpload} className="mt-6 h-12 w-full rounded-xl bg-sky-500 font-semibold">View Tracks →</button><button onClick={() => { mobileCloseUpload(); setMobileUploadStep(1); }} className="mt-3 w-full text-sm text-sky-200">Add another track</button></div></div> : null}
-      </div>
-      <div className="hidden md:block"><Container>
-      <section className="space-y-8 py-20">
-        {albumCreated ? (
-          <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm">
-            <Card className="w-full max-w-md border-pink/30 p-6 text-center shadow-[0_0_40px_rgba(209,74,139,0.25)]">
-              <p className="text-xs uppercase tracking-[0.24em] text-pink">Album Created</p>
-              <h2 className="mt-3 text-2xl font-semibold text-white">{albumCreated.title} created</h2>
-              {albumCreated.coverArt ? (
-                <div className="relative mx-auto mt-5 aspect-square w-44 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04]">
-                  <Image
-                    src={albumCreated.coverArt}
-                    alt={`${albumCreated.title} cover art`}
-                    fill
-                    className="object-cover"
-                    unoptimized
-                  />
-                </div>
-              ) : null}
-              <p className="mt-5 text-sm text-fog">
-                Your album has been added to your artist page content.
-              </p>
-              <Button className="mt-6 w-full" onClick={() => setAlbumCreated(null)}>
-                Okay
-              </Button>
-            </Card>
-          </div>
-        ) : null}
-
-        {showCreateAlbumModal ? (
-          <div className="fixed inset-0 z-[90] flex items-start justify-center overflow-y-auto bg-black/70 px-4 py-6 pb-28 backdrop-blur-sm">
-            <Card className="my-auto w-full max-w-xl p-6">
-              <div className="flex items-start justify-between gap-4">
+          {activeTab !== "profile" ? (
+            <section>
+              <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs uppercase tracking-[0.24em] text-pink">Albums</p>
-                  <h2 className="mt-2 text-2xl font-semibold text-white">Create Album</h2>
+                  <p className="text-xs uppercase tracking-[.2em] text-sky-300">
+                    Artist dashboard
+                  </p>
+                  <h1 className="mt-1 text-2xl font-semibold text-white">
+                    {activeTab === "tracks"
+                      ? "Your Music"
+                      : activeTab === "albums"
+                        ? "Your Releases"
+                        : activeTab === "gigs"
+                          ? "Upcoming Gigs"
+                          : activeTab === "media"
+                            ? "Media"
+                            : "Your Profile"}
+                  </h1>
                 </div>
-                <Button type="button" variant="outline" onClick={() => setShowCreateAlbumModal(false)}>
-                  Close
-                </Button>
+                <button
+                  onClick={() => setActiveTab("profile")}
+                  className="text-sm text-sky-300"
+                >
+                  Home
+                </button>
               </div>
-              <form action={async (formData) => { await createAlbum(formData); }} className="mt-6 space-y-4">
-                <input name="title" required placeholder="Album title" className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white" />
-                <input name="releaseDate" type="date" className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white" />
-                <textarea name="description" rows={5} placeholder="Album description" className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white" />
-                <input name="coverArt" placeholder="Album cover URL fallback" className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white" />
-                <label className="block rounded-xl border border-dashed border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-fog">
-                  Upload cover art
-                  <input name="coverFile" type="file" accept="image/*" className="mt-2 block w-full text-xs" />
-                </label>
-                <Button type="submit" className="w-full">Create</Button>
-              </form>
-            </Card>
-          </div>
-        ) : null}
-
-        {showCreateTrackModal ? (
-          <div className="fixed inset-0 z-[90] flex items-start justify-center overflow-y-auto bg-black/70 px-4 py-6 pb-28 backdrop-blur-sm">
-            <Card className="my-auto w-full max-w-xl p-6">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-xs uppercase tracking-[0.24em] text-pink">Tracks</p>
-                  <h2 className="mt-2 text-2xl font-semibold text-white">Add Track</h2>
-                </div>
-                <Button type="button" variant="outline" onClick={() => { setShowCreateTrackModal(false); setTrackMetadataStatus(null); }}>
-                  Close
-                </Button>
-              </div>
-              <form action={async (formData) => { await uploadSong(formData); }} className="mt-6 space-y-4">
-                <input name="title" required value={trackDraft.title} onChange={(event) => setTrackDraft((draft) => ({ ...draft, title: event.target.value }))} placeholder="Track title" className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white" />
-                <input name="trackNumber" type="number" min="1" value={trackDraft.trackNumber} onChange={(event) => setTrackDraft((draft) => ({ ...draft, trackNumber: event.target.value }))} placeholder="Track number (optional)" className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white" />
-                <label className="block">
-                  <span className="mb-2 block text-sm text-fog">Album</span>
-                  <select name="albumId" className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white">
-                    <option value="">No album</option>
-                    {(content?.albums ?? []).map((album) => (
-                      <option key={album.id} value={album.id}>{album.title}</option>
-                    ))}
-                  </select>
-                </label>
-                <textarea name="description" rows={4} placeholder="Track description" className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white" />
-                <input name="audioUrl" placeholder="Audio URL fallback (optional)" className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white" />
-                <input name="coverImage" placeholder="Cover art URL fallback (optional)" className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white" />
-                <label className="block rounded-xl border border-dashed border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-fog">
-                  Upload audio file
-                  <input name="audioFile" type="file" accept="audio/*" onChange={(event) => { const file = event.target.files?.[0]; if (file) void readTrackMetadata(file); }} className="mt-2 block w-full text-xs" />
-                </label>
-                {trackMetadataStatus ? <p className="text-xs text-fog">{trackMetadataStatus}</p> : null}
-                <label className="block rounded-xl border border-dashed border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-fog">
-                  Upload cover art
-                  <input name="coverFile" type="file" accept="image/*" className="mt-2 block w-full text-xs" />
-                </label>
-                <label className="flex items-center gap-3 text-sm text-fog">
-                  <input type="checkbox" name="enabled" defaultChecked />
-                  <span>Enabled</span>
-                </label>
-                <label className="flex items-center gap-3 text-sm text-fog">
-                  <input type="checkbox" name="radioSelected" />
-                  <span>Prioritise this as your radio-selected track</span>
-                </label>
-                <Button type="submit" className="w-full">Create Track</Button>
-              </form>
-            </Card>
-          </div>
-        ) : null}
-
-        {versionSongId ? (
-          <div className="fixed inset-0 z-[90] overflow-y-auto bg-black/70 px-4 py-6 backdrop-blur-sm">
-            <Card className="mx-auto w-full max-w-xl p-6">
-              <div className="flex items-start justify-between gap-4">
-                <div><p className="text-xs uppercase tracking-[0.24em] text-pink">Recording diary</p><h2 className="mt-2 text-2xl font-semibold text-white">Add new version</h2></div>
-                <Button type="button" variant="outline" onClick={() => setVersionSongId(null)}>Close</Button>
-              </div>
-              <form action={async (formData) => { await addTrackVersion(formData); }} className="mt-6 space-y-4">
-                <label className="block text-sm text-fog">Version type
-                  <select name="versionType" className="mt-2 w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white">
-                    {TRACK_VERSION_TYPES.map((type) => <option key={type} value={type}>{type}</option>)}
-                  </select>
-                </label>
-                <p className="rounded-xl border border-white/10 bg-white/[0.03] p-3 text-sm text-fog">The next number is assigned automatically where needed, for example <span className="text-white">Mix 4</span>. Previous versions are never overwritten.</p>
-                <label className="block rounded-xl border border-dashed border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-fog">Audio <input name="audioFile" required type="file" accept="audio/*" className="mt-2 block w-full text-xs" /></label>
-                <textarea name="notes" rows={5} placeholder="Notes (optional): what changed, what worked, and anything to remember for next time." className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white" />
-                <label className="block text-sm text-fog">Date recorded / created <input name="recordedAt" type="date" className="mt-2 w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white" /></label>
-                <label className="block rounded-xl border border-dashed border-pink/30 bg-pink/5 px-4 py-3 text-sm text-fog"><strong className="block text-white">Setup photos (optional)</strong><span className="mt-1 block">Capture anything you’ll want to recreate later — pedal settings, amp controls, microphone placement, drum setup, room position, outboard gear or other recording settings.</span><input name="setupPhotos" type="file" accept="image/*" capture="environment" multiple className="mt-3 block w-full text-xs" /></label>
-                <Button type="submit" className="w-full">Add Version</Button>
-              </form>
-            </Card>
-          </div>
-        ) : null}
-
-        {showBulkTrackModal ? (
-          <div className="fixed inset-0 z-[90] flex items-start justify-center overflow-y-auto bg-black/70 px-4 py-6 pb-28 backdrop-blur-sm">
-            <Card className="my-auto w-full max-w-xl p-6">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-xs uppercase tracking-[0.24em] text-pink">Tracks</p>
-                  <h2 className="mt-2 text-2xl font-semibold text-white">Bulk Upload</h2>
-                </div>
-                <Button type="button" variant="outline" onClick={() => setShowBulkTrackModal(false)}>
-                  Close
-                </Button>
-              </div>
-              <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm text-fog">
-                <p className="font-semibold text-white">Filename rules</p>
-                <div className="mt-3 space-y-2">
-                  <p><span className="text-white">Track only:</span> <span className="font-mono">Hello World.mp3</span></p>
-                  <p><span className="text-white">Numbered track only:</span> <span className="font-mono">01 - Some Song Title.mp3</span></p>
-                </div>
-                <p className="mt-3">Bulk uploads stay albumless. Use the Track Library’s album assignment controls once you are ready to group them.</p>
-              </div>
-              <form action={async (formData) => { await bulkUploadSongs(formData); }} className="mt-6 space-y-4">
-                <label className="block rounded-xl border border-dashed border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-fog">
-                  Upload audio files
-                  <input
-                    name="audioFiles"
-                    type="file"
-                    accept="audio/*"
-                    multiple
-                    className="mt-2 block w-full text-xs"
-                    onChange={(event) => handleBulkTrackSelection(event.target.files)}
-                  />
-                </label>
-                {bulkTrackFiles.length ? (
-                  <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-                    <p className="text-sm font-semibold text-white">Tracks to be added</p>
-                    <div className="mt-3 space-y-2">
-                      {bulkTrackFiles.map((track) => (
-                        <div
-                          key={track.fileName}
-                          className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3"
-                        >
-                          <p className="truncate text-sm text-white">{track.title}</p>
-                          <p className="mt-1 truncate text-xs text-fog">{track.fileName}</p>
-                          <p className="mt-2 text-xs text-fog">
-                            {track.trackNumber ? `Track ${track.trackNumber}` : "No track number"}
-                            {track.albumTitle ? ` • Album: ${track.albumTitle}` : " • Standalone track"}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ) : null}
-                <Button type="submit" className="w-full">Upload Tracks</Button>
-              </form>
-            </Card>
-          </div>
-        ) : null}
-
-        {selectedAlbum ? (
-          <div className="fixed inset-0 z-[90] flex items-start justify-center overflow-y-auto bg-black/70 px-4 py-6 pb-28 backdrop-blur-sm">
-            <Card className="my-auto w-full max-w-2xl p-6">
-              <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0">
-                  <p className="text-xs uppercase tracking-[0.24em] text-pink">Album View</p>
-                  <h2 className="mt-2 truncate text-2xl font-semibold text-white">{selectedAlbum.title}</h2>
-                  <p className="mt-1 text-sm text-fog">{formatDate(selectedAlbum.releaseDate)}</p>
-                </div>
-                <div className="flex gap-3">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      setEditingAlbumTracks((state) => !state);
-                      setAlbumTrackDraft(selectedAlbumTracks);
-                    }}
+              {activeTab === "tracks" ? (
+                <>
+                  <button
+                    onClick={() => setMobileUploadStep(1)}
+                    className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-sky-500 font-semibold"
                   >
-                    {editingAlbumTracks ? "Cancel Edit" : "Edit"}
-                  </Button>
-                  <Button type="button" variant="outline" onClick={() => setSelectedAlbumId(null)}>
-                    Close
-                  </Button>
-                </div>
-              </div>
-              {selectedAlbum.description ? (
-                <p className="mt-4 text-sm leading-7 text-fog">{selectedAlbum.description}</p>
-              ) : null}
-              <div className="mt-6">
-                <p className="text-xs uppercase tracking-[0.18em] text-fog">Tracks</p>
-                <div className="mt-3 space-y-2">
-                  {(editingAlbumTracks ? albumTrackDraft : selectedAlbumTracks).length ? (
-                    (editingAlbumTracks ? albumTrackDraft : selectedAlbumTracks).map((song, index) => (
+                    <CirclePlus size={18} /> Upload track
+                  </button>
+                  <div className="mt-4 space-y-2">
+                    {content?.songs.map((song) => (
                       <div
                         key={song.id}
-                        draggable={editingAlbumTracks}
-                        onDragStart={() => setDraggedTrackId(song.id)}
-                        onDragOver={(event) => {
-                          if (!editingAlbumTracks) return;
-                          event.preventDefault();
-                        }}
-                        onDrop={() => {
-                          if (!editingAlbumTracks || draggedTrackId === null || draggedTrackId === song.id) return;
-                          setAlbumTrackDraft((current) => {
-                            const next = [...current];
-                            const fromIndex = next.findIndex((item) => item.id === draggedTrackId);
-                            const toIndex = next.findIndex((item) => item.id === song.id);
-                            if (fromIndex === -1 || toIndex === -1) return current;
-                            const [moved] = next.splice(fromIndex, 1);
-                            next.splice(toIndex, 0, moved);
-                            return next;
-                          });
-                        }}
-                        className={`flex items-center justify-between gap-4 rounded-xl border px-4 py-3 ${
-                          editingAlbumTracks
-                            ? "cursor-move border-pink/30 bg-pink/10"
-                            : "border-white/10 bg-white/[0.03]"
-                        }`}
+                        className="flex items-center gap-3 rounded-xl border border-sky-100/10 bg-[#07172c] p-3"
                       >
-                        <div className="min-w-0">
-                          <p className="truncate text-sm text-white">{song.title}</p>
-                          <p className="mt-1 text-xs text-fog">Track {index + 1}</p>
+                        <Music2 className="text-sky-300" />
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm text-white">
+                            {song.title}
+                          </p>
+                          <p className="text-xs text-sky-100/60">
+                            {song.enabled ? "Active" : "Inactive"}
+                          </p>
                         </div>
-                        {editingAlbumTracks ? (
-                          <span className="text-xs uppercase tracking-[0.18em] text-pink">Drag</span>
-                        ) : null}
+                        <ChevronRight size={17} className="text-sky-200" />
                       </div>
-                    ))
-                  ) : (
-                    <p className="text-sm text-fog">No tracks assigned to this album yet.</p>
+                    )) || (
+                      <p className="mt-4 text-sm text-sky-100/60">
+                        No tracks yet.
+                      </p>
+                    )}
+                  </div>
+                </>
+              ) : null}
+              {activeTab === "albums" ? (
+                <>
+                  <button
+                    onClick={() => setMobileEditor("album")}
+                    className="mt-5 h-12 w-full rounded-xl bg-sky-500 font-semibold"
+                  >
+                    + New release
+                  </button>
+                  <div className="mt-4 space-y-2">
+                    {content?.albums.map((album) => (
+                      <div
+                        key={album.id}
+                        className="rounded-xl border border-sky-100/10 bg-[#07172c] p-3"
+                      >
+                        <p className="text-sm text-white">{album.title}</p>
+                        <p className="mt-1 text-xs text-sky-100/60">
+                          {formatDate(album.releaseDate)}
+                        </p>
+                      </div>
+                    )) || (
+                      <p className="text-sm text-sky-100/60">
+                        No releases yet.
+                      </p>
+                    )}
+                  </div>
+                </>
+              ) : null}
+              {activeTab === "gigs" ? (
+                <>
+                  <button
+                    onClick={() => setMobileEditor("gig")}
+                    className="mt-5 h-12 w-full rounded-xl bg-sky-500 font-semibold"
+                  >
+                    + Add gig
+                  </button>
+                  <div className="mt-4 space-y-2">
+                    {content?.gigs.map((gig) => (
+                      <div
+                        key={gig.id}
+                        className="rounded-xl border border-sky-100/10 bg-[#07172c] p-3"
+                      >
+                        <p className="text-sm text-white">{gig.title}</p>
+                        <p className="mt-1 text-xs text-sky-100/60">
+                          {formatDate(gig.eventDate)} ·{" "}
+                          {gig.venue || gig.city || "Venue TBC"}
+                        </p>
+                      </div>
+                    )) || (
+                      <p className="text-sm text-sky-100/60">No gigs yet.</p>
+                    )}
+                  </div>
+                </>
+              ) : null}
+              {activeTab === "media" ? (
+                <>
+                  <button
+                    onClick={() => setMobileEditor("video")}
+                    className="mt-5 h-12 w-full rounded-xl bg-sky-500 font-semibold"
+                  >
+                    + Add video
+                  </button>
+                  <div className="mt-4 rounded-xl border border-sky-100/10 bg-[#07172c] p-4 text-sm text-sky-100/60">
+                    {content?.photos.length ?? 0} photos and{" "}
+                    {content?.videos.length ?? 0} videos. Add a video link or
+                    upload its thumbnail here.
+                  </div>
+                </>
+              ) : null}
+            </section>
+          ) : (
+            <>
+              <section className="rounded-3xl border border-sky-200/15 bg-[radial-gradient(circle_at_80%_20%,rgba(42,139,229,.25),transparent_35%),rgba(5,16,34,.88)] p-4 shadow-2xl">
+                <div className="flex items-center gap-3">
+                  <div className="relative h-16 w-16 overflow-hidden rounded-full border border-sky-200/40 bg-sky-950">
+                    {profile.profileImage || profile.heroImage ? (
+                      <Image
+                        src={profile.profileImage || profile.heroImage}
+                        alt="Artist"
+                        fill
+                        className="object-cover"
+                        unoptimized
+                      />
+                    ) : (
+                      <Music2 className="m-5 text-sky-200" />
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs text-sky-100">Hi {user.username}</p>
+                    <h1 className="truncate text-2xl font-semibold text-white">
+                      {dashboard?.artist.name ?? user.username}
+                    </h1>
+                    <a
+                      href={`/${dashboard?.artist.slug ?? profile.slug}`}
+                      className="text-xs text-sky-300"
+                    >
+                      View public page →
+                    </a>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setMobileMenuOpen(true)}
+                  className="mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-sky-500 to-blue-500 text-sm font-semibold text-white shadow-[0_0_24px_rgba(54,159,255,.35)]"
+                >
+                  <CirclePlus size={19} /> ADD MUSIC
+                </button>
+              </section>
+              <section className="mt-4 grid grid-cols-4 gap-2">
+                {[
+                  [Music2, "Upload", () => setMobileMenuOpen(true)],
+                  [
+                    Disc3,
+                    "Release",
+                    () => setMobileEditor("album"),
+                  ],
+                  [CalendarDays, "Gig", () => setMobileEditor("gig")],
+                  [Video, "Video", () => setMobileEditor("video")],
+                ].map(([Icon, label, action]) => {
+                  const ActionIcon = Icon as ElementType;
+                  return (
+                    <button
+                      key={String(label)}
+                      onClick={action as () => void}
+                      className="rounded-xl border border-sky-100/10 bg-[#07172c]/90 py-3 text-center text-[10px] text-sky-100"
+                    >
+                      <ActionIcon
+                        className="mx-auto mb-1 text-sky-300"
+                        size={19}
+                      />
+                      {String(label)}
+                    </button>
+                  );
+                })}
+              </section>
+              <section className="mt-6">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg font-semibold text-white">
+                    Your Music
+                  </h2>
+                  <button
+                    onClick={() => setActiveTab("tracks")}
+                    className="text-xs text-sky-300"
+                  >
+                    View all →
+                  </button>
+                </div>
+                <div className="mt-3 space-y-2">
+                  {content?.songs.slice(0, 3).map((song) => (
+                    <button
+                      key={song.id}
+                      onClick={() => setActiveTab("tracks")}
+                      className="flex w-full items-center gap-3 rounded-xl border border-sky-100/10 bg-[#07172c]/90 p-2 text-left"
+                    >
+                      <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-sky-950">
+                        {song.coverImage ? (
+                          <Image
+                            src={song.coverImage}
+                            alt=""
+                            fill
+                            className="object-cover"
+                            unoptimized
+                          />
+                        ) : (
+                          <Music2 className="m-3 text-sky-300" />
+                        )}
+                      </div>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm text-white">
+                          {song.title}
+                        </span>
+                        <span className="text-xs text-sky-100/60">
+                          {song.description || "Track"}
+                        </span>
+                      </span>
+                      <ChevronRight size={17} className="text-sky-200" />
+                    </button>
+                  )) || (
+                    <p className="rounded-xl border border-dashed border-white/10 p-4 text-sm text-sky-100/60">
+                      Your uploaded tracks will appear here.
+                    </p>
                   )}
                 </div>
-                {editingAlbumTracks ? (
-                  <div className="mt-4 flex justify-end gap-3">
+              </section>
+              <section className="mt-6">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg font-semibold text-white">
+                    Upcoming Gigs
+                  </h2>
+                  <button
+                    onClick={() => setActiveTab("gigs")}
+                    className="text-xs text-sky-300"
+                  >
+                    View all →
+                  </button>
+                </div>
+                <div className="mt-3 space-y-2">
+                  {content?.gigs.slice(0, 2).map((gig) => (
+                    <button
+                      key={gig.id}
+                      onClick={() => setActiveTab("gigs")}
+                      className="flex w-full items-center gap-3 rounded-xl border border-sky-100/10 bg-[#07172c]/90 p-3 text-left"
+                    >
+                      <span className="rounded-lg bg-sky-400/15 px-2 py-1 text-center text-xs text-sky-200">
+                        {formatDate(gig.eventDate).slice(8)}
+                        <br />
+                        {formatDate(gig.eventDate).slice(5, 7)}
+                      </span>
+                      <span>
+                        <span className="block text-sm text-white">
+                          {gig.title}
+                        </span>
+                        <span className="text-xs text-sky-100/60">
+                          {gig.venue || gig.city || "Venue TBC"}
+                        </span>
+                      </span>
+                    </button>
+                  )) || (
+                    <button
+                      onClick={() => setMobileEditor("gig")}
+                      className="w-full rounded-xl border border-dashed border-white/10 p-4 text-sm text-sky-100/60"
+                    >
+                      Add your first gig
+                    </button>
+                  )}
+                </div>
+              </section>
+            </>
+          )}
+        </main>
+        <nav className="fixed inset-x-0 bottom-0 z-30 flex h-[72px] items-center justify-around border-t border-sky-100/15 bg-[#040d1d]/95 px-2 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl">
+          <button
+            onClick={() => setActiveTab("profile")}
+            className="flex flex-col items-center text-[10px] text-sky-300"
+          >
+            <UserRound size={19} />
+            Home
+          </button>
+          <button
+            onClick={() => setActiveTab("tracks")}
+            className="flex flex-col items-center text-[10px] text-sky-100"
+          >
+            <Music2 size={19} />
+            Music
+          </button>
+          <button
+            onClick={() => setMobileMenuOpen(true)}
+            className="-mt-7 flex h-14 w-14 items-center justify-center rounded-full bg-sky-500 text-white shadow-[0_0_25px_rgba(54,159,255,.7)]"
+          >
+            <CirclePlus size={28} />
+          </button>
+          <a
+            href="/radio"
+            className="flex flex-col items-center text-[10px] text-sky-100"
+          >
+            <Radio size={19} />
+            Radio
+          </a>
+          <button
+            onClick={() => setMobileMenuOpen(true)}
+            className="flex flex-col items-center text-[10px] text-sky-100"
+          >
+            <Menu size={19} />
+            Menu
+          </button>
+        </nav>
+        {mobileMenuOpen ? (
+          <div
+            className="fixed inset-0 z-40 flex items-end bg-black/65"
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            <section
+              onClick={(event) => event.stopPropagation()}
+              className="w-full rounded-t-3xl border-t border-sky-200/20 bg-[#06162a] p-5 pb-8"
+            >
+              <div className="mx-auto mb-5 h-1 w-10 rounded-full bg-white/30" />
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-white">
+                  Create something new
+                </h2>
+                <button onClick={() => setMobileMenuOpen(false)}>
+                  <X className="text-sky-100" />
+                </button>
+              </div>
+              <div className="mt-4 space-y-3">
+                <button
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    setMobileUploadStep(1);
+                  }}
+                  className="flex w-full items-center gap-3 rounded-xl border border-sky-300/20 bg-sky-500/10 p-4 text-left"
+                >
+                  <FileAudio className="text-sky-300" />
+                  <span>
+                    <b className="block text-sm text-white">Upload Track</b>
+                    <small className="text-sky-100/60">
+                      Add a new track or version
+                    </small>
+                  </span>
+                </button>
+                <button
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    setMobileEditor("album");
+                  }}
+                  className="flex w-full items-center gap-3 rounded-xl border border-white/10 p-4 text-left"
+                >
+                  <Disc3 className="text-sky-300" />
+                  <span className="text-sm text-white">Create Release</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    setMobileEditor("gig");
+                  }}
+                  className="flex w-full items-center gap-3 rounded-xl border border-white/10 p-4 text-left"
+                >
+                  <CalendarDays className="text-sky-300" />
+                  <span className="text-sm text-white">Add Gig</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    setMobileEditor("video");
+                  }}
+                  className="flex w-full items-center gap-3 rounded-xl border border-white/10 p-4 text-left"
+                >
+                  <Video className="text-sky-300" />
+                  <span className="text-sm text-white">Add Video</span>
+                </button>
+              </div>
+            </section>
+          </div>
+        ) : null}
+        {mobileEditor ? (
+          <div className="fixed inset-0 z-[100] flex min-h-dvh flex-col bg-[#040d1d] text-white">
+            <header className="flex items-center justify-between border-b border-sky-100/15 px-4 py-4">
+              <button onClick={() => setMobileEditor(null)} aria-label="Close">
+                <ChevronLeft />
+              </button>
+              <b>
+                {mobileEditor === "album"
+                  ? "Create a release"
+                  : mobileEditor === "gig"
+                    ? "Add a gig"
+                    : "Add a video"}
+              </b>
+              <button onClick={() => setMobileEditor(null)} aria-label="Close">
+                <X />
+              </button>
+            </header>
+            <form
+              action={submitMobileEditor}
+              className="flex flex-1 flex-col overflow-y-auto px-5 py-6 pb-28"
+            >
+              <p className="text-xs uppercase tracking-[.2em] text-sky-300">
+                {mobileEditor === "album"
+                  ? "Release details"
+                  : mobileEditor === "gig"
+                    ? "Event details"
+                    : "Video details"}
+              </p>
+              <h2 className="mt-2 text-2xl font-semibold">
+                {mobileEditor === "album"
+                  ? "Share your new release"
+                  : mobileEditor === "gig"
+                    ? "Tell fans where to find you"
+                    : "Add a video to your page"}
+              </h2>
+              <div className="mt-6 space-y-4">
+                <input
+                  name="title"
+                  required
+                  placeholder={
+                    mobileEditor === "album"
+                      ? "Release title"
+                      : mobileEditor === "gig"
+                        ? "Gig title"
+                        : "Video title"
+                  }
+                  className="w-full rounded-xl border border-sky-100/20 bg-white/5 px-4 py-3"
+                />
+                {mobileEditor === "album" ? (
+                  <>
+                    <label className="block text-sm text-sky-100">
+                      Release date
+                      <input
+                        name="releaseDate"
+                        type="date"
+                        className="mt-2 w-full rounded-xl border border-sky-100/20 bg-white/5 px-4 py-3"
+                      />
+                    </label>
+                    <textarea
+                      name="description"
+                      rows={4}
+                      placeholder="About this release (optional)"
+                      className="w-full rounded-xl border border-sky-100/20 bg-white/5 px-4 py-3"
+                    />
+                    <input
+                      name="coverArt"
+                      type="url"
+                      placeholder="Cover image URL (optional)"
+                      className="w-full rounded-xl border border-sky-100/20 bg-white/5 px-4 py-3"
+                    />
+                    <label className="block rounded-xl border border-dashed border-sky-300/40 bg-sky-500/5 p-4 text-sm text-sky-100">
+                      Upload cover art (optional)
+                      <input
+                        name="coverFile"
+                        type="file"
+                        accept="image/*"
+                        className="mt-2 block w-full text-xs"
+                      />
+                    </label>
+                  </>
+                ) : null}
+                {mobileEditor === "gig" ? (
+                  <>
+                    <input
+                      name="venue"
+                      required
+                      placeholder="Venue"
+                      className="w-full rounded-xl border border-sky-100/20 bg-white/5 px-4 py-3"
+                    />
+                    <input
+                      name="city"
+                      required
+                      placeholder="City"
+                      className="w-full rounded-xl border border-sky-100/20 bg-white/5 px-4 py-3"
+                    />
+                    <label className="block text-sm text-sky-100">
+                      Date and time
+                      <input
+                        name="eventDate"
+                        type="datetime-local"
+                        required
+                        className="mt-2 w-full rounded-xl border border-sky-100/20 bg-white/5 px-4 py-3"
+                      />
+                    </label>
+                    <input
+                      name="ticketUrl"
+                      type="url"
+                      placeholder="Ticket link (optional)"
+                      className="w-full rounded-xl border border-sky-100/20 bg-white/5 px-4 py-3"
+                    />
+                    <textarea
+                      name="description"
+                      rows={4}
+                      placeholder="Gig details (optional)"
+                      className="w-full rounded-xl border border-sky-100/20 bg-white/5 px-4 py-3"
+                    />
+                  </>
+                ) : null}
+                {mobileEditor === "video" ? (
+                  <>
+                    <input
+                      name="videoUrl"
+                      type="url"
+                      required
+                      placeholder="YouTube, Vimeo, or video URL"
+                      className="w-full rounded-xl border border-sky-100/20 bg-white/5 px-4 py-3"
+                    />
+                    <input
+                      name="thumbnailUrl"
+                      type="url"
+                      placeholder="Thumbnail image URL (optional)"
+                      className="w-full rounded-xl border border-sky-100/20 bg-white/5 px-4 py-3"
+                    />
+                    <label className="block rounded-xl border border-dashed border-sky-300/40 bg-sky-500/5 p-4 text-sm text-sky-100">
+                      Upload thumbnail (optional)
+                      <input
+                        name="thumbnailFile"
+                        type="file"
+                        accept="image/*"
+                        className="mt-2 block w-full text-xs"
+                      />
+                    </label>
+                  </>
+                ) : null}
+              </div>
+              <div className="mt-auto pt-8">
+                <button
+                  type="submit"
+                  disabled={mobileEditorSubmitting}
+                  className="h-12 w-full rounded-xl bg-sky-500 font-semibold disabled:opacity-50"
+                >
+                  {mobileEditorSubmitting
+                    ? "Saving…"
+                    : mobileEditor === "album"
+                      ? "Create release"
+                      : mobileEditor === "gig"
+                        ? "Add gig"
+                        : "Add video"}
+                </button>
+              </div>
+            </form>
+          </div>
+        ) : null}
+        {mobileUploadStep ? (
+          <div className="fixed inset-0 z-[100] flex min-h-dvh flex-col bg-[#040d1d] text-white">
+            <header className="flex items-center justify-between border-b border-sky-100/15 px-4 py-4">
+              <button
+                onClick={() =>
+                  mobileUploadStep === 1
+                    ? mobileCloseUpload()
+                    : setMobileUploadStep(mobileUploadStep - 1)
+                }
+              >
+                <ChevronLeft />
+              </button>
+              <b>Add a Track</b>
+              <button onClick={mobileCloseUpload}>
+                <X />
+              </button>
+            </header>
+            <div className="px-5 pt-4">
+              <div className="flex items-start justify-between">
+                {["Audio", "Details", "Version", "Review"].map((label, i) => (
+                  <div
+                    key={label}
+                    className="flex flex-1 flex-col items-center gap-1 text-[10px] text-sky-100/70"
+                  >
+                    <span
+                      className={`flex h-7 w-7 items-center justify-center rounded-full border ${mobileUploadStep === i + 1 ? "border-sky-300 bg-sky-500 text-white" : mobileUploadStep > i + 1 ? "border-sky-400 bg-sky-400 text-slate-950" : "border-sky-100/30"}`}
+                    >
+                      {i + 1}
+                    </span>
+                    {label}
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="flex-1 overflow-y-auto px-5 py-6 pb-28">
+              {mobileUploadStep === 1 ? (
+                <>
+                  <p className="text-xs text-sky-200">Step 1 of 4</p>
+                  <h2 className="mt-1 text-2xl font-semibold">
+                    Add your audio
+                  </h2>
+                  <p className="mt-2 text-sm text-sky-100/65">
+                    Upload your track. We support WAV, MP3, FLAC and more.
+                  </p>
+                  <input
+                    ref={mobileAudioInput}
+                    type="file"
+                    accept="audio/*"
+                    className="sr-only"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      setMobileAudioFile(file);
+                      const metadata = await getTrackDetailsFromAudio(file);
+                      setMobileTrack((track) => ({
+                        ...track,
+                        title: metadata.title,
+                      }));
+                    }}
+                  />
+                  <button
+                    onClick={() => mobileAudioInput.current?.click()}
+                    className="mt-7 flex min-h-40 w-full flex-col items-center justify-center rounded-xl border border-dashed border-sky-300/50 bg-sky-500/5 text-sky-200"
+                  >
+                    <FileAudio size={30} />
+                    <b className="mt-3">Choose audio file</b>
+                    <small className="mt-1 text-sky-100/60">
+                      Max file size 2GB
+                    </small>
+                  </button>
+                  {mobileAudioFile ? (
+                    <div className="mt-3 flex items-center gap-3 rounded-xl border border-sky-300/20 bg-sky-500/10 p-3">
+                      <FileAudio className="text-sky-300" />
+                      <span className="min-w-0 flex-1 truncate text-sm">
+                        {mobileAudioFile.name}
+                      </span>
+                      <button onClick={() => setMobileAudioFile(null)}>
+                        <X size={16} />
+                      </button>
+                    </div>
+                  ) : null}
+                </>
+              ) : null}
+              {mobileUploadStep === 2 ? (
+                <>
+                  <p className="text-xs text-sky-200">Step 2 of 4</p>
+                  <h2 className="mt-1 text-2xl font-semibold">Track details</h2>
+                  <div className="mt-6 space-y-4">
+                    <input
+                      value={mobileTrack.title}
+                      onChange={(e) =>
+                        setMobileTrack({
+                          ...mobileTrack,
+                          title: e.target.value,
+                        })
+                      }
+                      placeholder="Track title"
+                      className="w-full rounded-xl border border-sky-100/20 bg-white/5 px-4 py-3"
+                    />
+                    <input
+                      value={mobileTrack.genre}
+                      onChange={(e) =>
+                        setMobileTrack({
+                          ...mobileTrack,
+                          genre: e.target.value,
+                        })
+                      }
+                      placeholder="Genre"
+                      className="w-full rounded-xl border border-sky-100/20 bg-white/5 px-4 py-3"
+                    />
+                    <textarea
+                      value={mobileTrack.description}
+                      onChange={(e) =>
+                        setMobileTrack({
+                          ...mobileTrack,
+                          description: e.target.value,
+                        })
+                      }
+                      rows={4}
+                      placeholder="Description"
+                      className="w-full rounded-xl border border-sky-100/20 bg-white/5 px-4 py-3"
+                    />
+                    <label className="block text-sm text-sky-100">
+                      Track artwork
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) =>
+                          setMobileArtworkFile(e.target.files?.[0] ?? null)
+                        }
+                        className="mt-2 block w-full text-xs"
+                      />
+                    </label>
+                  </div>
+                </>
+              ) : null}
+              {mobileUploadStep === 3 ? (
+                <>
+                  <p className="text-xs text-sky-200">Step 3 of 4</p>
+                  <h2 className="mt-1 text-2xl font-semibold">
+                    Version & release
+                  </h2>
+                  <div className="mt-6 space-y-4">
+                    <label className="flex gap-3 rounded-xl border border-sky-300/30 bg-sky-500/10 p-4">
+                      <input
+                        type="radio"
+                        checked={mobileUploadMode === "new"}
+                        onChange={() => setMobileUploadMode("new")}
+                      />{" "}
+                      <span>
+                        <b className="block">Create new track</b>
+                        <small className="text-sky-100/60">
+                          Add this as a new track
+                        </small>
+                      </span>
+                    </label>
+                    <label className="flex gap-3 rounded-xl border border-white/10 p-4">
+                      <input
+                        type="radio"
+                        checked={mobileUploadMode === "version"}
+                        onChange={() => setMobileUploadMode("version")}
+                      />{" "}
+                      <span>
+                        <b className="block">Add as new version</b>
+                        <small className="text-sky-100/60">
+                          Keep the recording history together
+                        </small>
+                      </span>
+                    </label>
+                    {mobileUploadMode === "version" ? (
+                      <>
+                        <select
+                          value={mobileVersionSongId ?? ""}
+                          onChange={(e) =>
+                            setMobileVersionSongId(
+                              Number(e.target.value) || null,
+                            )
+                          }
+                          className="w-full rounded-xl border border-sky-100/20 bg-[#07172c] px-4 py-3"
+                        >
+                          <option value="">Choose existing track</option>
+                          {content?.songs.map((song) => (
+                            <option key={song.id} value={song.id}>
+                              {song.title}
+                            </option>
+                          ))}
+                        </select>
+                        <select
+                          value={mobileTrack.versionType}
+                          onChange={(e) =>
+                            setMobileTrack({
+                              ...mobileTrack,
+                              versionType: e.target.value,
+                            })
+                          }
+                          className="w-full rounded-xl border border-sky-100/20 bg-[#07172c] px-4 py-3"
+                        >
+                          {TRACK_VERSION_TYPES.map((type) => (
+                            <option key={type}>{type}</option>
+                          ))}
+                        </select>
+                        <input
+                          value={mobileTrack.versionName}
+                          onChange={(e) =>
+                            setMobileTrack({
+                              ...mobileTrack,
+                              versionName: e.target.value,
+                            })
+                          }
+                          placeholder="Version name (optional)"
+                          className="w-full rounded-xl border border-sky-100/20 bg-white/5 px-4 py-3"
+                        />
+                        <textarea
+                          value={mobileTrack.notes}
+                          onChange={(e) =>
+                            setMobileTrack({
+                              ...mobileTrack,
+                              notes: e.target.value,
+                            })
+                          }
+                          placeholder="Notes (optional)"
+                          className="w-full rounded-xl border border-sky-100/20 bg-white/5 px-4 py-3"
+                        />
+                      </>
+                    ) : null}
+                  </div>
+                </>
+              ) : null}
+              {mobileUploadStep === 4 ? (
+                <>
+                  <p className="text-xs text-sky-200">Step 4 of 4</p>
+                  <h2 className="mt-1 text-2xl font-semibold">
+                    Review & upload
+                  </h2>
+                  <div className="mt-6 rounded-xl border border-sky-200/15 bg-sky-500/5 p-4">
+                    <p className="font-semibold">{mobileTrackTitle}</p>
+                    <p className="mt-1 text-sm text-sky-100/65">
+                      {mobileTrack.genre || "No genre"} ·{" "}
+                      {mobileAudioFile
+                        ? `${(mobileAudioFile.size / 1024 / 1024).toFixed(1)} MB`
+                        : "No audio"}
+                    </p>
+                    <p className="mt-4 text-xs uppercase tracking-wider text-sky-300">
+                      {mobileUploadMode === "version"
+                        ? `${mobileTrack.versionType} version`
+                        : "New track"}
+                    </p>
+                    {mobileTrack.description ? (
+                      <p className="mt-2 text-sm text-sky-100/70">
+                        {mobileTrack.description}
+                      </p>
+                    ) : null}
+                  </div>
+                </>
+              ) : null}
+            </div>
+            <footer className="fixed inset-x-0 bottom-0 flex gap-3 border-t border-sky-100/15 bg-[#040d1d]/95 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+              <button
+                onClick={() =>
+                  mobileUploadStep === 1
+                    ? mobileCloseUpload()
+                    : setMobileUploadStep(mobileUploadStep - 1)
+                }
+                className="h-12 px-3 text-sm text-sky-100"
+              >
+                {mobileUploadStep === 1 ? "Cancel" : "← Back"}
+              </button>
+              <button
+                disabled={
+                  (mobileUploadStep === 1 && !mobileAudioFile) ||
+                  (mobileUploadStep === 3 &&
+                    mobileUploadMode === "version" &&
+                    !mobileVersionSongId)
+                }
+                onClick={() =>
+                  mobileUploadStep === 4
+                    ? void submitMobileUpload()
+                    : setMobileUploadStep(mobileUploadStep + 1)
+                }
+                className="ml-auto h-12 flex-1 rounded-xl bg-sky-500 text-sm font-semibold disabled:opacity-40"
+              >
+                {mobileUploadStep === 4 ? "Upload to Fully Open" : "Continue →"}
+              </button>
+            </footer>
+          </div>
+        ) : null}
+        {mobileUploadComplete ? (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center bg-[#040d1d] p-6 text-center">
+            <div>
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border-2 border-sky-300 text-3xl text-sky-300">
+                ✓
+              </div>
+              <h2 className="mt-5 text-2xl font-semibold text-white">
+                Track uploaded
+              </h2>
+              <p className="mt-2 text-sm text-sky-100/65">
+                Your track has been added to your artist page.
+              </p>
+              <button
+                onClick={mobileCloseUpload}
+                className="mt-6 h-12 w-full rounded-xl bg-sky-500 font-semibold"
+              >
+                View Tracks →
+              </button>
+              <button
+                onClick={() => {
+                  mobileCloseUpload();
+                  setMobileUploadStep(1);
+                }}
+                className="mt-3 w-full text-sm text-sky-200"
+              >
+                Add another track
+              </button>
+            </div>
+          </div>
+        ) : null}
+        {mobileUploadSubmitting ? (
+          <div className="fixed inset-0 z-[120] flex items-center justify-center bg-[#040d1d]/95 p-6 text-center backdrop-blur-sm">
+            <div className="w-full max-w-sm">
+              <div className="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-sky-200/20 border-t-sky-300" />
+              <p className="mt-6 text-xs uppercase tracking-[.2em] text-sky-300">
+                Saving in progress
+              </p>
+              <h2 className="mt-2 text-xl font-semibold text-white">
+                {uploading ?? "Saving your changes…"}
+              </h2>
+              <div className="mt-5 h-2 overflow-hidden rounded-full bg-white/10">
+                <div
+                  className="h-full rounded-full bg-sky-400 transition-all duration-200"
+                  style={{ width: `${Math.max(uploadPercent, 8)}%` }}
+                />
+              </div>
+              <p className="mt-3 text-sm text-sky-100/65">
+                {uploading
+                  ? `${uploadPercent}% complete`
+                  : "Please don’t close this screen."}
+              </p>
+            </div>
+          </div>
+        ) : null}
+      </div>
+      <div className="hidden md:block">
+        <Container>
+          <section className="space-y-8 py-20">
+            {albumCreated ? (
+              <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm">
+                <Card className="w-full max-w-md border-pink/30 p-6 text-center shadow-[0_0_40px_rgba(209,74,139,0.25)]">
+                  <p className="text-xs uppercase tracking-[0.24em] text-pink">
+                    Album Created
+                  </p>
+                  <h2 className="mt-3 text-2xl font-semibold text-white">
+                    {albumCreated.title} created
+                  </h2>
+                  {albumCreated.coverArt ? (
+                    <div className="relative mx-auto mt-5 aspect-square w-44 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04]">
+                      <Image
+                        src={albumCreated.coverArt}
+                        alt={`${albumCreated.title} cover art`}
+                        fill
+                        className="object-cover"
+                        unoptimized
+                      />
+                    </div>
+                  ) : null}
+                  <p className="mt-5 text-sm text-fog">
+                    Your album has been added to your artist page content.
+                  </p>
+                  <Button
+                    className="mt-6 w-full"
+                    onClick={() => setAlbumCreated(null)}
+                  >
+                    Okay
+                  </Button>
+                </Card>
+              </div>
+            ) : null}
+
+            {showCreateAlbumModal ? (
+              <div className="fixed inset-0 z-[90] flex items-start justify-center overflow-y-auto bg-black/70 px-4 py-6 pb-28 backdrop-blur-sm">
+                <Card className="my-auto w-full max-w-xl p-6">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.24em] text-pink">
+                        Albums
+                      </p>
+                      <h2 className="mt-2 text-2xl font-semibold text-white">
+                        Create Album
+                      </h2>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setShowCreateAlbumModal(false)}
+                    >
+                      Close
+                    </Button>
+                  </div>
+                  <form
+                    action={async (formData) => {
+                      await createAlbum(formData);
+                    }}
+                    className="mt-6 space-y-4"
+                  >
+                    <input
+                      name="title"
+                      required
+                      placeholder="Album title"
+                      className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white"
+                    />
+                    <input
+                      name="releaseDate"
+                      type="date"
+                      className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white"
+                    />
+                    <textarea
+                      name="description"
+                      rows={5}
+                      placeholder="Album description"
+                      className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white"
+                    />
+                    <input
+                      name="coverArt"
+                      placeholder="Album cover URL fallback"
+                      className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white"
+                    />
+                    <label className="block rounded-xl border border-dashed border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-fog">
+                      Upload cover art
+                      <input
+                        name="coverFile"
+                        type="file"
+                        accept="image/*"
+                        className="mt-2 block w-full text-xs"
+                      />
+                    </label>
+                    <Button type="submit" className="w-full">
+                      Create
+                    </Button>
+                  </form>
+                </Card>
+              </div>
+            ) : null}
+
+            {showCreateTrackModal ? (
+              <div className="fixed inset-0 z-[90] flex items-start justify-center overflow-y-auto bg-black/70 px-4 py-6 pb-28 backdrop-blur-sm">
+                <Card className="my-auto w-full max-w-xl p-6">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.24em] text-pink">
+                        Tracks
+                      </p>
+                      <h2 className="mt-2 text-2xl font-semibold text-white">
+                        Add Track
+                      </h2>
+                    </div>
                     <Button
                       type="button"
                       variant="outline"
                       onClick={() => {
-                        setEditingAlbumTracks(false);
-                        setAlbumTrackDraft(selectedAlbumTracks);
-                        setDraggedTrackId(null);
+                        setShowCreateTrackModal(false);
+                        setTrackMetadataStatus(null);
                       }}
                     >
-                      Cancel
-                    </Button>
-                    <Button type="button" onClick={() => void saveAlbumTrackOrder()}>
-                      Save Order
+                      Close
                     </Button>
                   </div>
-                ) : null}
-              </div>
-            </Card>
-          </div>
-        ) : null}
-
-        {uploading ? (
-          <div className="fixed inset-0 z-[95] flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm">
-            <Card className="w-full max-w-md border-pink/30 p-6 shadow-[0_0_40px_rgba(209,74,139,0.18)]">
-              <p className="text-xs uppercase tracking-[0.24em] text-pink">Upload in progress</p>
-              <h2 className="mt-3 text-xl font-semibold text-white">{uploading}</h2>
-              <div className="mt-5 h-3 overflow-hidden rounded-full bg-white/10">
-                <div
-                  className="h-full rounded-full bg-[linear-gradient(90deg,#F2A7C4_0%,#D14A8B_50%,#A12C6A_100%)] transition-all duration-200"
-                  style={{ width: `${Math.max(uploadPercent, 5)}%` }}
-                />
-              </div>
-              <p className="mt-3 text-sm text-fog">{uploadPercent}%</p>
-            </Card>
-          </div>
-        ) : null}
-
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <p className="text-xs uppercase tracking-[0.24em] text-fog">Artist CMS</p>
-            <h1 className="mt-3 text-4xl font-semibold text-white">{dashboard?.artist.name ?? user.username}</h1>
-            <p className="mt-3 max-w-2xl text-fog">
-              Manage the content that appears on your public artist page: profile, albums, tracks, gigs, media, and press.
-            </p>
-          </div>
-          <div className="flex gap-3">
-            {dashboard?.artist.slug ? (
-              <a href={`/${dashboard.artist.slug}`}>
-                <Button variant="outline">View public page</Button>
-              </a>
-            ) : null}
-            <a href="/radio">
-              <Button>Listen Live</Button>
-            </a>
-          </div>
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-4">
-          <Card className="p-5">
-            <p className="text-fog">Active Tracks</p>
-            <p className="mt-2 text-2xl text-white">
-              {dashboard?.usage.songs ?? 0}/{dashboard?.limits.songs ?? "Unlimited"}
-            </p>
-          </Card>
-          <Card className="p-5">
-            <p className="text-fog">Photos</p>
-            <p className="mt-2 text-2xl text-white">
-              {dashboard?.usage.photos ?? 0}/{dashboard?.limits.photos ?? "Unlimited"}
-            </p>
-          </Card>
-          <Card className="p-5">
-            <p className="text-fog">Videos</p>
-            <p className="mt-2 text-2xl text-white">
-              {dashboard?.usage.videos ?? 0}/{dashboard?.limits.videos ?? "Unlimited"}
-            </p>
-          </Card>
-          <Card className="p-5">
-            <p className="text-fog">Radio Picks</p>
-            <p className="mt-2 text-2xl text-white">
-              {dashboard?.usage.radioTracks ?? 0}/{dashboard?.limits.radioTracks ?? "Unlimited"}
-            </p>
-          </Card>
-        </div>
-
-        <ShareFullyOpen variant="dashboard" />
-
-        <div className="flex flex-wrap gap-2">
-          {tabs.map((tab) => (
-            <button
-              key={tab.key}
-              type="button"
-              onClick={() => setActiveTab(tab.key)}
-              className={`rounded-full border px-4 py-2 text-sm transition ${
-                activeTab === tab.key
-                  ? "border-pink/60 bg-pink/20 text-white"
-                  : "border-white/10 bg-white/[0.03] text-fog hover:text-white"
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        {message ? <p className="text-sm text-fog">{message}</p> : null}
-
-        {activeTab === "profile" ? (
-          <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
-            <Card className="space-y-4 p-6">
-              <h2 className="text-2xl font-semibold text-white">Profile</h2>
-              <div className="rounded-xl border border-pink/30 bg-pink/10 p-4">
-                <div className="flex items-center justify-between gap-4">
-                  <p className="font-meta text-xs uppercase tracking-[0.2em] text-pink">Search-ready profile</p>
-                  <p className="text-sm text-white">{completedSeoChecks}/{seoChecks.length} complete</p>
-                </div>
-                <p className="mt-2 text-sm leading-6 text-fog">These visible details help listeners and search engines understand your music. Add a descriptive alt text when uploading gallery photos.</p>
-                <ul className="mt-3 grid gap-2 text-sm text-fog">
-                  {seoChecks.map(([label, complete]) => (
-                    <li key={label} className={complete ? "text-white" : undefined}>{complete ? "✓" : "○"} {label}</li>
-                  ))}
-                </ul>
-              </div>
-              <div className="grid gap-4 md:grid-cols-2">
-                <input value={profile.name} onChange={(e) => setProfile((s) => ({ ...s, name: e.target.value }))} placeholder="Artist name" className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white" />
-                <input value={profile.slug} onChange={(e) => setProfile((s) => ({ ...s, slug: e.target.value }))} placeholder="Slug" className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white" />
-                <input value={profile.location} onChange={(e) => setProfile((s) => ({ ...s, location: e.target.value }))} placeholder="Location" className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white" />
-                <input value={profile.genres} onChange={(e) => setProfile((s) => ({ ...s, genres: e.target.value }))} placeholder="Genres, comma separated" className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white" />
-                <input value={profile.heroImage} onChange={(e) => setProfile((s) => ({ ...s, heroImage: e.target.value }))} placeholder="Hero image URL" className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white md:col-span-2" />
-                <input value={profile.profileImage} onChange={(e) => setProfile((s) => ({ ...s, profileImage: e.target.value }))} placeholder="Profile image URL" className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white" />
-                <input value={profile.bannerImage} onChange={(e) => setProfile((s) => ({ ...s, bannerImage: e.target.value }))} placeholder="Banner image URL" className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white" />
-                <label className="rounded-xl border border-dashed border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-fog">
-                  Upload hero image
-                  <input type="file" accept="image/*" className="mt-2 block w-full text-xs" onChange={(e) => { const file = e.target.files?.[0]; if (file) void uploadProfileImage(file, "heroImage"); }} />
-                </label>
-                <label className="rounded-xl border border-dashed border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-fog">
-                  Upload profile image
-                  <input type="file" accept="image/*" className="mt-2 block w-full text-xs" onChange={(e) => { const file = e.target.files?.[0]; if (file) void uploadProfileImage(file, "profileImage"); }} />
-                </label>
-                <label className="rounded-xl border border-dashed border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-fog md:col-span-2">
-                  Upload banner image
-                  <input type="file" accept="image/*" className="mt-2 block w-full text-xs" onChange={(e) => { const file = e.target.files?.[0]; if (file) void uploadProfileImage(file, "bannerImage"); }} />
-                </label>
-              </div>
-              <div className="grid gap-4 md:grid-cols-3">
-                <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
-                  <p className="text-xs uppercase tracking-[0.2em] text-fog">Hero</p>
-                  <div className="relative mt-3 aspect-[16/10] overflow-hidden rounded-lg bg-white/[0.04]">
-                    {profile.heroImage ? (
-                      <Image src={profile.heroImage} alt="Hero preview" fill className="object-cover" unoptimized />
-                    ) : (
-                      <div className="flex h-full items-center justify-center text-xs text-fog">No hero image</div>
-                    )}
-                  </div>
-                </div>
-                <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
-                  <p className="text-xs uppercase tracking-[0.2em] text-fog">Profile</p>
-                  <div className="relative mt-3 aspect-square overflow-hidden rounded-lg bg-white/[0.04]">
-                    {profile.profileImage ? (
-                      <Image src={profile.profileImage} alt="Profile preview" fill className="object-cover" unoptimized />
-                    ) : (
-                      <div className="flex h-full items-center justify-center text-xs text-fog">No profile image</div>
-                    )}
-                  </div>
-                </div>
-                <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
-                  <p className="text-xs uppercase tracking-[0.2em] text-fog">Banner</p>
-                  <div className="relative mt-3 aspect-[16/10] overflow-hidden rounded-lg bg-white/[0.04]">
-                    {profile.bannerImage ? (
-                      <Image src={profile.bannerImage} alt="Banner preview" fill className="object-cover" unoptimized />
-                    ) : (
-                      <div className="flex h-full items-center justify-center text-xs text-fog">No banner image</div>
-                    )}
-                  </div>
-                </div>
-              </div>
-              <textarea value={profile.bio} onChange={(e) => setProfile((s) => ({ ...s, bio: e.target.value }))} rows={7} placeholder="Artist bio" className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white" />
-              {profile.slug ? (
-                <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-                  <p className="text-xs uppercase tracking-[0.2em] text-fog">Artist Space</p>
-                  <a
-                    href={`/artist/${profile.slug}`}
-                    className="mt-2 inline-flex text-sm text-pink transition hover:text-white"
+                  <form
+                    action={async (formData) => {
+                      await uploadSong(formData);
+                    }}
+                    className="mt-6 space-y-4"
                   >
-                    fullyopenrecords.com/artist/{profile.slug}
-                  </a>
-                </div>
-              ) : null}
-              <div className="grid gap-4 md:grid-cols-2">
-                <input value={profile.facebook} onChange={(e) => setProfile((s) => ({ ...s, facebook: e.target.value }))} placeholder="Facebook URL" className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white" />
-                <input value={profile.x} onChange={(e) => setProfile((s) => ({ ...s, x: e.target.value }))} placeholder="X URL" className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white" />
-                <input value={profile.instagram} onChange={(e) => setProfile((s) => ({ ...s, instagram: e.target.value }))} placeholder="Instagram URL" className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white" />
-                <input value={profile.youtube} onChange={(e) => setProfile((s) => ({ ...s, youtube: e.target.value }))} placeholder="YouTube URL" className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white" />
-                <input value={profile.soundcloud} onChange={(e) => setProfile((s) => ({ ...s, soundcloud: e.target.value }))} placeholder="SoundCloud URL" className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white" />
-                <input value={profile.bandcamp} onChange={(e) => setProfile((s) => ({ ...s, bandcamp: e.target.value }))} placeholder="Bandcamp URL" className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white" />
-                <input value={profile.spotify} onChange={(e) => setProfile((s) => ({ ...s, spotify: e.target.value }))} placeholder="Spotify URL" className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white" />
-                <input value={profile.website} onChange={(e) => setProfile((s) => ({ ...s, website: e.target.value }))} placeholder="Website URL" className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white" />
-              </div>
-              <Button onClick={() => void saveProfile()}>Save profile</Button>
-            </Card>
-
-            <Card className="space-y-4 p-6">
-              <h2 className="text-2xl font-semibold text-white">Public page summary</h2>
-              <div className="space-y-3 text-sm text-fog">
-                <p><span className="text-white">URL:</span> /artist/{profile.slug || "your-band-name"}</p>
-                <p><span className="text-white">Tracks:</span> {content?.songs.length ?? 0}</p>
-                <p><span className="text-white">Albums:</span> {content?.albums.length ?? 0}</p>
-                <p><span className="text-white">Gigs:</span> {content?.gigs.length ?? 0}</p>
-                <p><span className="text-white">Media:</span> {(content?.photos.length ?? 0) + (content?.videos.length ?? 0)}</p>
-                <p><span className="text-white">Press:</span> {content?.press.length ?? 0}</p>
-              </div>
-            </Card>
-          </div>
-        ) : null}
-
-        {activeTab === "albums" ? (
-          <Card className="p-6">
-            <div className="flex items-center justify-between gap-4">
-              <h2 className="text-2xl font-semibold text-white">Albums</h2>
-              <Button type="button" onClick={() => setShowCreateAlbumModal(true)}>
-                Create Album
-              </Button>
-            </div>
-            <div className="mt-6 grid gap-4">
-                {content?.albums.length ? content.albums.map((album) => (
-                  <div key={album.id} className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-                    {editingAlbumId === album.id ? (
-                      <div className="space-y-3">
-                        <input
-                          value={albumDraft.title}
-                          onChange={(e) => setAlbumDraft((state) => ({ ...state, title: e.target.value }))}
-                          placeholder="Album title"
-                          className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white"
-                        />
-                        <textarea
-                          value={albumDraft.description}
-                          onChange={(e) => setAlbumDraft((state) => ({ ...state, description: e.target.value }))}
-                          rows={4}
-                          placeholder="Album description"
-                          className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white"
-                        />
-                        <div className="flex gap-3">
-                          <Button type="button" onClick={() => void saveAlbumEdit(album.id)}>
-                            Save
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => {
-                              setEditingAlbumId(null);
-                              setAlbumDraft({ title: "", description: "" });
-                            }}
-                          >
-                            Cancel
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div
-                        role="button"
-                        tabIndex={0}
-                        onClick={() => setSelectedAlbumId(album.id)}
-                        onKeyDown={(event) => {
-                          if (event.key === "Enter" || event.key === " ") {
-                            event.preventDefault();
-                            setSelectedAlbumId(album.id);
-                          }
-                        }}
-                        className="flex w-full items-start gap-4 text-left"
+                    <input
+                      name="title"
+                      required
+                      value={trackDraft.title}
+                      onChange={(event) =>
+                        setTrackDraft((draft) => ({
+                          ...draft,
+                          title: event.target.value,
+                        }))
+                      }
+                      placeholder="Track title"
+                      className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white"
+                    />
+                    <input
+                      name="trackNumber"
+                      type="number"
+                      min="1"
+                      value={trackDraft.trackNumber}
+                      onChange={(event) =>
+                        setTrackDraft((draft) => ({
+                          ...draft,
+                          trackNumber: event.target.value,
+                        }))
+                      }
+                      placeholder="Track number (optional)"
+                      className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white"
+                    />
+                    <label className="block">
+                      <span className="mb-2 block text-sm text-fog">Album</span>
+                      <select
+                        name="albumId"
+                        className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white"
                       >
-                        <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl border border-white/10 bg-white/[0.04]">
-                          {album.coverArt ? (
-                            <Image
-                              src={album.coverArt}
-                              alt={`${album.title} cover art`}
-                              fill
-                              className="object-cover"
-                              unoptimized
-                            />
-                          ) : (
-                            <div className="flex h-full items-center justify-center text-[10px] uppercase tracking-[0.18em] text-fog">
-                              No Art
-                            </div>
-                          )}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-start justify-between gap-4">
-                            <div className="min-w-0">
-                              <p className="truncate text-lg text-white">{album.title}</p>
-                              <p className="mt-1 text-sm text-fog">{formatDate(album.releaseDate)}</p>
-                              <p className="mt-2 text-xs uppercase tracking-[0.18em] text-fog">
-                                {(content.songs ?? []).filter((song) => song.albumId === album.id).length} tracks
+                        <option value="">No album</option>
+                        {(content?.albums ?? []).map((album) => (
+                          <option key={album.id} value={album.id}>
+                            {album.title}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <textarea
+                      name="description"
+                      rows={4}
+                      placeholder="Track description"
+                      className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white"
+                    />
+                    <input
+                      name="audioUrl"
+                      placeholder="Audio URL fallback (optional)"
+                      className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white"
+                    />
+                    <input
+                      name="coverImage"
+                      placeholder="Cover art URL fallback (optional)"
+                      className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white"
+                    />
+                    <label className="block rounded-xl border border-dashed border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-fog">
+                      Upload audio file
+                      <input
+                        name="audioFile"
+                        type="file"
+                        accept="audio/*"
+                        onChange={(event) => {
+                          const file = event.target.files?.[0];
+                          if (file) void readTrackMetadata(file);
+                        }}
+                        className="mt-2 block w-full text-xs"
+                      />
+                    </label>
+                    {trackMetadataStatus ? (
+                      <p className="text-xs text-fog">{trackMetadataStatus}</p>
+                    ) : null}
+                    <label className="block rounded-xl border border-dashed border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-fog">
+                      Upload cover art
+                      <input
+                        name="coverFile"
+                        type="file"
+                        accept="image/*"
+                        className="mt-2 block w-full text-xs"
+                      />
+                    </label>
+                    <label className="flex items-center gap-3 text-sm text-fog">
+                      <input type="checkbox" name="enabled" defaultChecked />
+                      <span>Enabled</span>
+                    </label>
+                    <label className="flex items-center gap-3 text-sm text-fog">
+                      <input type="checkbox" name="radioSelected" />
+                      <span>Prioritise this as your radio-selected track</span>
+                    </label>
+                    <Button type="submit" className="w-full">
+                      Create Track
+                    </Button>
+                  </form>
+                </Card>
+              </div>
+            ) : null}
+
+            {versionSongId ? (
+              <div className="fixed inset-0 z-[90] overflow-y-auto bg-black/70 px-4 py-6 backdrop-blur-sm">
+                <Card className="mx-auto w-full max-w-xl p-6">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.24em] text-pink">
+                        Recording diary
+                      </p>
+                      <h2 className="mt-2 text-2xl font-semibold text-white">
+                        Add new version
+                      </h2>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setVersionSongId(null)}
+                    >
+                      Close
+                    </Button>
+                  </div>
+                  <form
+                    action={async (formData) => {
+                      await addTrackVersion(formData);
+                    }}
+                    className="mt-6 space-y-4"
+                  >
+                    <label className="block text-sm text-fog">
+                      Version type
+                      <select
+                        name="versionType"
+                        className="mt-2 w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white"
+                      >
+                        {TRACK_VERSION_TYPES.map((type) => (
+                          <option key={type} value={type}>
+                            {type}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <p className="rounded-xl border border-white/10 bg-white/[0.03] p-3 text-sm text-fog">
+                      The next number is assigned automatically where needed,
+                      for example <span className="text-white">Mix 4</span>.
+                      Previous versions are never overwritten.
+                    </p>
+                    <label className="block rounded-xl border border-dashed border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-fog">
+                      Audio{" "}
+                      <input
+                        name="audioFile"
+                        required
+                        type="file"
+                        accept="audio/*"
+                        className="mt-2 block w-full text-xs"
+                      />
+                    </label>
+                    <textarea
+                      name="notes"
+                      rows={5}
+                      placeholder="Notes (optional): what changed, what worked, and anything to remember for next time."
+                      className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white"
+                    />
+                    <label className="block text-sm text-fog">
+                      Date recorded / created{" "}
+                      <input
+                        name="recordedAt"
+                        type="date"
+                        className="mt-2 w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white"
+                      />
+                    </label>
+                    <label className="block rounded-xl border border-dashed border-pink/30 bg-pink/5 px-4 py-3 text-sm text-fog">
+                      <strong className="block text-white">
+                        Setup photos (optional)
+                      </strong>
+                      <span className="mt-1 block">
+                        Capture anything you’ll want to recreate later — pedal
+                        settings, amp controls, microphone placement, drum
+                        setup, room position, outboard gear or other recording
+                        settings.
+                      </span>
+                      <input
+                        name="setupPhotos"
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        multiple
+                        className="mt-3 block w-full text-xs"
+                      />
+                    </label>
+                    <Button type="submit" className="w-full">
+                      Add Version
+                    </Button>
+                  </form>
+                </Card>
+              </div>
+            ) : null}
+
+            {showBulkTrackModal ? (
+              <div className="fixed inset-0 z-[90] flex items-start justify-center overflow-y-auto bg-black/70 px-4 py-6 pb-28 backdrop-blur-sm">
+                <Card className="my-auto w-full max-w-xl p-6">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.24em] text-pink">
+                        Tracks
+                      </p>
+                      <h2 className="mt-2 text-2xl font-semibold text-white">
+                        Bulk Upload
+                      </h2>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setShowBulkTrackModal(false)}
+                    >
+                      Close
+                    </Button>
+                  </div>
+                  <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm text-fog">
+                    <p className="font-semibold text-white">Filename rules</p>
+                    <div className="mt-3 space-y-2">
+                      <p>
+                        <span className="text-white">Track only:</span>{" "}
+                        <span className="font-mono">Hello World.mp3</span>
+                      </p>
+                      <p>
+                        <span className="text-white">Numbered track only:</span>{" "}
+                        <span className="font-mono">
+                          01 - Some Song Title.mp3
+                        </span>
+                      </p>
+                    </div>
+                    <p className="mt-3">
+                      Bulk uploads stay albumless. Use the Track Library’s album
+                      assignment controls once you are ready to group them.
+                    </p>
+                  </div>
+                  <form
+                    action={async (formData) => {
+                      await bulkUploadSongs(formData);
+                    }}
+                    className="mt-6 space-y-4"
+                  >
+                    <label className="block rounded-xl border border-dashed border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-fog">
+                      Upload audio files
+                      <input
+                        name="audioFiles"
+                        type="file"
+                        accept="audio/*"
+                        multiple
+                        className="mt-2 block w-full text-xs"
+                        onChange={(event) =>
+                          handleBulkTrackSelection(event.target.files)
+                        }
+                      />
+                    </label>
+                    {bulkTrackFiles.length ? (
+                      <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                        <p className="text-sm font-semibold text-white">
+                          Tracks to be added
+                        </p>
+                        <div className="mt-3 space-y-2">
+                          {bulkTrackFiles.map((track) => (
+                            <div
+                              key={track.fileName}
+                              className="rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3"
+                            >
+                              <p className="truncate text-sm text-white">
+                                {track.title}
+                              </p>
+                              <p className="mt-1 truncate text-xs text-fog">
+                                {track.fileName}
+                              </p>
+                              <p className="mt-2 text-xs text-fog">
+                                {track.trackNumber
+                                  ? `Track ${track.trackNumber}`
+                                  : "No track number"}
+                                {track.albumTitle
+                                  ? ` • Album: ${track.albumTitle}`
+                                  : " • Standalone track"}
                               </p>
                             </div>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                setEditingAlbumId(album.id);
-                                setAlbumDraft({
-                                  title: album.title,
-                                  description: album.description ?? ""
-                                });
-                              }}
-                            >
-                              Edit
-                            </Button>
-                          </div>
+                          ))}
                         </div>
                       </div>
-                    )}
-                  </div>
-                )) : <p className="text-fog">No albums created yet.</p>}
-            </div>
-          </Card>
-        ) : null}
-
-        {activeTab === "tracks" ? (
-          <Card className="p-6">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-              <div>
-                <h2 className="text-2xl font-semibold text-white">Track Library</h2>
-                <p className="mt-2 text-sm text-fog">
-                  Manage your uploaded tracks, control which ones are active on your artist page, and assign them to albums.
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-3">
-                <Button type="button" variant="outline" onClick={() => setShowBulkTrackModal(true)}>
-                  Bulk Upload
-                </Button>
-                <Button type="button" onClick={() => { setTrackDraft({ title: "", trackNumber: "" }); setTrackMetadataStatus(null); setShowCreateTrackModal(true); }}>
-                  Add Track
-                </Button>
-              </div>
-            </div>
-
-            {dashboard?.artist.plan === "free" ? (
-              <div className="mt-6 rounded-2xl border border-pink/30 bg-pink/10 p-4">
-                <p className="text-sm font-semibold text-white">Free plan active-track limit</p>
-                <p className="mt-2 text-sm leading-7 text-fog">
-                  You can upload as many tracks as you want, but only 5 can be active on your public artist page at one time. Extra tracks stay visible, but they are not playable until activated.
-                </p>
+                    ) : null}
+                    <Button type="submit" className="w-full">
+                      Upload Tracks
+                    </Button>
+                  </form>
+                </Card>
               </div>
             ) : null}
 
-            <div className="mt-6 flex flex-col gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4 lg:flex-row lg:items-center lg:justify-between">
-              <div>
-                <p className="text-sm font-semibold text-white">Bulk album assignment</p>
-                <p className="mt-1 text-sm text-fog">
-                  Select one or more tracks, then assign them to an album in one step.
-                </p>
-              </div>
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                <select
-                  defaultValue=""
-                  className="min-w-[220px] rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white"
-                  onChange={(event) => {
-                    const value = event.target.value;
-                    if (!value) return;
-                    void assignSelectedTracksToAlbum(value === "none" ? null : Number(value));
-                    event.target.value = "";
-                  }}
-                >
-                  <option value="">Add selected to album</option>
-                  <option value="none">Remove from album</option>
-                  {(content?.albums ?? []).map((album) => (
-                    <option key={album.id} value={album.id}>
-                      {album.title}
-                    </option>
-                  ))}
-                </select>
-                <p className="text-xs uppercase tracking-[0.18em] text-fog">
-                  {selectedTrackIds.length} selected
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-6 grid gap-3">
-              {content?.songs.length ? content.songs.map((song) => {
-                const isSelected = selectedTrackIds.includes(song.id);
-                return (
-                  <div key={song.id} className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-                    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                      <div className="flex min-w-0 gap-4">
-                        <label className="mt-1 flex h-5 items-center">
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={(event) => {
-                              setSelectedTrackIds((current) =>
-                                event.target.checked
-                                  ? [...current, song.id]
-                                  : current.filter((id) => id !== song.id)
-                              );
+            {selectedAlbum ? (
+              <div className="fixed inset-0 z-[90] flex items-start justify-center overflow-y-auto bg-black/70 px-4 py-6 pb-28 backdrop-blur-sm">
+                <Card className="my-auto w-full max-w-2xl p-6">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <p className="text-xs uppercase tracking-[0.24em] text-pink">
+                        Album View
+                      </p>
+                      <h2 className="mt-2 truncate text-2xl font-semibold text-white">
+                        {selectedAlbum.title}
+                      </h2>
+                      <p className="mt-1 text-sm text-fog">
+                        {formatDate(selectedAlbum.releaseDate)}
+                      </p>
+                    </div>
+                    <div className="flex gap-3">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          setEditingAlbumTracks((state) => !state);
+                          setAlbumTrackDraft(selectedAlbumTracks);
+                        }}
+                      >
+                        {editingAlbumTracks ? "Cancel Edit" : "Edit"}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setSelectedAlbumId(null)}
+                      >
+                        Close
+                      </Button>
+                    </div>
+                  </div>
+                  {selectedAlbum.description ? (
+                    <p className="mt-4 text-sm leading-7 text-fog">
+                      {selectedAlbum.description}
+                    </p>
+                  ) : null}
+                  <div className="mt-6">
+                    <p className="text-xs uppercase tracking-[0.18em] text-fog">
+                      Tracks
+                    </p>
+                    <div className="mt-3 space-y-2">
+                      {(editingAlbumTracks
+                        ? albumTrackDraft
+                        : selectedAlbumTracks
+                      ).length ? (
+                        (editingAlbumTracks
+                          ? albumTrackDraft
+                          : selectedAlbumTracks
+                        ).map((song, index) => (
+                          <div
+                            key={song.id}
+                            draggable={editingAlbumTracks}
+                            onDragStart={() => setDraggedTrackId(song.id)}
+                            onDragOver={(event) => {
+                              if (!editingAlbumTracks) return;
+                              event.preventDefault();
                             }}
-                          />
-                        </label>
-                        <div className="min-w-0">
-                          <p className="truncate text-white">{song.title}</p>
-                          <p className="mt-1 text-sm text-fog">
-                            {song.albumId ? selectedAlbumTitleById.get(song.albumId) ?? "Album assigned" : "No album"}
-                          </p>
-                          {song.description ? (
-                            <p className="mt-3 text-sm text-fog">{song.description}</p>
-                          ) : null}
-                          <div className="mt-3 flex flex-wrap items-center gap-2">
-                            <span
-                              className={`rounded-full px-3 py-1 text-xs uppercase tracking-[0.18em] ${
-                                song.enabled
-                                  ? "border border-pink/30 bg-pink/15 text-white"
-                                  : "border border-white/10 bg-white/[0.04] text-fog"
-                              }`}
-                            >
-                              {song.enabled ? "Active" : "Inactive"}
-                            </span>
-                            {song.radioSelected ? (
-                              <span className="rounded-full border border-pink/30 bg-pink/15 px-3 py-1 text-xs uppercase tracking-[0.18em] text-white">
-                                Radio Priority
+                            onDrop={() => {
+                              if (
+                                !editingAlbumTracks ||
+                                draggedTrackId === null ||
+                                draggedTrackId === song.id
+                              )
+                                return;
+                              setAlbumTrackDraft((current) => {
+                                const next = [...current];
+                                const fromIndex = next.findIndex(
+                                  (item) => item.id === draggedTrackId,
+                                );
+                                const toIndex = next.findIndex(
+                                  (item) => item.id === song.id,
+                                );
+                                if (fromIndex === -1 || toIndex === -1)
+                                  return current;
+                                const [moved] = next.splice(fromIndex, 1);
+                                next.splice(toIndex, 0, moved);
+                                return next;
+                              });
+                            }}
+                            className={`flex items-center justify-between gap-4 rounded-xl border px-4 py-3 ${
+                              editingAlbumTracks
+                                ? "cursor-move border-pink/30 bg-pink/10"
+                                : "border-white/10 bg-white/[0.03]"
+                            }`}
+                          >
+                            <div className="min-w-0">
+                              <p className="truncate text-sm text-white">
+                                {song.title}
+                              </p>
+                              <p className="mt-1 text-xs text-fog">
+                                Track {index + 1}
+                              </p>
+                            </div>
+                            {editingAlbumTracks ? (
+                              <span className="text-xs uppercase tracking-[0.18em] text-pink">
+                                Drag
                               </span>
                             ) : null}
                           </div>
-                        </div>
-                      </div>
-
-                      <div className="flex flex-wrap gap-2 lg:justify-end">
-                        <Button type="button" variant="outline" onClick={() => setVersionSongId(song.id)}>Add Version</Button>
+                        ))
+                      ) : (
+                        <p className="text-sm text-fog">
+                          No tracks assigned to this album yet.
+                        </p>
+                      )}
+                    </div>
+                    {editingAlbumTracks ? (
+                      <div className="mt-4 flex justify-end gap-3">
                         <Button
                           type="button"
                           variant="outline"
-                          onClick={() => void updateTrack(song.id, { enabled: !song.enabled }, song.enabled ? "Track deactivated." : "Track activated.")}
-                        >
-                          {song.enabled ? "Deactivate" : "Activate"}
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="border-red-400/20 text-red-200 hover:border-red-400/40 hover:bg-red-500/10 hover:text-white"
-                          onClick={() => void deleteTrack(song.id, song.title)}
-                        >
-                          Delete
-                        </Button>
-                        <select
-                          className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-white"
-                          value={song.albumId ?? ""}
-                          onChange={(event) => {
-                            const value = event.target.value;
-                            void assignTrackToAlbum(song.id, value ? Number(value) : null);
+                          onClick={() => {
+                            setEditingAlbumTracks(false);
+                            setAlbumTrackDraft(selectedAlbumTracks);
+                            setDraggedTrackId(null);
                           }}
                         >
-                          <option value="">Add to album</option>
-                          {(content?.albums ?? []).map((album) => (
-                            <option key={album.id} value={album.id}>
-                              {album.title}
-                            </option>
-                          ))}
-                        </select>
-                        {song.audioUrl ? (
-                          <a
-                            href={song.audioUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex h-11 items-center justify-center rounded-xl border border-white/10 px-4 text-xs uppercase tracking-[0.18em] text-fog transition hover:border-pink/40 hover:text-white"
-                          >
-                            Preview Audio
-                          </a>
-                        ) : null}
+                          Cancel
+                        </Button>
+                        <Button
+                          type="button"
+                          onClick={() => void saveAlbumTrackOrder()}
+                        >
+                          Save Order
+                        </Button>
+                      </div>
+                    ) : null}
+                  </div>
+                </Card>
+              </div>
+            ) : null}
+
+            {uploading ? (
+              <div className="fixed inset-0 z-[95] flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm">
+                <Card className="w-full max-w-md border-pink/30 p-6 shadow-[0_0_40px_rgba(209,74,139,0.18)]">
+                  <p className="text-xs uppercase tracking-[0.24em] text-pink">
+                    Upload in progress
+                  </p>
+                  <h2 className="mt-3 text-xl font-semibold text-white">
+                    {uploading}
+                  </h2>
+                  <div className="mt-5 h-3 overflow-hidden rounded-full bg-white/10">
+                    <div
+                      className="h-full rounded-full bg-[linear-gradient(90deg,#F2A7C4_0%,#D14A8B_50%,#A12C6A_100%)] transition-all duration-200"
+                      style={{ width: `${Math.max(uploadPercent, 5)}%` }}
+                    />
+                  </div>
+                  <p className="mt-3 text-sm text-fog">{uploadPercent}%</p>
+                </Card>
+              </div>
+            ) : null}
+
+            <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <p className="text-xs uppercase tracking-[0.24em] text-fog">
+                  Artist CMS
+                </p>
+                <h1 className="mt-3 text-4xl font-semibold text-white">
+                  {dashboard?.artist.name ?? user.username}
+                </h1>
+                <p className="mt-3 max-w-2xl text-fog">
+                  Manage the content that appears on your public artist page:
+                  profile, albums, tracks, gigs, media, and press.
+                </p>
+              </div>
+              <div className="flex gap-3">
+                {dashboard?.artist.slug ? (
+                  <a href={`/${dashboard.artist.slug}`}>
+                    <Button variant="outline">View public page</Button>
+                  </a>
+                ) : null}
+                <a href="/radio">
+                  <Button>Listen Live</Button>
+                </a>
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-4">
+              <Card className="p-5">
+                <p className="text-fog">Active Tracks</p>
+                <p className="mt-2 text-2xl text-white">
+                  {dashboard?.usage.songs ?? 0}/
+                  {dashboard?.limits.songs ?? "Unlimited"}
+                </p>
+              </Card>
+              <Card className="p-5">
+                <p className="text-fog">Photos</p>
+                <p className="mt-2 text-2xl text-white">
+                  {dashboard?.usage.photos ?? 0}/
+                  {dashboard?.limits.photos ?? "Unlimited"}
+                </p>
+              </Card>
+              <Card className="p-5">
+                <p className="text-fog">Videos</p>
+                <p className="mt-2 text-2xl text-white">
+                  {dashboard?.usage.videos ?? 0}/
+                  {dashboard?.limits.videos ?? "Unlimited"}
+                </p>
+              </Card>
+              <Card className="p-5">
+                <p className="text-fog">Radio Picks</p>
+                <p className="mt-2 text-2xl text-white">
+                  {dashboard?.usage.radioTracks ?? 0}/
+                  {dashboard?.limits.radioTracks ?? "Unlimited"}
+                </p>
+              </Card>
+            </div>
+
+            <ShareFullyOpen variant="dashboard" />
+
+            <div className="flex flex-wrap gap-2">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.key}
+                  type="button"
+                  onClick={() => setActiveTab(tab.key)}
+                  className={`rounded-full border px-4 py-2 text-sm transition ${
+                    activeTab === tab.key
+                      ? "border-pink/60 bg-pink/20 text-white"
+                      : "border-white/10 bg-white/[0.03] text-fog hover:text-white"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {message ? <p className="text-sm text-fog">{message}</p> : null}
+
+            {activeTab === "profile" ? (
+              <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
+                <Card className="space-y-4 p-6">
+                  <h2 className="text-2xl font-semibold text-white">Profile</h2>
+                  <div className="rounded-xl border border-pink/30 bg-pink/10 p-4">
+                    <div className="flex items-center justify-between gap-4">
+                      <p className="font-meta text-xs uppercase tracking-[0.2em] text-pink">
+                        Search-ready profile
+                      </p>
+                      <p className="text-sm text-white">
+                        {completedSeoChecks}/{seoChecks.length} complete
+                      </p>
+                    </div>
+                    <p className="mt-2 text-sm leading-6 text-fog">
+                      These visible details help listeners and search engines
+                      understand your music. Add a descriptive alt text when
+                      uploading gallery photos.
+                    </p>
+                    <ul className="mt-3 grid gap-2 text-sm text-fog">
+                      {seoChecks.map(([label, complete]) => (
+                        <li
+                          key={label}
+                          className={complete ? "text-white" : undefined}
+                        >
+                          {complete ? "✓" : "○"} {label}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <input
+                      value={profile.name}
+                      onChange={(e) =>
+                        setProfile((s) => ({ ...s, name: e.target.value }))
+                      }
+                      placeholder="Artist name"
+                      className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white"
+                    />
+                    <input
+                      value={profile.slug}
+                      onChange={(e) =>
+                        setProfile((s) => ({ ...s, slug: e.target.value }))
+                      }
+                      placeholder="Slug"
+                      className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white"
+                    />
+                    <input
+                      value={profile.location}
+                      onChange={(e) =>
+                        setProfile((s) => ({ ...s, location: e.target.value }))
+                      }
+                      placeholder="Location"
+                      className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white"
+                    />
+                    <input
+                      value={profile.genres}
+                      onChange={(e) =>
+                        setProfile((s) => ({ ...s, genres: e.target.value }))
+                      }
+                      placeholder="Genres, comma separated"
+                      className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white"
+                    />
+                    <input
+                      value={profile.heroImage}
+                      onChange={(e) =>
+                        setProfile((s) => ({ ...s, heroImage: e.target.value }))
+                      }
+                      placeholder="Hero image URL"
+                      className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white md:col-span-2"
+                    />
+                    <input
+                      value={profile.profileImage}
+                      onChange={(e) =>
+                        setProfile((s) => ({
+                          ...s,
+                          profileImage: e.target.value,
+                        }))
+                      }
+                      placeholder="Profile image URL"
+                      className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white"
+                    />
+                    <input
+                      value={profile.bannerImage}
+                      onChange={(e) =>
+                        setProfile((s) => ({
+                          ...s,
+                          bannerImage: e.target.value,
+                        }))
+                      }
+                      placeholder="Banner image URL"
+                      className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white"
+                    />
+                    <label className="rounded-xl border border-dashed border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-fog">
+                      Upload hero image
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="mt-2 block w-full text-xs"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) void uploadProfileImage(file, "heroImage");
+                        }}
+                      />
+                    </label>
+                    <label className="rounded-xl border border-dashed border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-fog">
+                      Upload profile image
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="mt-2 block w-full text-xs"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file)
+                            void uploadProfileImage(file, "profileImage");
+                        }}
+                      />
+                    </label>
+                    <label className="rounded-xl border border-dashed border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-fog md:col-span-2">
+                      Upload banner image
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="mt-2 block w-full text-xs"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file)
+                            void uploadProfileImage(file, "bannerImage");
+                        }}
+                      />
+                    </label>
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-3">
+                    <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+                      <p className="text-xs uppercase tracking-[0.2em] text-fog">
+                        Hero
+                      </p>
+                      <div className="relative mt-3 aspect-[16/10] overflow-hidden rounded-lg bg-white/[0.04]">
+                        {profile.heroImage ? (
+                          <Image
+                            src={profile.heroImage}
+                            alt="Hero preview"
+                            fill
+                            className="object-cover"
+                            unoptimized
+                          />
+                        ) : (
+                          <div className="flex h-full items-center justify-center text-xs text-fog">
+                            No hero image
+                          </div>
+                        )}
                       </div>
                     </div>
-                    <div className="mt-5 border-t border-white/10 pt-4">
-                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-pink">Recording diary</p>
-                      {(content.trackVersions ?? []).filter((version) => Number(version.songId) === Number(song.id)).length ? (
-                        <div className="mt-3 space-y-3">
-                          {(content.trackVersions ?? []).filter((version) => Number(version.songId) === Number(song.id)).map((version) => (
-                            <div key={version.id} className="rounded-xl border border-white/10 bg-black/10 p-4">
-                              <div className="flex flex-wrap items-start justify-between gap-3"><div><p className="font-semibold text-white">{version.label}</p><p className="mt-1 text-xs text-fog">{formatDate(version.recordedAt || version.createdAt)} · uploaded {formatDate(version.createdAt)}</p></div><Button type="button" variant="outline" className="border-red-400/20 text-red-200" onClick={() => void deleteTrackVersion(version.id, version.label)}>Delete version</Button></div>
-                              <div className="mt-3"><StreamButton audioUrl={version.audioUrl} label="Play version" pauseLabel="Pause" size="sm" trackTitle={`${song.title} — ${version.label}`} /></div>
-                              {version.notes ? <p className="mt-3 whitespace-pre-line text-sm leading-6 text-fog">{version.notes}</p> : null}
-                              {version.photos.length ? <div className="mt-4 flex flex-wrap gap-2">{version.photos.map((photo, index) => <a key={`${photo.imageUrl}-${index}`} href={photo.imageUrl} target="_blank" rel="noreferrer" className="relative h-20 w-20 overflow-hidden rounded-lg border border-white/10"><Image src={photo.imageUrl} alt={`${version.label} setup photo ${index + 1}`} fill sizes="80px" className="object-cover" unoptimized /></a>)}</div> : null}
-                            </div>
-                          ))}
-                        </div>
-                      ) : <p className="mt-2 text-sm text-fog">No versions yet. Add the first jam, demo, mix or master to begin the history.</p>}
+                    <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+                      <p className="text-xs uppercase tracking-[0.2em] text-fog">
+                        Profile
+                      </p>
+                      <div className="relative mt-3 aspect-square overflow-hidden rounded-lg bg-white/[0.04]">
+                        {profile.profileImage ? (
+                          <Image
+                            src={profile.profileImage}
+                            alt="Profile preview"
+                            fill
+                            className="object-cover"
+                            unoptimized
+                          />
+                        ) : (
+                          <div className="flex h-full items-center justify-center text-xs text-fog">
+                            No profile image
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+                      <p className="text-xs uppercase tracking-[0.2em] text-fog">
+                        Banner
+                      </p>
+                      <div className="relative mt-3 aspect-[16/10] overflow-hidden rounded-lg bg-white/[0.04]">
+                        {profile.bannerImage ? (
+                          <Image
+                            src={profile.bannerImage}
+                            alt="Banner preview"
+                            fill
+                            className="object-cover"
+                            unoptimized
+                          />
+                        ) : (
+                          <div className="flex h-full items-center justify-center text-xs text-fog">
+                            No banner image
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
-                );
-              }) : <p className="text-fog">No tracks uploaded yet.</p>}
-            </div>
-          </Card>
-        ) : null}
+                  <textarea
+                    value={profile.bio}
+                    onChange={(e) =>
+                      setProfile((s) => ({ ...s, bio: e.target.value }))
+                    }
+                    rows={7}
+                    placeholder="Artist bio"
+                    className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white"
+                  />
+                  {profile.slug ? (
+                    <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                      <p className="text-xs uppercase tracking-[0.2em] text-fog">
+                        Artist Space
+                      </p>
+                      <a
+                        href={`/artist/${profile.slug}`}
+                        className="mt-2 inline-flex text-sm text-pink transition hover:text-white"
+                      >
+                        fullyopenrecords.com/artist/{profile.slug}
+                      </a>
+                    </div>
+                  ) : null}
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <input
+                      value={profile.facebook}
+                      onChange={(e) =>
+                        setProfile((s) => ({ ...s, facebook: e.target.value }))
+                      }
+                      placeholder="Facebook URL"
+                      className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white"
+                    />
+                    <input
+                      value={profile.x}
+                      onChange={(e) =>
+                        setProfile((s) => ({ ...s, x: e.target.value }))
+                      }
+                      placeholder="X URL"
+                      className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white"
+                    />
+                    <input
+                      value={profile.instagram}
+                      onChange={(e) =>
+                        setProfile((s) => ({ ...s, instagram: e.target.value }))
+                      }
+                      placeholder="Instagram URL"
+                      className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white"
+                    />
+                    <input
+                      value={profile.youtube}
+                      onChange={(e) =>
+                        setProfile((s) => ({ ...s, youtube: e.target.value }))
+                      }
+                      placeholder="YouTube URL"
+                      className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white"
+                    />
+                    <input
+                      value={profile.soundcloud}
+                      onChange={(e) =>
+                        setProfile((s) => ({
+                          ...s,
+                          soundcloud: e.target.value,
+                        }))
+                      }
+                      placeholder="SoundCloud URL"
+                      className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white"
+                    />
+                    <input
+                      value={profile.bandcamp}
+                      onChange={(e) =>
+                        setProfile((s) => ({ ...s, bandcamp: e.target.value }))
+                      }
+                      placeholder="Bandcamp URL"
+                      className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white"
+                    />
+                    <input
+                      value={profile.spotify}
+                      onChange={(e) =>
+                        setProfile((s) => ({ ...s, spotify: e.target.value }))
+                      }
+                      placeholder="Spotify URL"
+                      className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white"
+                    />
+                    <input
+                      value={profile.website}
+                      onChange={(e) =>
+                        setProfile((s) => ({ ...s, website: e.target.value }))
+                      }
+                      placeholder="Website URL"
+                      className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white"
+                    />
+                  </div>
+                  <Button onClick={() => void saveProfile()}>
+                    Save profile
+                  </Button>
+                </Card>
 
-        {activeTab === "gigs" ? (
-          <div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
-            <Card className="space-y-4 p-6">
-              <h2 className="text-2xl font-semibold text-white">Add gig</h2>
-              <form action={async (formData) => { await createGig(formData); }} className="space-y-4">
-                <input name="title" required placeholder="Gig title" className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white" />
-                <div className="grid gap-4 md:grid-cols-2">
-                  <input name="venue" placeholder="Venue" className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white" />
-                  <input name="city" placeholder="City" className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white" />
+                <Card className="space-y-4 p-6">
+                  <h2 className="text-2xl font-semibold text-white">
+                    Public page summary
+                  </h2>
+                  <div className="space-y-3 text-sm text-fog">
+                    <p>
+                      <span className="text-white">URL:</span> /artist/
+                      {profile.slug || "your-band-name"}
+                    </p>
+                    <p>
+                      <span className="text-white">Tracks:</span>{" "}
+                      {content?.songs.length ?? 0}
+                    </p>
+                    <p>
+                      <span className="text-white">Albums:</span>{" "}
+                      {content?.albums.length ?? 0}
+                    </p>
+                    <p>
+                      <span className="text-white">Gigs:</span>{" "}
+                      {content?.gigs.length ?? 0}
+                    </p>
+                    <p>
+                      <span className="text-white">Media:</span>{" "}
+                      {(content?.photos.length ?? 0) +
+                        (content?.videos.length ?? 0)}
+                    </p>
+                    <p>
+                      <span className="text-white">Press:</span>{" "}
+                      {content?.press.length ?? 0}
+                    </p>
+                  </div>
+                </Card>
+              </div>
+            ) : null}
+
+            {activeTab === "albums" ? (
+              <Card className="p-6">
+                <div className="flex items-center justify-between gap-4">
+                  <h2 className="text-2xl font-semibold text-white">Albums</h2>
+                  <Button
+                    type="button"
+                    onClick={() => setShowCreateAlbumModal(true)}
+                  >
+                    Create Album
+                  </Button>
                 </div>
-                <input name="eventDate" type="date" required className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white" />
-                <input name="ticketUrl" placeholder="Ticket URL" className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white" />
-                <textarea name="description" rows={4} placeholder="Gig description" className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white" />
-                <Button type="submit" className="w-full">Add gig</Button>
-              </form>
-            </Card>
+                <div className="mt-6 grid gap-4">
+                  {content?.albums.length ? (
+                    content.albums.map((album) => (
+                      <div
+                        key={album.id}
+                        className="rounded-xl border border-white/10 bg-white/[0.03] p-4"
+                      >
+                        {editingAlbumId === album.id ? (
+                          <div className="space-y-3">
+                            <input
+                              value={albumDraft.title}
+                              onChange={(e) =>
+                                setAlbumDraft((state) => ({
+                                  ...state,
+                                  title: e.target.value,
+                                }))
+                              }
+                              placeholder="Album title"
+                              className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white"
+                            />
+                            <textarea
+                              value={albumDraft.description}
+                              onChange={(e) =>
+                                setAlbumDraft((state) => ({
+                                  ...state,
+                                  description: e.target.value,
+                                }))
+                              }
+                              rows={4}
+                              placeholder="Album description"
+                              className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white"
+                            />
+                            <div className="flex gap-3">
+                              <Button
+                                type="button"
+                                onClick={() => void saveAlbumEdit(album.id)}
+                              >
+                                Save
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => {
+                                  setEditingAlbumId(null);
+                                  setAlbumDraft({ title: "", description: "" });
+                                }}
+                              >
+                                Cancel
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => setSelectedAlbumId(album.id)}
+                            onKeyDown={(event) => {
+                              if (event.key === "Enter" || event.key === " ") {
+                                event.preventDefault();
+                                setSelectedAlbumId(album.id);
+                              }
+                            }}
+                            className="flex w-full items-start gap-4 text-left"
+                          >
+                            <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl border border-white/10 bg-white/[0.04]">
+                              {album.coverArt ? (
+                                <Image
+                                  src={album.coverArt}
+                                  alt={`${album.title} cover art`}
+                                  fill
+                                  className="object-cover"
+                                  unoptimized
+                                />
+                              ) : (
+                                <div className="flex h-full items-center justify-center text-[10px] uppercase tracking-[0.18em] text-fog">
+                                  No Art
+                                </div>
+                              )}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-start justify-between gap-4">
+                                <div className="min-w-0">
+                                  <p className="truncate text-lg text-white">
+                                    {album.title}
+                                  </p>
+                                  <p className="mt-1 text-sm text-fog">
+                                    {formatDate(album.releaseDate)}
+                                  </p>
+                                  <p className="mt-2 text-xs uppercase tracking-[0.18em] text-fog">
+                                    {
+                                      (content.songs ?? []).filter(
+                                        (song) => song.albumId === album.id,
+                                      ).length
+                                    }{" "}
+                                    tracks
+                                  </p>
+                                </div>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    setEditingAlbumId(album.id);
+                                    setAlbumDraft({
+                                      title: album.title,
+                                      description: album.description ?? "",
+                                    });
+                                  }}
+                                >
+                                  Edit
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-fog">No albums created yet.</p>
+                  )}
+                </div>
+              </Card>
+            ) : null}
 
-            <Card className="p-6">
-              <h2 className="text-2xl font-semibold text-white">Upcoming gigs</h2>
-              <div className="mt-4 grid gap-3">
-                {content?.gigs.length ? content.gigs.map((gig) => (
-                  <div key={gig.id} className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-                    <p className="text-white">{gig.title}</p>
-                    <p className="mt-1 text-sm text-fog">{[gig.venue, gig.city].filter(Boolean).join(" — ") || "Venue TBC"}</p>
-                    <p className="mt-1 text-sm text-fog">{formatDate(gig.eventDate)}</p>
-                    {gig.description ? <p className="mt-3 text-sm text-fog">{gig.description}</p> : null}
+            {activeTab === "tracks" ? (
+              <Card className="p-6">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                  <div>
+                    <h2 className="text-2xl font-semibold text-white">
+                      Track Library
+                    </h2>
+                    <p className="mt-2 text-sm text-fog">
+                      Manage your uploaded tracks, control which ones are active
+                      on your artist page, and assign them to albums.
+                    </p>
                   </div>
-                )) : <p className="text-fog">No gigs added yet.</p>}
-              </div>
-            </Card>
-          </div>
-        ) : null}
+                  <div className="flex flex-wrap gap-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setShowBulkTrackModal(true)}
+                    >
+                      Bulk Upload
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={() => {
+                        setTrackDraft({ title: "", trackNumber: "" });
+                        setTrackMetadataStatus(null);
+                        setShowCreateTrackModal(true);
+                      }}
+                    >
+                      Add Track
+                    </Button>
+                  </div>
+                </div>
 
-        {activeTab === "media" ? (
-          <div className="grid gap-6 lg:grid-cols-2">
-            <Card className="space-y-4 p-6">
-              <h2 className="text-2xl font-semibold text-white">Photos</h2>
-              <form action={async (formData) => { await uploadPhoto(formData); }} className="space-y-4">
-                <input name="alt" placeholder="Photo description" className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white" />
-                <label className="block rounded-xl border border-dashed border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-fog">
-                  Upload photo
-                  <input name="photoFile" type="file" accept="image/*" required className="mt-2 block w-full text-xs" />
-                </label>
-                <Button type="submit" className="w-full">Add photo</Button>
-              </form>
-              <div className="grid gap-3 sm:grid-cols-2">
-                {content?.photos.length ? content.photos.map((photo) => (
-                  <div key={photo.id} className="overflow-hidden rounded-xl border border-white/10 bg-white/[0.03]">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={photo.imageUrl} alt={photo.alt ?? ""} className="aspect-square w-full object-cover" />
-                    <div className="flex items-center justify-between gap-3 p-3">
-                      <p className="min-w-0 truncate text-sm text-fog">{photo.alt || "Untitled photo"}</p>
-                      <Button type="button" variant="outline" size="sm" onClick={() => void deleteMedia("photo", photo.id, "this photo")}>Delete</Button>
+                {dashboard?.artist.plan === "free" ? (
+                  <div className="mt-6 rounded-2xl border border-pink/30 bg-pink/10 p-4">
+                    <p className="text-sm font-semibold text-white">
+                      Free plan active-track limit
+                    </p>
+                    <p className="mt-2 text-sm leading-7 text-fog">
+                      You can upload as many tracks as you want, but only 5 can
+                      be active on your public artist page at one time. Extra
+                      tracks stay visible, but they are not playable until
+                      activated.
+                    </p>
+                  </div>
+                ) : null}
+
+                <div className="mt-6 flex flex-col gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4 lg:flex-row lg:items-center lg:justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-white">
+                      Bulk album assignment
+                    </p>
+                    <p className="mt-1 text-sm text-fog">
+                      Select one or more tracks, then assign them to an album in
+                      one step.
+                    </p>
+                  </div>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                    <select
+                      defaultValue=""
+                      className="min-w-[220px] rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white"
+                      onChange={(event) => {
+                        const value = event.target.value;
+                        if (!value) return;
+                        void assignSelectedTracksToAlbum(
+                          value === "none" ? null : Number(value),
+                        );
+                        event.target.value = "";
+                      }}
+                    >
+                      <option value="">Add selected to album</option>
+                      <option value="none">Remove from album</option>
+                      {(content?.albums ?? []).map((album) => (
+                        <option key={album.id} value={album.id}>
+                          {album.title}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs uppercase tracking-[0.18em] text-fog">
+                      {selectedTrackIds.length} selected
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-6 grid gap-3">
+                  {content?.songs.length ? (
+                    content.songs.map((song) => {
+                      const isSelected = selectedTrackIds.includes(song.id);
+                      return (
+                        <div
+                          key={song.id}
+                          className="rounded-xl border border-white/10 bg-white/[0.03] p-4"
+                        >
+                          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                            <div className="flex min-w-0 gap-4">
+                              <label className="mt-1 flex h-5 items-center">
+                                <input
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  onChange={(event) => {
+                                    setSelectedTrackIds((current) =>
+                                      event.target.checked
+                                        ? [...current, song.id]
+                                        : current.filter(
+                                            (id) => id !== song.id,
+                                          ),
+                                    );
+                                  }}
+                                />
+                              </label>
+                              <div className="min-w-0">
+                                <p className="truncate text-white">
+                                  {song.title}
+                                </p>
+                                <p className="mt-1 text-sm text-fog">
+                                  {song.albumId
+                                    ? (selectedAlbumTitleById.get(
+                                        song.albumId,
+                                      ) ?? "Album assigned")
+                                    : "No album"}
+                                </p>
+                                {song.description ? (
+                                  <p className="mt-3 text-sm text-fog">
+                                    {song.description}
+                                  </p>
+                                ) : null}
+                                <div className="mt-3 flex flex-wrap items-center gap-2">
+                                  <span
+                                    className={`rounded-full px-3 py-1 text-xs uppercase tracking-[0.18em] ${
+                                      song.enabled
+                                        ? "border border-pink/30 bg-pink/15 text-white"
+                                        : "border border-white/10 bg-white/[0.04] text-fog"
+                                    }`}
+                                  >
+                                    {song.enabled ? "Active" : "Inactive"}
+                                  </span>
+                                  {song.radioSelected ? (
+                                    <span className="rounded-full border border-pink/30 bg-pink/15 px-3 py-1 text-xs uppercase tracking-[0.18em] text-white">
+                                      Radio Priority
+                                    </span>
+                                  ) : null}
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex flex-wrap gap-2 lg:justify-end">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setVersionSongId(song.id)}
+                              >
+                                Add Version
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() =>
+                                  void updateTrack(
+                                    song.id,
+                                    { enabled: !song.enabled },
+                                    song.enabled
+                                      ? "Track deactivated."
+                                      : "Track activated.",
+                                  )
+                                }
+                              >
+                                {song.enabled ? "Deactivate" : "Activate"}
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                className="border-red-400/20 text-red-200 hover:border-red-400/40 hover:bg-red-500/10 hover:text-white"
+                                onClick={() =>
+                                  void deleteTrack(song.id, song.title)
+                                }
+                              >
+                                Delete
+                              </Button>
+                              <select
+                                className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-white"
+                                value={song.albumId ?? ""}
+                                onChange={(event) => {
+                                  const value = event.target.value;
+                                  void assignTrackToAlbum(
+                                    song.id,
+                                    value ? Number(value) : null,
+                                  );
+                                }}
+                              >
+                                <option value="">Add to album</option>
+                                {(content?.albums ?? []).map((album) => (
+                                  <option key={album.id} value={album.id}>
+                                    {album.title}
+                                  </option>
+                                ))}
+                              </select>
+                              {song.audioUrl ? (
+                                <a
+                                  href={song.audioUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="inline-flex h-11 items-center justify-center rounded-xl border border-white/10 px-4 text-xs uppercase tracking-[0.18em] text-fog transition hover:border-pink/40 hover:text-white"
+                                >
+                                  Preview Audio
+                                </a>
+                              ) : null}
+                            </div>
+                          </div>
+                          <div className="mt-5 border-t border-white/10 pt-4">
+                            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-pink">
+                              Recording diary
+                            </p>
+                            {(content.trackVersions ?? []).filter(
+                              (version) =>
+                                Number(version.songId) === Number(song.id),
+                            ).length ? (
+                              <div className="mt-3 space-y-3">
+                                {(content.trackVersions ?? [])
+                                  .filter(
+                                    (version) =>
+                                      Number(version.songId) ===
+                                      Number(song.id),
+                                  )
+                                  .map((version) => (
+                                    <div
+                                      key={version.id}
+                                      className="rounded-xl border border-white/10 bg-black/10 p-4"
+                                    >
+                                      <div className="flex flex-wrap items-start justify-between gap-3">
+                                        <div>
+                                          <p className="font-semibold text-white">
+                                            {version.label}
+                                          </p>
+                                          <p className="mt-1 text-xs text-fog">
+                                            {formatDate(
+                                              version.recordedAt ||
+                                                version.createdAt,
+                                            )}{" "}
+                                            · uploaded{" "}
+                                            {formatDate(version.createdAt)}
+                                          </p>
+                                        </div>
+                                        <Button
+                                          type="button"
+                                          variant="outline"
+                                          className="border-red-400/20 text-red-200"
+                                          onClick={() =>
+                                            void deleteTrackVersion(
+                                              version.id,
+                                              version.label,
+                                            )
+                                          }
+                                        >
+                                          Delete version
+                                        </Button>
+                                      </div>
+                                      <div className="mt-3">
+                                        <StreamButton
+                                          audioUrl={version.audioUrl}
+                                          label="Play version"
+                                          pauseLabel="Pause"
+                                          size="sm"
+                                          trackTitle={`${song.title} — ${version.label}`}
+                                        />
+                                      </div>
+                                      {version.notes ? (
+                                        <p className="mt-3 whitespace-pre-line text-sm leading-6 text-fog">
+                                          {version.notes}
+                                        </p>
+                                      ) : null}
+                                      {version.photos.length ? (
+                                        <div className="mt-4 flex flex-wrap gap-2">
+                                          {version.photos.map(
+                                            (photo, index) => (
+                                              <a
+                                                key={`${photo.imageUrl}-${index}`}
+                                                href={photo.imageUrl}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="relative h-20 w-20 overflow-hidden rounded-lg border border-white/10"
+                                              >
+                                                <Image
+                                                  src={photo.imageUrl}
+                                                  alt={`${version.label} setup photo ${index + 1}`}
+                                                  fill
+                                                  sizes="80px"
+                                                  className="object-cover"
+                                                  unoptimized
+                                                />
+                                              </a>
+                                            ),
+                                          )}
+                                        </div>
+                                      ) : null}
+                                    </div>
+                                  ))}
+                              </div>
+                            ) : (
+                              <p className="mt-2 text-sm text-fog">
+                                No versions yet. Add the first jam, demo, mix or
+                                master to begin the history.
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <p className="text-fog">No tracks uploaded yet.</p>
+                  )}
+                </div>
+              </Card>
+            ) : null}
+
+            {activeTab === "gigs" ? (
+              <div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
+                <Card className="space-y-4 p-6">
+                  <h2 className="text-2xl font-semibold text-white">Add gig</h2>
+                  <form
+                    action={async (formData) => {
+                      await createGig(formData);
+                    }}
+                    className="space-y-4"
+                  >
+                    <input
+                      name="title"
+                      required
+                      placeholder="Gig title"
+                      className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white"
+                    />
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <input
+                        name="venue"
+                        placeholder="Venue"
+                        className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white"
+                      />
+                      <input
+                        name="city"
+                        placeholder="City"
+                        className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white"
+                      />
                     </div>
+                    <input
+                      name="eventDate"
+                      type="date"
+                      required
+                      className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white"
+                    />
+                    <input
+                      name="ticketUrl"
+                      placeholder="Ticket URL"
+                      className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white"
+                    />
+                    <textarea
+                      name="description"
+                      rows={4}
+                      placeholder="Gig description"
+                      className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white"
+                    />
+                    <Button type="submit" className="w-full">
+                      Add gig
+                    </Button>
+                  </form>
+                </Card>
+
+                <Card className="p-6">
+                  <h2 className="text-2xl font-semibold text-white">
+                    Upcoming gigs
+                  </h2>
+                  <div className="mt-4 grid gap-3">
+                    {content?.gigs.length ? (
+                      content.gigs.map((gig) => (
+                        <div
+                          key={gig.id}
+                          className="rounded-xl border border-white/10 bg-white/[0.03] p-4"
+                        >
+                          <p className="text-white">{gig.title}</p>
+                          <p className="mt-1 text-sm text-fog">
+                            {[gig.venue, gig.city]
+                              .filter(Boolean)
+                              .join(" — ") || "Venue TBC"}
+                          </p>
+                          <p className="mt-1 text-sm text-fog">
+                            {formatDate(gig.eventDate)}
+                          </p>
+                          {gig.description ? (
+                            <p className="mt-3 text-sm text-fog">
+                              {gig.description}
+                            </p>
+                          ) : null}
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-fog">No gigs added yet.</p>
+                    )}
                   </div>
-                )) : <p className="text-fog">No photos uploaded yet.</p>}
+                </Card>
               </div>
-            </Card>
+            ) : null}
 
-            <Card className="space-y-4 p-6">
-              <h2 className="text-2xl font-semibold text-white">Videos</h2>
-              <form action={async (formData) => { await addVideo(formData); }} className="space-y-4">
-                <input name="title" required placeholder="Video title" className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white" />
-                <input name="videoUrl" required placeholder="Video URL" className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white" />
-                <input name="thumbnailUrl" placeholder="Thumbnail URL fallback" className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white" />
-                <label className="block rounded-xl border border-dashed border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-fog">
-                  Upload video thumbnail
-                  <input name="thumbnailFile" type="file" accept="image/*" className="mt-2 block w-full text-xs" />
-                </label>
-                <Button type="submit" className="w-full">Add video</Button>
-              </form>
-              <div className="grid gap-3">
-                {content?.videos.length ? content.videos.map((video) => (
-                  <div key={video.id} className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-                    <p className="text-white">{video.title}</p>
-                    {video.thumbnailUrl || getYouTubeThumbnail(video.videoUrl) ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={video.thumbnailUrl || getYouTubeThumbnail(video.videoUrl) || ""} alt="" className="mt-3 h-32 w-full rounded-xl object-cover" />
-                    ) : null}
-                    <a href={video.videoUrl ?? "#"} target="_blank" rel="noreferrer" className="mt-3 inline-block text-xs uppercase tracking-[0.18em] text-fog">
-                      View video
-                    </a>
-                    <Button type="button" variant="outline" size="sm" className="mt-3 ml-3" onClick={() => void deleteMedia("video", video.id, `“${video.title}”`)}>Delete</Button>
+            {activeTab === "media" ? (
+              <div className="grid gap-6 lg:grid-cols-2">
+                <Card className="space-y-4 p-6">
+                  <h2 className="text-2xl font-semibold text-white">Photos</h2>
+                  <form
+                    action={async (formData) => {
+                      await uploadPhoto(formData);
+                    }}
+                    className="space-y-4"
+                  >
+                    <input
+                      name="alt"
+                      placeholder="Photo description"
+                      className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white"
+                    />
+                    <label className="block rounded-xl border border-dashed border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-fog">
+                      Upload photo
+                      <input
+                        name="photoFile"
+                        type="file"
+                        accept="image/*"
+                        required
+                        className="mt-2 block w-full text-xs"
+                      />
+                    </label>
+                    <Button type="submit" className="w-full">
+                      Add photo
+                    </Button>
+                  </form>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {content?.photos.length ? (
+                      content.photos.map((photo) => (
+                        <div
+                          key={photo.id}
+                          className="overflow-hidden rounded-xl border border-white/10 bg-white/[0.03]"
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={photo.imageUrl}
+                            alt={photo.alt ?? ""}
+                            className="aspect-square w-full object-cover"
+                          />
+                          <div className="flex items-center justify-between gap-3 p-3">
+                            <p className="min-w-0 truncate text-sm text-fog">
+                              {photo.alt || "Untitled photo"}
+                            </p>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() =>
+                                void deleteMedia(
+                                  "photo",
+                                  photo.id,
+                                  "this photo",
+                                )
+                              }
+                            >
+                              Delete
+                            </Button>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-fog">No photos uploaded yet.</p>
+                    )}
                   </div>
-                )) : <p className="text-fog">No videos added yet.</p>}
-              </div>
-            </Card>
-          </div>
-        ) : null}
+                </Card>
 
-        {activeTab === "press" ? (
-          <div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
-            <Card className="space-y-4 p-6">
-              <h2 className="text-2xl font-semibold text-white">Add press item</h2>
-              <form action={async (formData) => { await addPress(formData); }} className="space-y-4">
-                <input name="title" required placeholder="Title" className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white" />
-                <input name="publication" required placeholder="Publication" className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white" />
-                <input name="date" type="date" className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white" />
-                <input name="articleLink" placeholder="Article link" className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white" />
-                <textarea name="excerpt" rows={4} placeholder="Excerpt" className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white" />
-                <input name="featureImage" placeholder="Feature image URL fallback" className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white" />
-                <label className="block rounded-xl border border-dashed border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-fog">
-                  Upload feature image
-                  <input name="featureFile" type="file" accept="image/*" className="mt-2 block w-full text-xs" />
-                </label>
-                <Button type="submit" className="w-full">Add press item</Button>
-              </form>
-            </Card>
-
-            <Card className="p-6">
-              <h2 className="text-2xl font-semibold text-white">Press coverage</h2>
-              <div className="mt-4 grid gap-3">
-                {content?.press.length ? content.press.map((item) => (
-                  <div key={item.id} className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-                    <p className="text-white">{item.title}</p>
-                    <p className="mt-1 text-sm text-fog">{item.publication} • {formatDate(item.date)}</p>
-                    {item.excerpt ? <p className="mt-3 text-sm text-fog">{item.excerpt}</p> : null}
-                    {item.articleLink ? <a href={item.articleLink} target="_blank" rel="noreferrer" className="mt-3 inline-block text-xs uppercase tracking-[0.18em] text-fog">Read article</a> : null}
+                <Card className="space-y-4 p-6">
+                  <h2 className="text-2xl font-semibold text-white">Videos</h2>
+                  <form
+                    action={async (formData) => {
+                      await addVideo(formData);
+                    }}
+                    className="space-y-4"
+                  >
+                    <input
+                      name="title"
+                      required
+                      placeholder="Video title"
+                      className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white"
+                    />
+                    <input
+                      name="videoUrl"
+                      required
+                      placeholder="Video URL"
+                      className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white"
+                    />
+                    <input
+                      name="thumbnailUrl"
+                      placeholder="Thumbnail URL fallback"
+                      className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white"
+                    />
+                    <label className="block rounded-xl border border-dashed border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-fog">
+                      Upload video thumbnail
+                      <input
+                        name="thumbnailFile"
+                        type="file"
+                        accept="image/*"
+                        className="mt-2 block w-full text-xs"
+                      />
+                    </label>
+                    <Button type="submit" className="w-full">
+                      Add video
+                    </Button>
+                  </form>
+                  <div className="grid gap-3">
+                    {content?.videos.length ? (
+                      content.videos.map((video) => (
+                        <div
+                          key={video.id}
+                          className="rounded-xl border border-white/10 bg-white/[0.03] p-4"
+                        >
+                          <p className="text-white">{video.title}</p>
+                          {video.thumbnailUrl ||
+                          getYouTubeThumbnail(video.videoUrl) ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={
+                                video.thumbnailUrl ||
+                                getYouTubeThumbnail(video.videoUrl) ||
+                                ""
+                              }
+                              alt=""
+                              className="mt-3 h-32 w-full rounded-xl object-cover"
+                            />
+                          ) : null}
+                          <a
+                            href={video.videoUrl ?? "#"}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="mt-3 inline-block text-xs uppercase tracking-[0.18em] text-fog"
+                          >
+                            View video
+                          </a>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="mt-3 ml-3"
+                            onClick={() =>
+                              void deleteMedia(
+                                "video",
+                                video.id,
+                                `“${video.title}”`,
+                              )
+                            }
+                          >
+                            Delete
+                          </Button>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-fog">No videos added yet.</p>
+                    )}
                   </div>
-                )) : <p className="text-fog">No press items added yet.</p>}
+                </Card>
               </div>
-            </Card>
-          </div>
-        ) : null}
+            ) : null}
 
-        {activeTab === "settings" ? (
-          <Card className="space-y-4 p-6">
-            <h2 className="text-2xl font-semibold text-white">Settings</h2>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-                <p className="text-fog">Plan</p>
-                <p className="mt-2 text-white">{dashboard?.artist.plan ?? "free"}</p>
+            {activeTab === "press" ? (
+              <div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
+                <Card className="space-y-4 p-6">
+                  <h2 className="text-2xl font-semibold text-white">
+                    Add press item
+                  </h2>
+                  <form
+                    action={async (formData) => {
+                      await addPress(formData);
+                    }}
+                    className="space-y-4"
+                  >
+                    <input
+                      name="title"
+                      required
+                      placeholder="Title"
+                      className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white"
+                    />
+                    <input
+                      name="publication"
+                      required
+                      placeholder="Publication"
+                      className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white"
+                    />
+                    <input
+                      name="date"
+                      type="date"
+                      className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white"
+                    />
+                    <input
+                      name="articleLink"
+                      placeholder="Article link"
+                      className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white"
+                    />
+                    <textarea
+                      name="excerpt"
+                      rows={4}
+                      placeholder="Excerpt"
+                      className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white"
+                    />
+                    <input
+                      name="featureImage"
+                      placeholder="Feature image URL fallback"
+                      className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white"
+                    />
+                    <label className="block rounded-xl border border-dashed border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-fog">
+                      Upload feature image
+                      <input
+                        name="featureFile"
+                        type="file"
+                        accept="image/*"
+                        className="mt-2 block w-full text-xs"
+                      />
+                    </label>
+                    <Button type="submit" className="w-full">
+                      Add press item
+                    </Button>
+                  </form>
+                </Card>
+
+                <Card className="p-6">
+                  <h2 className="text-2xl font-semibold text-white">
+                    Press coverage
+                  </h2>
+                  <div className="mt-4 grid gap-3">
+                    {content?.press.length ? (
+                      content.press.map((item) => (
+                        <div
+                          key={item.id}
+                          className="rounded-xl border border-white/10 bg-white/[0.03] p-4"
+                        >
+                          <p className="text-white">{item.title}</p>
+                          <p className="mt-1 text-sm text-fog">
+                            {item.publication} • {formatDate(item.date)}
+                          </p>
+                          {item.excerpt ? (
+                            <p className="mt-3 text-sm text-fog">
+                              {item.excerpt}
+                            </p>
+                          ) : null}
+                          {item.articleLink ? (
+                            <a
+                              href={item.articleLink}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="mt-3 inline-block text-xs uppercase tracking-[0.18em] text-fog"
+                            >
+                              Read article
+                            </a>
+                          ) : null}
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-fog">No press items added yet.</p>
+                    )}
+                  </div>
+                </Card>
               </div>
-              <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
-                <p className="text-fog">Public URL</p>
-                <p className="mt-2 text-white">/artist/{dashboard?.artist.slug ?? profile.slug}</p>
-              </div>
-            </div>
-            <p className="text-sm text-fog">
-              This CMS controls the artist content shown on your public page. Radio placement remains curated by Fully Open Records staff.
-            </p>
-          </Card>
-        ) : null}
-      </section>
-    </Container></div>
+            ) : null}
+
+            {activeTab === "settings" ? (
+              <Card className="space-y-4 p-6">
+                <h2 className="text-2xl font-semibold text-white">Settings</h2>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                    <p className="text-fog">Plan</p>
+                    <p className="mt-2 text-white">
+                      {dashboard?.artist.plan ?? "free"}
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                    <p className="text-fog">Public URL</p>
+                    <p className="mt-2 text-white">
+                      /artist/{dashboard?.artist.slug ?? profile.slug}
+                    </p>
+                  </div>
+                </div>
+                <p className="text-sm text-fog">
+                  This CMS controls the artist content shown on your public
+                  page. Radio placement remains curated by Fully Open Records
+                  staff.
+                </p>
+              </Card>
+            ) : null}
+          </section>
+        </Container>
+      </div>
     </>
   );
 }

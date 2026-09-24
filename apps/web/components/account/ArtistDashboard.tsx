@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ElementType } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useAuth } from "../auth/AuthProvider";
@@ -10,6 +10,7 @@ import { getYouTubeThumbnail } from "../../lib/videoThumbnail";
 import { Card } from "../ui/card";
 import StreamButton from "../audio/StreamButton";
 import ShareFullyOpen from "../share/ShareFullyOpen";
+import { Bell, CalendarDays, ChevronLeft, ChevronRight, CirclePlus, Disc3, FileAudio, Menu, Music2, Radio, UserRound, Video, X } from "lucide-react";
 
 const TRACK_VERSION_TYPES = ["First Jam", "Song Idea", "Demo", "Rehearsal", "Live Recording", "Home Recording", "Studio Recording", "Rough Mix", "Mix", "Pre-Master", "Master", "Final Master"] as const;
 
@@ -193,6 +194,15 @@ export default function ArtistDashboard() {
   const [albumTrackDraft, setAlbumTrackDraft] = useState<ContentData["songs"]>([]);
   const [draggedTrackId, setDraggedTrackId] = useState<number | null>(null);
   const [selectedTrackIds, setSelectedTrackIds] = useState<number[]>([]);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileUploadStep, setMobileUploadStep] = useState<number | null>(null);
+  const [mobileAudioFile, setMobileAudioFile] = useState<File | null>(null);
+  const [mobileArtworkFile, setMobileArtworkFile] = useState<File | null>(null);
+  const [mobileUploadMode, setMobileUploadMode] = useState<"new" | "version">("new");
+  const [mobileVersionSongId, setMobileVersionSongId] = useState<number | null>(null);
+  const [mobileTrack, setMobileTrack] = useState({ title: "", genre: "", description: "", versionType: "Mix", versionName: "", notes: "" });
+  const [mobileUploadComplete, setMobileUploadComplete] = useState(false);
+  const mobileAudioInput = useRef<HTMLInputElement>(null);
   const latestLoadRequest = useRef(0);
   const [albumDraft, setAlbumDraft] = useState<{ title: string; description: string }>({
     title: "",
@@ -461,22 +471,25 @@ export default function ArtistDashboard() {
         setTrackDraft({ title: "", trackNumber: "" });
         setTrackMetadataStatus(null);
         await loadData();
+        return true;
       } else {
         setMessage(payload.error ?? "Track upload failed.");
+        return false;
       }
     } catch (error) {
       setUploading(null);
       setUploadPercent(0);
       setMessage(error instanceof Error ? error.message : "Track upload failed.");
+      return false;
     }
   }
 
-  async function addTrackVersion(formData: FormData) {
-    const songId = versionSongId;
+  async function addTrackVersion(formData: FormData, songIdOverride?: number) {
+    const songId = songIdOverride ?? versionSongId;
     const audioFile = formData.get("audioFile");
     if (!songId || !(audioFile instanceof File) || audioFile.size === 0) {
       setMessage("Choose an audio file for this version.");
-      return;
+      return false;
     }
     try {
       const versionType = String(formData.get("versionType") ?? "Demo");
@@ -509,10 +522,13 @@ export default function ArtistDashboard() {
         );
         setVersionSongId(null);
         await loadData();
+        return true;
       }
+      return false;
       void metadata;
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Version upload failed.");
+      return false;
     } finally { setUploading(null); setUploadPercent(0); }
   }
 
@@ -550,6 +566,31 @@ export default function ArtistDashboard() {
       trackNumber: details.trackNumber && details.trackNumber > 0 ? String(details.trackNumber) : ""
     });
     setTrackMetadataStatus(details.foundEmbeddedMetadata ? "Title and track number filled from the audio file." : "No embedded metadata found; filled from the filename.");
+  }
+
+  async function submitMobileUpload() {
+    if (!mobileAudioFile) {
+      setMessage("Choose an audio file first.");
+      setMobileUploadStep(1);
+      return;
+    }
+
+    const formData = new FormData();
+    formData.set("audioFile", mobileAudioFile);
+    formData.set("title", mobileTrack.title || parseBulkTrackFilename(mobileAudioFile.name).title);
+    formData.set("description", [mobileTrack.genre && `Genre: ${mobileTrack.genre}`, mobileTrack.description].filter(Boolean).join("\n\n"));
+    formData.set("enabled", "on");
+    if (mobileArtworkFile) formData.set("coverFile", mobileArtworkFile);
+
+    if (mobileUploadMode === "version") {
+      formData.set("versionType", mobileTrack.versionType);
+      formData.set("notes", [mobileTrack.versionName && `Version name: ${mobileTrack.versionName}`, mobileTrack.notes].filter(Boolean).join("\n\n"));
+    }
+    const saved = mobileUploadMode === "version" && mobileVersionSongId
+      ? await addTrackVersion(formData, mobileVersionSongId)
+      : await uploadSong(formData);
+
+    if (saved) setMobileUploadComplete(true);
   }
 
   async function bulkUploadSongs(formData: FormData) {
@@ -976,8 +1017,42 @@ export default function ArtistDashboard() {
     );
   }
 
+  const mobileTrackTitle = mobileTrack.title || (mobileAudioFile ? parseBulkTrackFilename(mobileAudioFile.name).title : "Untitled track");
+  const mobileCloseUpload = () => {
+    setMobileUploadStep(null); setMobileUploadComplete(false); setMobileAudioFile(null); setMobileArtworkFile(null);
+    setMobileTrack({ title: "", genre: "", description: "", versionType: "Mix", versionName: "", notes: "" });
+  };
+
   return (
-    <Container>
+    <>
+      <div className="min-h-dvh pb-24 md:hidden">
+        <header className="sticky top-0 z-30 flex items-center justify-between border-b border-sky-300/15 bg-[#040d1d]/90 px-4 py-3 backdrop-blur-xl">
+          <Link href="/" className="font-display text-sm font-bold tracking-[0.1em] text-white">◉ FULLY OPEN<span className="block text-[9px] tracking-[0.32em] text-sky-200">RECORDS</span></Link>
+          <div className="flex items-center gap-2"><button aria-label="Notifications" className="rounded-xl border border-white/10 p-2 text-sky-100"><Bell size={18} /></button><button aria-label="Open menu" onClick={() => setMobileMenuOpen(true)} className="rounded-xl border border-white/10 p-2 text-sky-100"><Menu size={18} /></button></div>
+        </header>
+        <main className="px-4 pt-5">
+          {activeTab !== "profile" ? <section><div className="flex items-center justify-between"><div><p className="text-xs uppercase tracking-[.2em] text-sky-300">Artist dashboard</p><h1 className="mt-1 text-2xl font-semibold text-white">{activeTab === "tracks" ? "Your Music" : activeTab === "albums" ? "Your Releases" : activeTab === "gigs" ? "Upcoming Gigs" : activeTab === "media" ? "Media" : "Your Profile"}</h1></div><button onClick={() => setActiveTab("profile")} className="text-sm text-sky-300">Home</button></div>{activeTab === "tracks" ? <><button onClick={() => setMobileUploadStep(1)} className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-sky-500 font-semibold"><CirclePlus size={18} /> Upload track</button><div className="mt-4 space-y-2">{content?.songs.map((song) => <div key={song.id} className="flex items-center gap-3 rounded-xl border border-sky-100/10 bg-[#07172c] p-3"><Music2 className="text-sky-300" /><div className="min-w-0 flex-1"><p className="truncate text-sm text-white">{song.title}</p><p className="text-xs text-sky-100/60">{song.enabled ? "Active" : "Inactive"}</p></div><ChevronRight size={17} className="text-sky-200" /></div>) || <p className="mt-4 text-sm text-sky-100/60">No tracks yet.</p>}</div></> : null}{activeTab === "albums" ? <><button onClick={() => setShowCreateAlbumModal(true)} className="mt-5 h-12 w-full rounded-xl bg-sky-500 font-semibold">+ New release</button><div className="mt-4 space-y-2">{content?.albums.map((album) => <div key={album.id} className="rounded-xl border border-sky-100/10 bg-[#07172c] p-3"><p className="text-sm text-white">{album.title}</p><p className="mt-1 text-xs text-sky-100/60">{formatDate(album.releaseDate)}</p></div>) || <p className="text-sm text-sky-100/60">No releases yet.</p>}</div></> : null}{activeTab === "gigs" ? <><button onClick={() => setActiveTab("profile")} className="mt-5 h-12 w-full rounded-xl bg-sky-500 font-semibold">+ Add gig</button><div className="mt-4 space-y-2">{content?.gigs.map((gig) => <div key={gig.id} className="rounded-xl border border-sky-100/10 bg-[#07172c] p-3"><p className="text-sm text-white">{gig.title}</p><p className="mt-1 text-xs text-sky-100/60">{formatDate(gig.eventDate)} · {gig.venue || gig.city || "Venue TBC"}</p></div>) || <p className="text-sm text-sky-100/60">No gigs yet.</p>}</div></> : null}{activeTab === "media" ? <div className="mt-5 rounded-xl border border-sky-100/10 bg-[#07172c] p-4 text-sm text-sky-100/60">{content?.photos.length ?? 0} photos and {content?.videos.length ?? 0} videos. Use the desktop editor for detailed media management.</div> : null}</section> : <>
+          <section className="rounded-3xl border border-sky-200/15 bg-[radial-gradient(circle_at_80%_20%,rgba(42,139,229,.25),transparent_35%),rgba(5,16,34,.88)] p-4 shadow-2xl">
+            <div className="flex items-center gap-3">
+              <div className="relative h-16 w-16 overflow-hidden rounded-full border border-sky-200/40 bg-sky-950">{profile.profileImage || profile.heroImage ? <Image src={profile.profileImage || profile.heroImage} alt="Artist" fill className="object-cover" unoptimized /> : <Music2 className="m-5 text-sky-200" />}</div>
+              <div className="min-w-0"><p className="text-xs text-sky-100">Hi {user.username}</p><h1 className="truncate text-2xl font-semibold text-white">{dashboard?.artist.name ?? user.username}</h1><a href={`/${dashboard?.artist.slug ?? profile.slug}`} className="text-xs text-sky-300">View public page →</a></div>
+            </div>
+            <button onClick={() => setMobileMenuOpen(true)} className="mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-sky-500 to-blue-500 text-sm font-semibold text-white shadow-[0_0_24px_rgba(54,159,255,.35)]"><CirclePlus size={19} /> ADD MUSIC</button>
+          </section>
+          <section className="mt-4 grid grid-cols-4 gap-2">
+            {[
+              [Music2, "Upload", () => setMobileMenuOpen(true)], [Disc3, "Release", () => { setActiveTab("albums"); }], [CalendarDays, "Gig", () => setActiveTab("gigs")], [Video, "Video", () => setActiveTab("media")]
+            ].map(([Icon, label, action]) => { const ActionIcon = Icon as ElementType; return <button key={String(label)} onClick={action as () => void} className="rounded-xl border border-sky-100/10 bg-[#07172c]/90 py-3 text-center text-[10px] text-sky-100"><ActionIcon className="mx-auto mb-1 text-sky-300" size={19} />{String(label)}</button>; })}
+          </section>
+          <section className="mt-6"><div className="flex items-center justify-between"><h2 className="text-lg font-semibold text-white">Your Music</h2><button onClick={() => setActiveTab("tracks")} className="text-xs text-sky-300">View all →</button></div><div className="mt-3 space-y-2">{content?.songs.slice(0, 3).map((song) => <button key={song.id} onClick={() => setActiveTab("tracks")} className="flex w-full items-center gap-3 rounded-xl border border-sky-100/10 bg-[#07172c]/90 p-2 text-left"><div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-sky-950">{song.coverImage ? <Image src={song.coverImage} alt="" fill className="object-cover" unoptimized /> : <Music2 className="m-3 text-sky-300" />}</div><span className="min-w-0 flex-1"><span className="block truncate text-sm text-white">{song.title}</span><span className="text-xs text-sky-100/60">{song.description || "Track"}</span></span><ChevronRight size={17} className="text-sky-200" /></button>) || <p className="rounded-xl border border-dashed border-white/10 p-4 text-sm text-sky-100/60">Your uploaded tracks will appear here.</p>}</div></section>
+          <section className="mt-6"><div className="flex items-center justify-between"><h2 className="text-lg font-semibold text-white">Upcoming Gigs</h2><button onClick={() => setActiveTab("gigs")} className="text-xs text-sky-300">View all →</button></div><div className="mt-3 space-y-2">{content?.gigs.slice(0, 2).map((gig) => <button key={gig.id} onClick={() => setActiveTab("gigs")} className="flex w-full items-center gap-3 rounded-xl border border-sky-100/10 bg-[#07172c]/90 p-3 text-left"><span className="rounded-lg bg-sky-400/15 px-2 py-1 text-center text-xs text-sky-200">{formatDate(gig.eventDate).slice(8)}<br />{formatDate(gig.eventDate).slice(5, 7)}</span><span><span className="block text-sm text-white">{gig.title}</span><span className="text-xs text-sky-100/60">{gig.venue || gig.city || "Venue TBC"}</span></span></button>) || <button onClick={() => setActiveTab("gigs")} className="w-full rounded-xl border border-dashed border-white/10 p-4 text-sm text-sky-100/60">Add your first gig</button>}</div></section></>}
+        </main>
+        <nav className="fixed inset-x-0 bottom-0 z-30 flex h-[72px] items-center justify-around border-t border-sky-100/15 bg-[#040d1d]/95 px-2 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl"><button onClick={() => setActiveTab("profile")} className="flex flex-col items-center text-[10px] text-sky-300"><UserRound size={19} />Home</button><button onClick={() => setActiveTab("tracks")} className="flex flex-col items-center text-[10px] text-sky-100"><Music2 size={19} />Music</button><button onClick={() => setMobileMenuOpen(true)} className="-mt-7 flex h-14 w-14 items-center justify-center rounded-full bg-sky-500 text-white shadow-[0_0_25px_rgba(54,159,255,.7)]"><CirclePlus size={28} /></button><a href="/radio" className="flex flex-col items-center text-[10px] text-sky-100"><Radio size={19} />Radio</a><button onClick={() => setMobileMenuOpen(true)} className="flex flex-col items-center text-[10px] text-sky-100"><Menu size={19} />Menu</button></nav>
+        {mobileMenuOpen ? <div className="fixed inset-0 z-40 flex items-end bg-black/65" onClick={() => setMobileMenuOpen(false)}><section onClick={(event) => event.stopPropagation()} className="w-full rounded-t-3xl border-t border-sky-200/20 bg-[#06162a] p-5 pb-8"><div className="mx-auto mb-5 h-1 w-10 rounded-full bg-white/30" /><div className="flex items-center justify-between"><h2 className="text-lg font-semibold text-white">Create something new</h2><button onClick={() => setMobileMenuOpen(false)}><X className="text-sky-100" /></button></div><div className="mt-4 space-y-3"><button onClick={() => { setMobileMenuOpen(false); setMobileUploadStep(1); }} className="flex w-full items-center gap-3 rounded-xl border border-sky-300/20 bg-sky-500/10 p-4 text-left"><FileAudio className="text-sky-300" /><span><b className="block text-sm text-white">Upload Track</b><small className="text-sky-100/60">Add a new track or version</small></span></button><button onClick={() => { setMobileMenuOpen(false); setActiveTab("albums"); }} className="flex w-full items-center gap-3 rounded-xl border border-white/10 p-4 text-left"><Disc3 className="text-sky-300" /><span className="text-sm text-white">Create Release</span></button><button onClick={() => { setMobileMenuOpen(false); setActiveTab("gigs"); }} className="flex w-full items-center gap-3 rounded-xl border border-white/10 p-4 text-left"><CalendarDays className="text-sky-300" /><span className="text-sm text-white">Add Gig</span></button></div></section></div> : null}
+        {mobileUploadStep ? <div className="fixed inset-0 z-50 flex min-h-dvh flex-col bg-[#040d1d] text-white"><header className="flex items-center justify-between border-b border-sky-100/15 px-4 py-4"><button onClick={() => mobileUploadStep === 1 ? mobileCloseUpload() : setMobileUploadStep(mobileUploadStep - 1)}><ChevronLeft /></button><b>Add a Track</b><button onClick={mobileCloseUpload}><X /></button></header><div className="px-5 pt-4"><div className="flex items-start justify-between">{["Audio", "Details", "Version", "Review"].map((label, i) => <div key={label} className="flex flex-1 flex-col items-center gap-1 text-[10px] text-sky-100/70"><span className={`flex h-7 w-7 items-center justify-center rounded-full border ${mobileUploadStep === i + 1 ? "border-sky-300 bg-sky-500 text-white" : mobileUploadStep > i + 1 ? "border-sky-400 bg-sky-400 text-slate-950" : "border-sky-100/30"}`}>{i + 1}</span>{label}</div>)}</div></div><div className="flex-1 overflow-y-auto px-5 py-6 pb-28">{mobileUploadStep === 1 ? <><p className="text-xs text-sky-200">Step 1 of 4</p><h2 className="mt-1 text-2xl font-semibold">Add your audio</h2><p className="mt-2 text-sm text-sky-100/65">Upload your track. We support WAV, MP3, FLAC and more.</p><input ref={mobileAudioInput} type="file" accept="audio/*" className="sr-only" onChange={async (e) => { const file = e.target.files?.[0]; if (!file) return; setMobileAudioFile(file); const metadata = await getTrackDetailsFromAudio(file); setMobileTrack((track) => ({ ...track, title: metadata.title })); }} /><button onClick={() => mobileAudioInput.current?.click()} className="mt-7 flex min-h-40 w-full flex-col items-center justify-center rounded-xl border border-dashed border-sky-300/50 bg-sky-500/5 text-sky-200"><FileAudio size={30} /><b className="mt-3">Choose audio file</b><small className="mt-1 text-sky-100/60">Max file size 2GB</small></button>{mobileAudioFile ? <div className="mt-3 flex items-center gap-3 rounded-xl border border-sky-300/20 bg-sky-500/10 p-3"><FileAudio className="text-sky-300" /><span className="min-w-0 flex-1 truncate text-sm">{mobileAudioFile.name}</span><button onClick={() => setMobileAudioFile(null)}><X size={16} /></button></div> : null}</> : null}{mobileUploadStep === 2 ? <><p className="text-xs text-sky-200">Step 2 of 4</p><h2 className="mt-1 text-2xl font-semibold">Track details</h2><div className="mt-6 space-y-4"><input value={mobileTrack.title} onChange={(e) => setMobileTrack({ ...mobileTrack, title: e.target.value })} placeholder="Track title" className="w-full rounded-xl border border-sky-100/20 bg-white/5 px-4 py-3" /><input value={mobileTrack.genre} onChange={(e) => setMobileTrack({ ...mobileTrack, genre: e.target.value })} placeholder="Genre" className="w-full rounded-xl border border-sky-100/20 bg-white/5 px-4 py-3" /><textarea value={mobileTrack.description} onChange={(e) => setMobileTrack({ ...mobileTrack, description: e.target.value })} rows={4} placeholder="Description" className="w-full rounded-xl border border-sky-100/20 bg-white/5 px-4 py-3" /><label className="block text-sm text-sky-100">Track artwork<input type="file" accept="image/*" onChange={(e) => setMobileArtworkFile(e.target.files?.[0] ?? null)} className="mt-2 block w-full text-xs" /></label></div></> : null}{mobileUploadStep === 3 ? <><p className="text-xs text-sky-200">Step 3 of 4</p><h2 className="mt-1 text-2xl font-semibold">Version & release</h2><div className="mt-6 space-y-4"><label className="flex gap-3 rounded-xl border border-sky-300/30 bg-sky-500/10 p-4"><input type="radio" checked={mobileUploadMode === "new"} onChange={() => setMobileUploadMode("new")} /> <span><b className="block">Create new track</b><small className="text-sky-100/60">Add this as a new track</small></span></label><label className="flex gap-3 rounded-xl border border-white/10 p-4"><input type="radio" checked={mobileUploadMode === "version"} onChange={() => setMobileUploadMode("version")} /> <span><b className="block">Add as new version</b><small className="text-sky-100/60">Keep the recording history together</small></span></label>{mobileUploadMode === "version" ? <><select value={mobileVersionSongId ?? ""} onChange={(e) => setMobileVersionSongId(Number(e.target.value) || null)} className="w-full rounded-xl border border-sky-100/20 bg-[#07172c] px-4 py-3"><option value="">Choose existing track</option>{content?.songs.map((song) => <option key={song.id} value={song.id}>{song.title}</option>)}</select><select value={mobileTrack.versionType} onChange={(e) => setMobileTrack({ ...mobileTrack, versionType: e.target.value })} className="w-full rounded-xl border border-sky-100/20 bg-[#07172c] px-4 py-3">{TRACK_VERSION_TYPES.map((type) => <option key={type}>{type}</option>)}</select><input value={mobileTrack.versionName} onChange={(e) => setMobileTrack({ ...mobileTrack, versionName: e.target.value })} placeholder="Version name (optional)" className="w-full rounded-xl border border-sky-100/20 bg-white/5 px-4 py-3" /><textarea value={mobileTrack.notes} onChange={(e) => setMobileTrack({ ...mobileTrack, notes: e.target.value })} placeholder="Notes (optional)" className="w-full rounded-xl border border-sky-100/20 bg-white/5 px-4 py-3" /></> : null}</div></> : null}{mobileUploadStep === 4 ? <><p className="text-xs text-sky-200">Step 4 of 4</p><h2 className="mt-1 text-2xl font-semibold">Review & upload</h2><div className="mt-6 rounded-xl border border-sky-200/15 bg-sky-500/5 p-4"><p className="font-semibold">{mobileTrackTitle}</p><p className="mt-1 text-sm text-sky-100/65">{mobileTrack.genre || "No genre"} · {mobileAudioFile ? `${(mobileAudioFile.size / 1024 / 1024).toFixed(1)} MB` : "No audio"}</p><p className="mt-4 text-xs uppercase tracking-wider text-sky-300">{mobileUploadMode === "version" ? `${mobileTrack.versionType} version` : "New track"}</p>{mobileTrack.description ? <p className="mt-2 text-sm text-sky-100/70">{mobileTrack.description}</p> : null}</div></> : null}</div><footer className="fixed inset-x-0 bottom-0 flex gap-3 border-t border-sky-100/15 bg-[#040d1d]/95 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]"><button onClick={() => mobileUploadStep === 1 ? mobileCloseUpload() : setMobileUploadStep(mobileUploadStep - 1)} className="h-12 px-3 text-sm text-sky-100">{mobileUploadStep === 1 ? "Cancel" : "← Back"}</button><button disabled={(mobileUploadStep === 1 && !mobileAudioFile) || (mobileUploadStep === 3 && mobileUploadMode === "version" && !mobileVersionSongId)} onClick={() => mobileUploadStep === 4 ? void submitMobileUpload() : setMobileUploadStep(mobileUploadStep + 1)} className="ml-auto h-12 flex-1 rounded-xl bg-sky-500 text-sm font-semibold disabled:opacity-40">{mobileUploadStep === 4 ? "Upload to Fully Open" : "Continue →"}</button></footer></div> : null}
+        {mobileUploadComplete ? <div className="fixed inset-0 z-[60] flex items-center justify-center bg-[#040d1d] p-6 text-center"><div><div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border-2 border-sky-300 text-3xl text-sky-300">✓</div><h2 className="mt-5 text-2xl font-semibold text-white">Track uploaded</h2><p className="mt-2 text-sm text-sky-100/65">Your track has been added to your artist page.</p><button onClick={mobileCloseUpload} className="mt-6 h-12 w-full rounded-xl bg-sky-500 font-semibold">View Tracks →</button><button onClick={() => { mobileCloseUpload(); setMobileUploadStep(1); }} className="mt-3 w-full text-sm text-sky-200">Add another track</button></div></div> : null}
+      </div>
+      <div className="hidden md:block"><Container>
       <section className="space-y-8 py-20">
         {albumCreated ? (
           <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm">
@@ -1871,6 +1946,7 @@ export default function ArtistDashboard() {
           </Card>
         ) : null}
       </section>
-    </Container>
+    </Container></div>
+    </>
   );
 }

@@ -1,5 +1,6 @@
 import { and, desc, eq, gte, isNotNull, lt, ne } from "drizzle-orm";
 import {
+  accountEmailNotifications,
   artistEngagementEmailHistory,
   artistEngagementOpportunities,
   artistEngagementPreferences,
@@ -648,16 +649,59 @@ export async function loadArtistEngagementState(env: Env, artistId: number) {
 }
 
 async function loadHistory(env: Env, artistId: number): Promise<HistoryItem[]> {
-  const rows = await getDb(env)
-    .select()
-    .from(artistEngagementEmailHistory)
-    .where(eq(artistEngagementEmailHistory.artistId, artistId))
-    .orderBy(
-      desc(artistEngagementEmailHistory.sentAt),
-      desc(artistEngagementEmailHistory.id),
-    )
-    .limit(100);
-  return rows as HistoryItem[];
+  const db = getDb(env);
+  const [rows, welcomeRows] = await Promise.all([
+    db
+      .select()
+      .from(artistEngagementEmailHistory)
+      .where(eq(artistEngagementEmailHistory.artistId, artistId))
+      .orderBy(
+        desc(artistEngagementEmailHistory.sentAt),
+        desc(artistEngagementEmailHistory.id),
+      )
+      .limit(100),
+    db
+      .select({
+        id: accountEmailNotifications.id,
+        sentAt: accountEmailNotifications.sentAt,
+        deliveryStatus: accountEmailNotifications.deliveryStatus,
+        postmarkMessageId: accountEmailNotifications.postmarkMessageId,
+      })
+      .from(accountEmailNotifications)
+      .innerJoin(users, eq(accountEmailNotifications.userId, users.id))
+      .innerJoin(artists, eq(artists.userId, users.id))
+      .where(
+        and(
+          eq(accountEmailNotifications.notificationType, "artist_getting_started"),
+          eq(accountEmailNotifications.status, "sent"),
+          isNotNull(accountEmailNotifications.sentAt),
+          eq(artists.id, artistId),
+        ),
+      ),
+  ]);
+  const welcomeHistory: HistoryItem[] = welcomeRows.flatMap((row) =>
+    row.sentAt
+      ? [
+          {
+            id: -row.id,
+            emailId: "artist-getting-started",
+            category: "nurture",
+            theme: "artist-welcome",
+            sentAt: row.sentAt,
+            triggerReason: "Existing artist getting-started email.",
+            stateSnapshot: {},
+            sendStatus: "sent",
+            deliveryStatus: row.deliveryStatus,
+            postmarkMessageId: row.postmarkMessageId,
+            error: null,
+            triggerKey: null,
+          },
+        ]
+      : [],
+  );
+  return [...(rows as HistoryItem[]), ...welcomeHistory].sort(
+    (a, b) => (b.sentAt ?? "").localeCompare(a.sentAt ?? ""),
+  );
 }
 
 async function loadOpportunities(env: Env, now: Date): Promise<Opportunity[]> {
@@ -1383,6 +1427,7 @@ export async function getArtistEngagementAudience(
   const [
     states,
     historyRows,
+    welcomeRows,
     preferenceRows,
     definitions,
     opportunities,
@@ -1400,6 +1445,24 @@ export async function getArtistEngagementAudience(
         ),
       )
       .orderBy(desc(artistEngagementEmailHistory.sentAt)),
+    getDb(env)
+      .select({
+        id: accountEmailNotifications.id,
+        artistId: artists.id,
+        sentAt: accountEmailNotifications.sentAt,
+        deliveryStatus: accountEmailNotifications.deliveryStatus,
+        postmarkMessageId: accountEmailNotifications.postmarkMessageId,
+      })
+      .from(accountEmailNotifications)
+      .innerJoin(users, eq(accountEmailNotifications.userId, users.id))
+      .innerJoin(artists, eq(artists.userId, users.id))
+      .where(
+        and(
+          eq(accountEmailNotifications.notificationType, "artist_getting_started"),
+          eq(accountEmailNotifications.status, "sent"),
+          isNotNull(accountEmailNotifications.sentAt),
+        ),
+      ),
     getDb(env).select().from(artistEngagementPreferences),
     loadEngagementCampaignDefinitions(env),
     loadOpportunities(env, at),
@@ -1426,6 +1489,25 @@ export async function getArtistEngagementAudience(
   for (const row of historyRows) {
     const history = historiesByArtist.get(row.artistId) ?? [];
     history.push(row as unknown as HistoryItem);
+    historiesByArtist.set(row.artistId, history);
+  }
+  for (const row of welcomeRows) {
+    if (!row.sentAt) continue;
+    const history = historiesByArtist.get(row.artistId) ?? [];
+    history.push({
+      id: -row.id,
+      emailId: "artist-getting-started",
+      category: "nurture",
+      theme: "artist-welcome",
+      sentAt: row.sentAt,
+      triggerReason: "Existing artist getting-started email.",
+      stateSnapshot: {},
+      sendStatus: "sent",
+      deliveryStatus: row.deliveryStatus,
+      postmarkMessageId: row.postmarkMessageId,
+      error: null,
+      triggerKey: null,
+    });
     historiesByArtist.set(row.artistId, history);
   }
   const preferences = new Map(preferenceRows.map((row) => [row.artistId, row]));
@@ -1553,7 +1635,8 @@ export async function getArtistEngagementAudience(
       socialLinkCount: state.socialLinkCount,
       lastMeaningfulActivity: state.lastMeaningfulActivity,
       lastLogin: state.lastLogin,
-      neverReturnedAfterRegistration: !state.lastLogin,
+      neverReturnedAfterRegistration:
+        !state.lastLogin && !state.lastMeaningfulActivity,
       active: state.active,
       contactable,
       suppressed: Boolean(
@@ -1678,7 +1761,7 @@ export async function getArtistEngagementAudience(
   return {
     generatedAt: at.toISOString(),
     activityDefinition:
-      "Last meaningful activity is the latest successful auth.login.succeeded or latest recorded artist profile/content/version event (profile edits/claims; track/release/gig/video/photo/press/Version Control actions; media uploads). Public page views and registration are excluded. ‘Never returned’ means no auth.login.succeeded event is recorded; historic logins before event logging may be unknown. Legacy imported content has no reliable historic edit time unless a corresponding flow event exists.",
+      "Last meaningful activity is the latest successful auth.login.succeeded or latest recorded artist profile/content/version event (profile edits/claims; track/release/gig/video/photo/press/Version Control actions; media uploads). Public page views and registration are excluded. ‘Never returned’ means no successful-login or meaningful artist-action event is recorded; successful-login tracking starts with this release, so older login dates cannot be reconstructed. Legacy imported content has no reliable historic edit time unless a corresponding flow event exists.",
     buckets: byBucket,
     coverage,
     artists: rows.map(

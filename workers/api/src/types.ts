@@ -30,4 +30,5 @@ export type Env = {
   RADIO_STREAM_URL: string;
   RADIO_METADATA_URL?: string;
   RADIO_EMBED_URL?: string;
+  ARTIST_ENGAGEMENT_ENABLED?: string;
 };

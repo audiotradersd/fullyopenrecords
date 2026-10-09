@@ -47,10 +47,12 @@ import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { Hono } from "hono";
 import { fallbackContent } from "../lib/content";
 import { generateRandomToken, hashPassword, hashSessionToken, SESSION_COOKIE_NAME, SESSION_MAX_AGE_SECONDS, verifyPassword } from "../lib/auth";
+import { verifyArtistUnsubscribeToken } from "../lib/auth";
 import { getDb } from "../lib/db";
 import { logFlowEvent } from "../lib/events";
 import { sendAndRecordArtistGettingStartedEmail, sendAndRecordNewAccountNotification } from "../lib/account-notifications";
 import { sendAccountWelcomeEmail } from "../lib/email";
+import { unsubscribeArtistEngagement } from "../lib/artist-engagement";
 import { getRadioStatus } from "../lib/radio";
 import { getHomePayload } from "../lib/home";
 import { getArtistsEditorialPayload } from "../lib/artists-editorial";
@@ -60,6 +62,25 @@ import { optionalUser, requireArtist, requireUser } from "../middleware/auth";
 import type { AppVariables, Env } from "../types";
 
 export const publicRouter = new Hono<{ Bindings: Env; Variables: AppVariables }>();
+
+publicRouter.get("/artist-email/unsubscribe", async (c) => {
+  const token = c.req.query("token") ?? "";
+  const artistId = await verifyArtistUnsubscribeToken(c.env.JWT_SECRET, token);
+  if (!artistId) return c.html("<!doctype html><title>Link expired</title><p>This unsubscribe link is invalid or expired. Contact us if you need help.</p>", 400);
+  return c.html(`<!doctype html><meta name="viewport" content="width=device-width"><title>Email preferences</title><main style="font:16px system-ui;max-width:560px;margin:12vh auto;padding:24px"><h1>Artist email preferences</h1><p>Stop Fully Open Records artist engagement emails for this account?</p><form method="post" action="/artist-email/unsubscribe?token=${encodeURIComponent(token)}"><button style="padding:12px 18px">Unsubscribe</button></form></main>`);
+});
+
+publicRouter.post("/artist-email/unsubscribe", async (c) => {
+  const token = c.req.query("token") ?? "";
+  const artistId = await verifyArtistUnsubscribeToken(c.env.JWT_SECRET, token);
+  if (!artistId) return c.text("This unsubscribe link is invalid or expired.", 400);
+  await unsubscribeArtistEngagement(c.env, artistId);
+  const form = c.req.header("Content-Type")?.includes("application/x-www-form-urlencoded") ? await c.req.parseBody() : {};
+  if (form["List-Unsubscribe"] === "One-Click") {
+    return c.body(null, 204);
+  }
+  return c.html("<!doctype html><title>Unsubscribed</title><main style=\"font:16px system-ui;max-width:560px;margin:12vh auto;padding:24px\"><h1>You’re unsubscribed</h1><p>You will no longer receive artist engagement emails from Fully Open Records.</p></main>");
+});
 
 const DEFAULT_FREE_LIMITS = {
   songs: 200,
@@ -683,6 +704,10 @@ publicRouter.post("/auth/register", rateLimit, zValidator("json", registerSchema
       .where(eq(artists.userId, user.id))
       .limit(1);
 
+    await logFlowEvent(c.env, c.req.raw, "auth.register.succeeded", {
+      user: { id: user.id, email: user.email, username: user.username, accountType: user.accountType as "artist" | "listener", role: user.role, artistId: artist?.id ?? null, artistSlug: artist?.slug ?? null }
+    });
+
     if (user.accountType === "artist") {
       c.executionCtx.waitUntil(sendAndRecordArtistGettingStartedEmail(c.env, {
         userId: user.id,
@@ -757,6 +782,10 @@ publicRouter.post("/auth/login", rateLimit, zValidator("json", loginSchema), asy
     .from(artists)
     .where(eq(artists.userId, user.id))
     .limit(1);
+
+  await logFlowEvent(c.env, c.req.raw, "auth.login.succeeded", {
+    user: { id: user.id, email: user.email, username: user.username, accountType: user.accountType as "artist" | "listener", role: user.role, artistId: artist?.id ?? null, artistSlug: artist?.slug ?? null }
+  });
 
   return c.json({
     sessionToken,

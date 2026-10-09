@@ -4,6 +4,8 @@ import { logger } from "hono/logger";
 import { csrfGuard } from "./middleware/csrf";
 import { syncRadioHistory } from "./lib/radio";
 import { syncArtistGettingStartedHardBounces } from "./lib/account-notifications";
+import { syncArtistEngagementHardBounces } from "./lib/artist-engagement";
+import { runArtistEngagementScheduleTick } from "./lib/artist-engagement-schedules";
 import { adminRouter } from "./routes/admin";
 import { publicRouter } from "./routes/public";
 import { mediaWorkerRouter } from "./routes/media-worker";
@@ -39,6 +41,10 @@ export default {
     try {
       await syncRadioHistory(env);
       await syncArtistGettingStartedHardBounces(env);
+      if (env.ARTIST_ENGAGEMENT_ENABLED === "true") {
+        const result = await runArtistEngagementScheduleTick(env);
+        if (result.enabled && !result.skipped && "syncBounces" in result && result.syncBounces) await syncArtistEngagementHardBounces(env);
+      }
     } catch (error) {
       console.error("scheduled task failed", error);
     }

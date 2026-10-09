@@ -6,7 +6,9 @@ export const csrfGuard = createMiddleware<{ Bindings: Env }>(async (c, next) => 
     return next();
   }
 
-  if (c.req.path === "/stripe/webhook") {
+  // Postmark's RFC 8058 one-click unsubscribe is authorized by the
+  // purpose-scoped signed token in the URL, not by a browser session.
+  if (c.req.path === "/stripe/webhook" || c.req.path === "/artist-email/unsubscribe") {
     return next();
   }
 

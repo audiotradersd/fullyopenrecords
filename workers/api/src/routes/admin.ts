@@ -17,6 +17,19 @@ import { fallbackContent } from "../lib/content";
 import { resolveArtistImage } from "../lib/artist-images";
 import { requireAdmin } from "../middleware/auth";
 import { sendAndRecordNewAccountNotification } from "../lib/account-notifications";
+import { logFlowEvent } from "../lib/events";
+import {
+  createArtistEngagementOpportunity,
+  deactivateArtistEngagementOpportunity,
+  dryRunArtistEngagement,
+  ENGAGEMENT_EMAILS,
+  getArtistEngagementArtists,
+  getArtistEngagementHistory,
+  getArtistEngagementAudience,
+  getArtistEngagementOpportunities,
+  sendTestEngagementEmail
+} from "../lib/artist-engagement";
+import { dryRunDailyEngagement, listDailyEngagementDecisions, listEngagementEmailHistory, getEngagementCampaignAdminList, listEngagementSchedules, getEngagementSchedule, listScheduleRevisions, createEngagementSchedule, saveEngagementSchedule, duplicateEngagementSchedule, activateEngagementSchedule, archiveEngagementSchedule, getScheduleExport, setCampaignDefinition, type CampaignSlot } from "../lib/artist-engagement-schedules";
 import type { AppVariables, Env } from "../types";
 
 export const adminRouter = new Hono<{ Bindings: Env; Variables: AppVariables }>();
@@ -88,6 +101,122 @@ adminRouter.post("/login", zValidator("json", loginSchema), async (c) => {
 });
 
 adminRouter.use("/*", requireAdmin);
+
+adminRouter.get("/email/schedules", async (c) => c.json(await listEngagementSchedules(c.env)));
+adminRouter.get("/email/audience", async (c) => {
+  const scheduleId = c.req.query("scheduleId");
+  return c.json(await getArtistEngagementAudience(c.env, new Date(), scheduleId ? Number(scheduleId) : undefined));
+});
+adminRouter.get("/email/audience/:artistId", async (c) => {
+  const audit = await getArtistEngagementAudience(c.env);
+  const artist = audit.artists.find((row) => row.id === Number(c.req.param("artistId")));
+  return artist ? c.json(artist) : c.json({ error: "Artist not found." }, 404);
+});
+adminRouter.post("/email/schedules", async (c) => {
+  const payload = await c.req.json<Record<string, unknown>>();
+  if (typeof payload.name !== "string") return c.json({ error: "A schedule name is required." }, 400);
+  const result = await createEngagementSchedule(c.env, { name: payload.name, timezone: typeof payload.timezone === "string" ? payload.timezone : undefined, slots: Array.isArray(payload.slots) ? payload.slots as CampaignSlot[] : [] });
+  return "error" in result ? c.json(result, 400) : c.json(result, 201);
+});
+adminRouter.get("/email/schedules/:id/export", async (c) => {
+  const scheduleId = Number(c.req.param("id"));
+  const data = await getScheduleExport(c.env, scheduleId);
+  if (!data) return c.json({ error: "Schedule not found." }, 404);
+  const format = c.req.query("format") === "csv" ? "csv" : "json";
+  if (format === "json") return new Response(JSON.stringify(data, null, 2), { headers: { "Content-Type": "application/json; charset=utf-8", "Content-Disposition": `attachment; filename=engagement-schedule-${scheduleId}.json` } });
+  const columns = ["scheduleName","revision","active","campaignId","campaignName","day","dayName","time","timezone","priority","priorityOverride","category","minRepeatDays","enabled"];
+  const rows = data.slots.map((slot) => [data.schedule.name,data.schedule.revision,data.schedule.status === "active",slot.campaignId,slot.campaignName,slot.day,slot.dayName,slot.time,slot.timezone,slot.priority,slot.priorityOverride ?? "",slot.category,slot.minRepeatDays,slot.enabled]);
+  const escape = (value: unknown) => `"${String(value ?? "").replaceAll('"','""')}"`;
+  return new Response([columns.join(","), ...rows.map((row) => row.map(escape).join(","))].join("\r\n"), { headers: { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename=engagement-schedule-${scheduleId}.csv` } });
+});
+adminRouter.get("/email/schedules/:id/revisions", async (c) => c.json(await listScheduleRevisions(c.env, Number(c.req.param("id")))));
+adminRouter.get("/email/schedules/:id/coverage", async (c) => c.json(await getArtistEngagementAudience(c.env, new Date(), Number(c.req.param("id"))).then((audit) => ({ ...audit.coverage, generatedAt: audit.generatedAt, activityDefinition: audit.activityDefinition, uncoveredArtists: audit.artists.filter((artist) => artist.contactable && !artist.scheduleCovered).map((artist) => ({ id: artist.id, name: artist.name, email: artist.email, bucket: artist.bucket, specificEligible: artist.specificEligible, coverageStatus: artist.coverageStatus })) }))));
+adminRouter.get("/email/schedules/:id", async (c) => {
+  const data = await getEngagementSchedule(c.env, Number(c.req.param("id")));
+  return data ? c.json(data) : c.json({ error: "Schedule not found." }, 404);
+});
+adminRouter.put("/email/schedules/:id", async (c) => {
+  const payload = await c.req.json<Record<string, unknown>>();
+  if (!Array.isArray(payload.slots)) return c.json({ error: "Schedule slots are required." }, 400);
+  const result = await saveEngagementSchedule(c.env, Number(c.req.param("id")), { name: typeof payload.name === "string" ? payload.name : undefined, timezone: typeof payload.timezone === "string" ? payload.timezone : undefined, slots: payload.slots as CampaignSlot[] });
+  return "error" in result ? c.json(result, 400) : c.json(result);
+});
+adminRouter.post("/email/schedules/:id/duplicate", async (c) => {
+  const payload = await c.req.json<{ name?: unknown }>().catch(() => ({} as { name?: unknown }));
+  const result = await duplicateEngagementSchedule(c.env, Number(c.req.param("id")), typeof payload.name === "string" ? payload.name : undefined);
+  return "error" in result ? c.json(result, 400) : c.json(result, 201);
+});
+adminRouter.post("/email/schedules/:id/activate", async (c) => {
+  const result = await activateEngagementSchedule(c.env, Number(c.req.param("id")));
+  return "error" in result ? c.json(result, 400) : c.json(result);
+});
+adminRouter.post("/email/schedules/:id/archive", async (c) => await archiveEngagementSchedule(c.env, Number(c.req.param("id"))) ? c.json({ ok: true }) : c.json({ error: "Schedule not found or is currently active." }, 400));
+adminRouter.get("/email/campaigns", async (c) => c.json(await getEngagementCampaignAdminList(c.env)));
+adminRouter.put("/email/campaigns/:id", async (c) => {
+  const payload = await c.req.json<Record<string, unknown>>();
+  const result = await setCampaignDefinition(c.env, c.req.param("id"), { priority: payload.priority as number | undefined, enabled: payload.enabled as boolean | undefined, minRepeatDays: payload.minRepeatDays as number | undefined });
+  return "error" in result ? c.json(result, 400) : c.json(result);
+});
+adminRouter.get("/email/history", async (c) => c.json(await listEngagementEmailHistory(c.env, Number(c.req.query("limit") ?? 500))));
+adminRouter.get("/email/decisions", async (c) => c.json(await listDailyEngagementDecisions(c.env, c.req.query("date"))));
+adminRouter.post("/email/dry-run", async (c) => {
+  const payload = await c.req.json<{ artistId?: unknown; date?: unknown }>();
+  const artistId = Number(payload.artistId);
+  if (!Number.isInteger(artistId) || artistId <= 0 || typeof payload.date !== "string") return c.json({ error: "Artist ID and local calendar date are required." }, 400);
+  const result = await dryRunDailyEngagement(c.env, artistId, payload.date);
+  return "error" in result ? c.json(result, 400) : c.json(result);
+});
+
+adminRouter.get("/artist-engagement/artists", async (c) => {
+  return c.json(await getArtistEngagementArtists(c.env, c.req.query("q") ?? ""));
+});
+
+adminRouter.get("/artist-engagement/history", async (c) => {
+  const artistId = Number(c.req.query("artistId"));
+  if (!Number.isInteger(artistId) || artistId <= 0) return c.json({ error: "A valid artist ID is required." }, 400);
+  const result = await getArtistEngagementHistory(c.env, artistId);
+  return result ? c.json(result) : c.json({ error: "Artist account not found." }, 404);
+});
+
+adminRouter.post("/artist-engagement/dry-run", async (c) => {
+  const payload = await c.req.json<{ artistId?: unknown }>();
+  const artistId = Number(payload.artistId);
+  if (!Number.isInteger(artistId) || artistId <= 0) return c.json({ error: "A valid artist ID is required." }, 400);
+  return c.json(await dryRunArtistEngagement(c.env, artistId));
+});
+
+adminRouter.post("/artist-engagement/test-send", async (c) => {
+  const payload = await c.req.json<{ artistId?: unknown; emailId?: unknown; testEmail?: unknown }>();
+  const artistId = Number(payload.artistId);
+  if (!Number.isInteger(artistId) || artistId <= 0 || typeof payload.emailId !== "string" || !ENGAGEMENT_EMAILS[payload.emailId] || typeof payload.testEmail !== "string") {
+    return c.json({ error: "Artist, known email ID and explicit test email address are required." }, 400);
+  }
+  const result = await sendTestEngagementEmail(c.env, artistId, payload.emailId, payload.testEmail);
+  return c.json(result, result.ok ? 200 : 400);
+});
+
+adminRouter.get("/artist-engagement/opportunities", async (c) => c.json(await getArtistEngagementOpportunities(c.env)));
+
+adminRouter.post("/artist-engagement/opportunities", async (c) => {
+  const payload = await c.req.json<Record<string, unknown>>();
+  if (typeof payload.emailId !== "string" || typeof payload.title !== "string" || typeof payload.description !== "string" ||
+      typeof payload.startsAt !== "string" || typeof payload.endsAt !== "string" ||
+      (payload.category !== "nurture" && payload.category !== "positive") ||
+      (payload.audience !== undefined && payload.audience !== null && (typeof payload.audience !== "object" || Array.isArray(payload.audience)))) {
+    return c.json({ error: "Provide an opportunity email, title, details, category and start/end times." }, 400);
+  }
+  const result = await createArtistEngagementOpportunity(c.env, {
+    emailId: payload.emailId, title: payload.title.trim(), description: payload.description.trim(), category: payload.category,
+    startsAt: payload.startsAt, endsAt: payload.endsAt, audience: payload.audience as Record<string, unknown> | null | undefined
+  });
+  return "error" in result ? c.json(result, 400) : c.json(result, 201);
+});
+
+adminRouter.delete("/artist-engagement/opportunities/:id", async (c) => {
+  const id = Number(c.req.param("id"));
+  if (!Number.isInteger(id) || id <= 0) return c.json({ error: "Invalid opportunity ID." }, 400);
+  return await deactivateArtistEngagementOpportunity(c.env, id) ? c.json({ ok: true }) : c.json({ error: "Opportunity not found." }, 404);
+});
 
 adminRouter.get("/artist-tiers", async (c) => c.json(await getDb(c.env).select().from(artistTiers).orderBy(asc(artistTiers.id))));
 adminRouter.post("/artist-tiers", async (c) => {
@@ -179,6 +308,11 @@ adminRouter.put("/editorial/artists/:slotKey", async (c) => {
   const ids = items.map((item) => Number(item.itemId)); if (ids.some((id) => !Number.isInteger(id)) || new Set(ids).size !== ids.length) return c.json({ error: "Selections must be unique." }, 400);
   const db = getDb(c.env);
   let [slot] = await db.select().from(editorialSlots).where(eq(editorialSlots.slotKey, key)).limit(1); if (!slot) [slot] = await db.insert(editorialSlots).values({ slotKey: key, title: key, active: true }).returning();
+  const previouslySelected = await db.select({ itemId: editorialSlotItems.itemId }).from(editorialSlotItems).where(eq(editorialSlotItems.slotId, slot.id));
+  const previousIds = new Set(previouslySelected.map((item) => item.itemId));
+  const newlySelectedSongs = ids.some((id) => !previousIds.has(id))
+    ? await db.select({ id: songs.id, artistId: songs.artistId, title: songs.title }).from(songs).where(inArray(songs.id, ids.filter((id) => !previousIds.has(id))))
+    : [];
   await db.delete(editorialSlotItems).where(eq(editorialSlotItems.slotId, slot.id));
   const rows = items.map((item, sortOrder) => ({ slotId: slot.id, itemType: "song" as const, itemId: ids[sortOrder], artistId: null, sortOrder, customTitle: typeof item.customTitle === "string" ? item.customTitle : null, customSubtitle: typeof item.customSubtitle === "string" ? item.customSubtitle : null, customDescription: typeof item.customDescription === "string" ? item.customDescription : null, customImage: typeof item.customImage === "string" ? item.customImage : null, customHref: typeof item.customHref === "string" ? item.customHref : null, active: true }));
   // D1 limits the number of bound SQL variables in a single statement. Each row
@@ -186,6 +320,13 @@ adminRouter.put("/editorial/artists/:slotKey", async (c) => {
   const insertBatchSize = 8;
   for (let start = 0; start < rows.length; start += insertBatchSize) {
     await db.insert(editorialSlotItems).values(rows.slice(start, start + insertBatchSize));
+  }
+  const notifiedArtists = new Set<number>();
+  for (const selected of newlySelectedSongs) {
+    if (selected.artistId === null) continue;
+    if (notifiedArtists.has(selected.artistId)) continue;
+    notifiedArtists.add(selected.artistId);
+    await logFlowEvent(c.env, c.req.raw, "artist.feature_selection.created", { artistId: selected.artistId, meta: { songId: selected.id, title: selected.title, slot: key } });
   }
   return c.json({ ok: true });
   } catch (error) {
@@ -397,14 +538,20 @@ adminRouter.get("/songs", async (c) => {
 
 adminRouter.post("/songs/:id/approve", async (c) => {
   const db = getDb(c.env);
+  const songId = Number(c.req.param("id"));
+  const [previous] = await db.select().from(songs).where(eq(songs.id, songId)).limit(1);
   const updated = await db
     .update(songs)
     .set({
       approvedForRadio: true,
       updatedAt: new Date().toISOString()
     })
-    .where(eq(songs.id, Number(c.req.param("id"))))
+    .where(eq(songs.id, songId))
     .returning();
+
+  if (updated[0] && !previous?.approvedForRadio) {
+    await logFlowEvent(c.env, c.req.raw, "artist.radio_selection.created", { artistId: updated[0].artistId, meta: { songId, title: updated[0].title } });
+  }
 
   return updated[0] ? c.json(updated[0]) : c.json({ error: "Not found" }, 404);
 });
@@ -429,6 +576,9 @@ adminRouter.put("/songs/:id/radio", async (c) => {
 
   const radioUpload = payload.enabled && updated[0] ? await queueRadioUpload(db, updated[0]) : null;
   if (radioUpload && !radioUpload.queued) return c.json({ error: radioUpload.error }, 409);
+  if (payload.enabled && updated[0] && !song.approvedForRadio) {
+    await logFlowEvent(c.env, c.req.raw, "artist.radio_selection.created", { artistId: updated[0].artistId, meta: { songId, title: updated[0].title } });
+  }
   return updated[0] ? c.json({ ...updated[0], radioUploadQueued: Boolean(radioUpload?.queued) }) : c.json({ error: "Not found" }, 404);
 });
 

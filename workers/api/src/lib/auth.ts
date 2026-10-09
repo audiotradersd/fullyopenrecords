@@ -22,6 +22,24 @@ export async function verifyAdminJwt(secret: string, token: string) {
   return result.payload;
 }
 
+export async function signArtistUnsubscribeToken(secret: string, artistId: number) {
+  return new SignJWT({ purpose: "artist-engagement-unsubscribe", artistId })
+    .setProtectedHeader({ alg: "HS256" })
+    .setIssuedAt()
+    .setExpirationTime("5y")
+    .sign(encoder.encode(secret));
+}
+
+export async function verifyArtistUnsubscribeToken(secret: string, token: string) {
+  try {
+    const { payload } = await jwtVerify(token, encoder.encode(secret));
+    if (payload.purpose !== "artist-engagement-unsubscribe" || typeof payload.artistId !== "number") return null;
+    return payload.artistId;
+  } catch {
+    return null;
+  }
+}
+
 function toBase64Url(bytes: Uint8Array) {
   const value = btoa(String.fromCharCode(...bytes));
   return value.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");

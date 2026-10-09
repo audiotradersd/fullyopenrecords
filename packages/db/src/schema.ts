@@ -110,6 +110,153 @@ export const accountEmailNotifications = sqliteTable(
   (table) => [uniqueIndex("account_email_notifications_user_type_idx").on(table.userId, table.notificationType)]
 );
 
+export const artistEngagementEmailHistory = sqliteTable(
+  "artist_engagement_email_history",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    artistId: integer("artist_id").notNull().references(() => artists.id, { onDelete: "cascade" }),
+    emailId: text("email_id").notNull(),
+    category: text("category").notNull().default("nurture"),
+    theme: text("theme").notNull(),
+    sentAt: text("sent_at"),
+    triggerReason: text("trigger_reason").notNull(),
+    stateSnapshot: text("state_snapshot", { mode: "json" }).$type<Record<string, unknown>>().notNull(),
+    postmarkMessageId: text("postmark_message_id"),
+    sendStatus: text("send_status").notNull(),
+    deliveryStatus: text("delivery_status").notNull().default("unconfirmed"),
+    postmarkBounceId: integer("postmark_bounce_id"),
+    deliveryDetails: text("delivery_details"),
+    deliveryCheckedAt: text("delivery_checked_at"),
+    error: text("error"),
+    evaluationDate: text("evaluation_date"),
+    attemptKey: text("attempt_key"),
+    triggerKey: text("trigger_key"),
+    scheduleId: integer("schedule_id"),
+    scheduleRevision: integer("schedule_revision"),
+    scheduleSlotId: text("schedule_slot_id"),
+    dailyDecisionId: integer("daily_decision_id"),
+    templateAlias: text("template_alias"),
+    ...timestamps
+  },
+  (table) => [
+    index("artist_engagement_history_artist_sent_idx").on(table.artistId, table.sentAt),
+    uniqueIndex("artist_engagement_history_attempt_key_idx").on(table.attemptKey),
+    uniqueIndex("artist_engagement_history_artist_day_idx").on(table.artistId, table.evaluationDate).where(sql`category = 'nurture'`),
+    uniqueIndex("artist_engagement_history_trigger_idx").on(table.triggerKey).where(sql`trigger_key IS NOT NULL`)
+  ]
+);
+
+export const artistEngagementPreferences = sqliteTable("artist_engagement_preferences", {
+  artistId: integer("artist_id").primaryKey().references(() => artists.id, { onDelete: "cascade" }),
+  nurtureUnsubscribedAt: text("nurture_unsubscribed_at"),
+  unsubscribeTokenHash: text("unsubscribe_token_hash"),
+  emailSuppressedAt: text("email_suppressed_at"),
+  emailSuppressedReason: text("email_suppressed_reason"),
+  ...timestamps
+});
+
+export const artistEngagementOpportunities = sqliteTable(
+  "artist_engagement_opportunities",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    emailId: text("email_id").notNull(),
+    category: text("category").notNull().default("nurture"),
+    title: text("title").notNull(),
+    description: text("description").notNull(),
+    audience: text("audience", { mode: "json" }).$type<Record<string, unknown> | null>(),
+    startsAt: text("starts_at").notNull(),
+    endsAt: text("ends_at").notNull(),
+    active: integer("active", { mode: "boolean" }).notNull().default(true),
+    ...timestamps
+  },
+  (table) => [index("artist_engagement_opportunities_active_dates_idx").on(table.active, table.startsAt, table.endsAt)]
+);
+
+export const artistEngagementRuns = sqliteTable("artist_engagement_runs", {
+  runDate: text("run_date").primaryKey(),
+  status: text("status").notNull(),
+  startedAt: text("started_at").notNull(),
+  completedAt: text("completed_at"),
+  summary: text("summary", { mode: "json" }).$type<Record<string, unknown> | null>()
+});
+
+export const artistEngagementCampaigns = sqliteTable("artist_engagement_campaigns", {
+  campaignId: text("campaign_id").primaryKey(),
+  name: text("name").notNull(),
+  templateAlias: text("template_alias").notNull(),
+  subject: text("subject").notNull(),
+  priority: integer("priority").notNull(),
+  category: text("category").notNull(),
+  theme: text("theme").notNull(),
+  eligibilityDescription: text("eligibility_description").notNull(),
+  minRepeatDays: integer("min_repeat_days").notNull(),
+  enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+  isEvent: integer("is_event", { mode: "boolean" }).notNull().default(false),
+  ...timestamps
+});
+
+export const artistEngagementSchedules = sqliteTable("artist_engagement_schedules", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  name: text("name").notNull(),
+  status: text("status").notNull().default("inactive"),
+  scheduleGroup: text("schedule_group").notNull().default("production"),
+  currentRevision: integer("current_revision").notNull().default(1),
+  timezone: text("timezone").notNull().default("Europe/London"),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  activatedAt: text("activated_at"),
+  deactivatedAt: text("deactivated_at")
+}, (table) => [uniqueIndex("artist_engagement_schedules_active_idx").on(table.scheduleGroup).where(sql`status = 'active'`)]);
+
+export const artistEngagementScheduleRevisions = sqliteTable("artist_engagement_schedule_revisions", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  scheduleId: integer("schedule_id").notNull().references(() => artistEngagementSchedules.id, { onDelete: "cascade" }),
+  revision: integer("revision").notNull(),
+  nameSnapshot: text("name_snapshot").notNull(),
+  timezone: text("timezone").notNull(),
+  slots: text("slots", { mode: "json" }).$type<Array<Record<string, unknown>>>().notNull(),
+  activeFrom: text("active_from"),
+  activeTo: text("active_to"),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`)
+}, (table) => [uniqueIndex("artist_engagement_schedule_revision_idx").on(table.scheduleId, table.revision), index("artist_engagement_schedule_active_period_idx").on(table.activeFrom, table.activeTo)]);
+
+export const artistEngagementDailySchedules = sqliteTable("artist_engagement_daily_schedules", {
+  localDate: text("local_date").notNull(),
+  scheduleGroup: text("schedule_group").notNull().default("production"),
+  timezone: text("timezone").notNull(),
+  scheduleId: integer("schedule_id").notNull().references(() => artistEngagementSchedules.id),
+  scheduleRevision: integer("schedule_revision").notNull(),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`)
+}, (table) => [uniqueIndex("artist_engagement_daily_schedule_group_idx").on(table.localDate, table.scheduleGroup)]);
+
+export const artistEngagementDailyDecisions = sqliteTable("artist_engagement_daily_decisions", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  artistId: integer("artist_id").notNull().references(() => artists.id, { onDelete: "cascade" }),
+  localDate: text("local_date").notNull(),
+  timezone: text("timezone").notNull(),
+  scheduleId: integer("schedule_id").notNull(),
+  scheduleRevision: integer("schedule_revision").notNull(),
+  candidates: text("candidates", { mode: "json" }).$type<Array<Record<string, unknown>>>().notNull(),
+  selectedCampaignId: text("selected_campaign_id"),
+  selectedSlotId: text("selected_slot_id"),
+  selectedSendAt: text("selected_send_at"),
+  winnerReason: text("winner_reason"),
+  status: text("status").notNull(),
+  revalidatedAt: text("revalidated_at"),
+  revalidationReason: text("revalidation_reason"),
+  sendHistoryId: integer("send_history_id"),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`)
+}, (table) => [uniqueIndex("artist_engagement_daily_decision_artist_date_idx").on(table.artistId, table.localDate), index("artist_engagement_daily_decision_date_idx").on(table.localDate, table.status)]);
+
+export const artistEngagementEligibility = sqliteTable("artist_engagement_eligibility", {
+  artistId: integer("artist_id").notNull().references(() => artists.id, { onDelete: "cascade" }),
+  campaignId: text("campaign_id").notNull(),
+  firstQualifiedAt: text("first_qualified_at").notNull(),
+  lastEvaluatedAt: text("last_evaluated_at").notNull(),
+  currentlyEligible: integer("currently_eligible", { mode: "boolean" }).notNull().default(true)
+}, (table) => [uniqueIndex("artist_engagement_eligibility_artist_campaign_idx").on(table.artistId, table.campaignId)]);
+
 export const releases = sqliteTable("releases", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   title: text("title").notNull(),

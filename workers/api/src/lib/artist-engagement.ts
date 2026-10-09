@@ -568,7 +568,12 @@ async function loadStates(env: Env, artistId?: number): Promise<State[]> {
       coalesce(gs.future_gigs,0) AS futureGigCount, coalesce(gs.past_gigs,0) AS pastGigCount, coalesce(vs.video_count,0) AS videoCount,
       coalesce(ps.photo_count,0) AS photoCount, coalesce(pr.press_count,0) AS pressCount, coalesce(vrs.version_count,0) AS versionCount,
       ss.last_track_upload AS lastTrackUpload, vrs.last_version AS lastVersion,
-      (SELECT MAX(value) FROM (SELECT ss.last_track_upload AS value UNION ALL SELECT al.last_album_add UNION ALL SELECT rs.last_release_add UNION ALL SELECT gs.last_gig_add UNION ALL SELECT vs.last_video_add UNION ALL SELECT ps.last_photo_add UNION ALL SELECT pr.last_press_add UNION ALL SELECT vrs.last_version)) AS lastContentAddition,
+      NULLIF(MAX(
+        coalesce(ss.last_track_upload,''), coalesce(al.last_album_add,''),
+        coalesce(rs.last_release_add,''), coalesce(gs.last_gig_add,''),
+        coalesce(vs.last_video_add,''), coalesce(ps.last_photo_add,''),
+        coalesce(pr.last_press_add,''), coalesce(vrs.last_version,'')
+      ),'') AS lastContentAddition,
       lg.last_login AS lastLogin, me.last_meaningful AS lastMeaningfulActivity,
       coalesce(ss.total_plays,0) AS totalTrackPlays, coalesce(ss.highest_track_plays,0) AS highestTrackPlayCount,
       (SELECT title FROM songs WHERE artist_id=a.id ORDER BY play_count DESC, id DESC LIMIT 1) AS topTrackTitle

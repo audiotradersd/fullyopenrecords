@@ -16,7 +16,67 @@ export function RadioPlayer({ streamUrl, nowPlaying = "Live stream", metadataUrl
   useEffect(() => { if (user && limitRef.current) { window.clearTimeout(limitRef.current); limitRef.current = null; setGateOpen(false); } }, [user]);
   useEffect(() => { if (!metadataUrl) return; let active = true; const load = async () => { try { const response = await fetch(metadataUrl, { cache: "no-store" }); if (!response.ok || !active) return; const payload = await response.json(); const source = Array.isArray(payload.icestats?.source) ? payload.icestats.source[0] : payload.icestats?.source; if (active) setMetadata({ title: payload.nowPlaying ?? payload.title ?? payload.song ?? source?.title ?? source?.yp_currently_playing, dj: payload.dj ?? payload.host ?? source?.artist }); } catch {} }; void load(); const timer = window.setInterval(load, 15000); return () => { active = false; window.clearInterval(timer); }; }, [metadataUrl]);
   const track = splitTrack(metadata.title ?? nowPlaying, metadata.dj);
-  async function toggle() { setLoading(true); try { if (isPlaying) { audioRef.current?.pause(); setIsPlaying(false); return; } audioRef.current?.pause(); window.dispatchEvent(new Event("fullyopen:radio-play")); const audio = new Audio(streamUrl); audio.crossOrigin = "anonymous"; audio.preload = "none"; audio.addEventListener("pause", () => setIsPlaying(false)); audio.addEventListener("ended", () => setIsPlaying(false)); audioRef.current = audio; await audio.play(); setIsPlaying(true); setError(null); setGateOpen(false); if (!user) limitRef.current = window.setTimeout(() => { audio.pause(); setGateOpen(true); }, 10 * 60 * 1000); } catch { setError("Stream unavailable right now."); setIsPlaying(false); } finally { setLoading(false); } }
+  useEffect(() => {
+    if (typeof navigator === "undefined" || !("mediaSession" in navigator) || typeof MediaMetadata === "undefined") return;
+
+    const metadataOptions: MediaMetadataInit = {
+      title: track.title,
+      artist: track.artist,
+      album: "Fully Open Radio"
+    };
+    if (artwork) {
+      try {
+        metadataOptions.artwork = [{ src: new URL(artwork, window.location.href).href }];
+      } catch {
+        // Keep track metadata even if the supplied artwork URL is invalid.
+      }
+    }
+    navigator.mediaSession.metadata = new MediaMetadata(metadataOptions);
+  }, [track.title, track.artist, artwork]);
+  useEffect(() => {
+    if (typeof navigator === "undefined" || !("mediaSession" in navigator)) return;
+
+    const mediaSession = navigator.mediaSession;
+    const registeredActions: MediaSessionAction[] = [];
+    const registerAction = (action: MediaSessionAction, handler: MediaSessionActionHandler) => {
+      try {
+        mediaSession.setActionHandler(action, handler);
+        registeredActions.push(action);
+      } catch {
+        // Some browsers expose Media Session but do not support every action.
+      }
+    };
+    const play = () => {
+      const audio = audioRef.current;
+      if (!audio) return;
+      void audio.play().then(() => setIsPlaying(!audio.paused && !audio.ended)).catch(() => setIsPlaying(false));
+    };
+    const pause = () => {
+      audioRef.current?.pause();
+      setIsPlaying(false);
+    };
+
+    registerAction("play", play);
+    registerAction("pause", pause);
+    registerAction("stop", pause);
+
+    return () => {
+      for (const action of registeredActions) {
+        try {
+          mediaSession.setActionHandler(action, null);
+        } catch {
+          // Ignore unsupported action cleanup.
+        }
+      }
+    };
+  }, []);
+  useEffect(() => {
+    if (typeof navigator === "undefined" || !("mediaSession" in navigator)) return;
+
+    const audio = audioRef.current;
+    navigator.mediaSession.playbackState = audio && !audio.paused && !audio.ended ? "playing" : "paused";
+  }, [isPlaying]);
+  async function toggle() { setLoading(true); try { if (isPlaying) { audioRef.current?.pause(); setIsPlaying(false); return; } audioRef.current?.pause(); window.dispatchEvent(new Event("fullyopen:radio-play")); const audio = new Audio(streamUrl); audio.crossOrigin = "anonymous"; audio.preload = "none"; audio.addEventListener("playing", () => setIsPlaying(true)); audio.addEventListener("pause", () => setIsPlaying(false)); audio.addEventListener("ended", () => setIsPlaying(false)); audioRef.current = audio; await audio.play(); setIsPlaying(!audio.paused && !audio.ended); setError(null); setGateOpen(false); if (!user) limitRef.current = window.setTimeout(() => { audio.pause(); setGateOpen(true); }, 10 * 60 * 1000); } catch { setError("Stream unavailable right now."); setIsPlaying(false); } finally { setLoading(false); } }
   async function favourite() { if (!user) { openAuth("register", "listener"); return; } const response = await fetch("/api/account/favourites/current", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ artistName: track.artist, title: track.title }) }); if (response.status === 401) { openAuth("register", "listener"); return; } setSaved(response.ok ? "Saved to favourites" : "Could not save"); window.setTimeout(() => setSaved(null), 2200); }
   return <section className="overflow-hidden rounded-xl border border-[#29465f] bg-[radial-gradient(circle_at_55%_20%,rgba(30,94,155,.23),transparent_32%),linear-gradient(110deg,rgba(6,17,31,.97),rgba(3,10,20,.96))] shadow-[0_20px_45px_rgba(0,0,0,.25)]"><div className="flex items-center justify-between px-5 pt-4"><p className="flex items-center gap-2 text-sm font-medium uppercase tracking-[.14em] text-[#ff78b5]"><span className="h-3 w-3 rounded-full bg-[#ff72ad] shadow-[0_0_12px_#ff72ad]" />Live now</p><span className="flex items-center gap-2 rounded-lg border border-[#853058] bg-[#3b122b]/50 px-3 py-2 text-xs font-semibold text-[#ff77b3]"><Radio className="h-3.5 w-3.5" /> LIVE</span></div><div className="grid gap-6 p-5 pt-4 md:grid-cols-[220px_1fr_1.45fr] md:items-center md:p-6 md:pt-4">{artwork ? <img src={artwork} alt={`${track.artist} artwork`} className="aspect-square w-full rounded-md border border-[#28527a] object-cover" /> : <div className="flex aspect-square w-full items-center justify-center rounded-md border border-[#28527a] bg-[radial-gradient(circle,#244b73,transparent_42%),linear-gradient(135deg,#091526,#102e48)]"><img src="/favicon.ico" alt="" className="h-20 w-20 object-contain opacity-80" /></div>}<div><p className="text-[10px] uppercase tracking-[.28em] text-[#a7c9e9]">Fully Open Radio</p><h2 className="mt-2 text-3xl font-semibold leading-none text-white">{track.title}</h2><p className="mt-1 text-lg text-white">{track.artist}</p><p className="mt-3 text-sm text-[#b8c8d9]">Independent / Alternative</p><div className="mt-5 flex items-center gap-4"><button onClick={() => void toggle()} disabled={loading} aria-label={isPlaying ? "Pause live radio" : "Play live radio"} className="flex h-14 w-14 items-center justify-center rounded-full bg-[#ff83bc] text-[#170817] shadow-[0_0_24px_rgba(255,104,172,.55)] transition hover:scale-105 disabled:opacity-60">{isPlaying ? <Pause className="h-6 w-6 fill-current" /> : <Play className="ml-1 h-6 w-6 fill-current" />}</button><button onClick={() => void favourite()} aria-label="Save current track" className="flex h-14 w-14 items-center justify-center rounded-full border border-[#36516c] text-white transition hover:border-[#ff83bc]"><Heart className="h-5 w-5" /></button></div>{saved ? <p className="mt-3 text-xs text-[#ff9bc9]">{saved}</p> : null}</div><div className="md:pl-4"><p className="text-xs uppercase tracking-[.2em] text-[#f3a6cf]">On air</p><div className="radio-wave mt-6 flex h-14 items-center gap-[5px]" aria-hidden="true">{Array.from({ length: 30 }, (_, i) => <span key={i} style={{ height: `${16 + ((i * 19) % 42)}px`, animationDelay: `${i * -0.08}s` }} />)}</div><p className="mt-5 text-sm text-[#c4d3e0]">Independent music. Chosen by people.</p></div></div>{error ? <p className="px-6 pb-5 text-sm text-[#ff8e9e]">{error}</p> : null}{gateOpen ? <div className="border-t border-white/10 bg-black/30 px-6 py-5 text-sm text-[#c4d3e0]">Create a free account to keep listening. <button onClick={() => openAuth("register", "listener")} className="ml-2 text-white underline">Create account</button></div> : null}</section>;
 }

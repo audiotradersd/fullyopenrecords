@@ -806,7 +806,7 @@ export default function ArtistEmailAdmin() {
                       <th className="px-3 py-3">Inactive 180d+</th>
                       <th className="px-3 py-3">Activity unknown</th>
                       <th className="px-3 py-3">
-                        No recorded successful login
+                        No recorded login or artist action
                       </th>
                     </tr>
                   </thead>

@@ -115,6 +115,59 @@ function encodedAudioKey(artistSlug: string, songId: number, title: string) {
   return `artists/${artistSlug}/songs/audio/encoded/${songId}-${slugify(title) || "track"}.mp3`;
 }
 
+async function hasMp3Frame(file: File) {
+  const prefix = new Uint8Array(await file.slice(0, 10).arrayBuffer());
+  let audioOffset = 0;
+
+  if (
+    prefix.length >= 10 &&
+    prefix[0] === 0x49 && prefix[1] === 0x44 && prefix[2] === 0x33
+  ) {
+    const tagSize =
+      ((prefix[6] & 0x7f) << 21) |
+      ((prefix[7] & 0x7f) << 14) |
+      ((prefix[8] & 0x7f) << 7) |
+      (prefix[9] & 0x7f);
+    const footerSize = (prefix[5] & 0x10) !== 0 ? 10 : 0;
+    audioOffset = 10 + tagSize + footerSize;
+  }
+
+  const bytes = new Uint8Array(
+    await file.slice(audioOffset, audioOffset + 4096).arrayBuffer(),
+  );
+  for (let index = 0; index + 3 < bytes.length; index += 1) {
+    const first = bytes[index];
+    const second = bytes[index + 1];
+    const third = bytes[index + 2];
+    const mpegVersion = (second >> 3) & 0x03;
+    const layer = (second >> 1) & 0x03;
+    const bitrate = (third >> 4) & 0x0f;
+    const sampleRate = (third >> 2) & 0x03;
+
+    if (
+      first === 0xff &&
+      (second & 0xe0) === 0xe0 &&
+      mpegVersion !== 0x01 &&
+      layer !== 0 &&
+      bitrate !== 0 && bitrate !== 0x0f &&
+      sampleRate !== 0x03
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+async function isSupportedShareImage(file: File) {
+  if (file.size === 0 || file.size > 10 * 1024 * 1024) return false;
+  const header = new Uint8Array(await file.slice(0, 12).arrayBuffer());
+  const jpeg = header[0] === 0xff && header[1] === 0xd8 && header[2] === 0xff;
+  const png = header[0] === 0x89 && header[1] === 0x50 && header[2] === 0x4e && header[3] === 0x47;
+  const webp = String.fromCharCode(...header.slice(0, 4)) === "RIFF" && String.fromCharCode(...header.slice(8, 12)) === "WEBP";
+  const mimeMatches = (jpeg && file.type === "image/jpeg") || (png && file.type === "image/png") || (webp && file.type === "image/webp");
+  return mimeMatches;
+}
+
 function reserveLegacySlug(value: string, id: number) {
   const base = slugify(value) || "artist";
   return `${base}-legacy-${id}`.slice(0, 60);
@@ -1217,9 +1270,21 @@ publicRouter.post("/artist/me/songs", requireArtist, zValidator("json", songSche
     return c.json({ error: "Artist profile not found" }, 404);
   }
 
+  if (!payload.masterKey || (payload.audioUrl && payload.audioUrl.length > 0)) {
+    return c.json({ error: "Tracks must be added by uploading an MP3 file; external audio links are not accepted." }, 400);
+  }
+
   const artistPath = slugify(artist.slug || artist.name) || `artist-${artist.id}`;
-  if (payload.masterKey && !payload.masterKey.startsWith(`artists/${artistPath}/songs/audio/`)) {
+  if (
+    !payload.masterKey.startsWith(`artists/${artistPath}/songs/audio/`) ||
+    !payload.masterKey.toLowerCase().endsWith(".mp3") ||
+    payload.masterKey.slice(`artists/${artistPath}/songs/audio/`.length).includes("/")
+  ) {
     return c.json({ error: "Invalid private audio upload." }, 400);
+  }
+  const uploadedMaster = await c.env.MASTER_BUCKET.head(payload.masterKey);
+  if (!uploadedMaster) {
+    return c.json({ error: "Upload an MP3 file before creating the track." }, 400);
   }
 
   const usage = await getArtistUsage(db, artist.id);
@@ -1286,6 +1351,9 @@ publicRouter.put("/artist/me/songs/:id", requireArtist, zValidator("json", songS
   const db = getDb(c.env);
   const user = c.get("user");
   const payload = c.req.valid("json");
+  if (payload.audioUrl !== undefined) {
+    return c.json({ error: "External audio links cannot be added to tracks. Upload an MP3 file instead." }, 400);
+  }
   const songId = Number(c.req.param("id"));
   const [artist] = await db.select().from(artists).where(eq(artists.userId, user.id)).limit(1);
 
@@ -1698,6 +1766,15 @@ publicRouter.post("/artist/me/media", requireArtist, async (c) => {
         fileType: typeof file
       });
       return c.json({ error: "File required" }, 400);
+    }
+
+    if (kind === "songs/audio") {
+      if (!file.name.toLowerCase().endsWith(".mp3") || !(await hasMp3Frame(file))) {
+        return c.json({ error: "Tracks must be uploaded as a valid MP3 file." }, 415);
+      }
+    }
+    if (kind === "share-assets" && !(await isSupportedShareImage(file))) {
+      return c.json({ error: "Share artwork must be a JPG, PNG or WebP image up to 10 MB." }, 415);
     }
 
     const artistPath = slugify(artist.slug || artist.name) || `artist-${artist.id}`;

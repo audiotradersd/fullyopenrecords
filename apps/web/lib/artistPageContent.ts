@@ -1,14 +1,16 @@
 import { getArtistHeroImage } from "./assets";
 
 type AlbumContent = {
+  id?: number;
   title: string;
   releaseDate?: string | null;
   description?: string | null;
   coverArt?: string | null;
-  tracks: Array<{ title: string; audioUrl?: string | null; duration?: string | null; enabled?: boolean | null }>;
+  tracks: Array<{ id?: number; title: string; audioUrl?: string | null; duration?: string | null; enabled?: boolean | null }>;
 };
 
 type TrackContent = {
+  id?: number;
   title: string;
   audioUrl?: string | null;
   releaseDate?: string | null;
@@ -18,6 +20,7 @@ type TrackContent = {
 };
 
 type PressContent = {
+  id?: number;
   title: string;
   publication: string;
   date?: string | null;
@@ -27,6 +30,7 @@ type PressContent = {
 };
 
 type GigContent = {
+  id?: number;
   title: string;
   venue?: string | null;
   city?: string | null;
@@ -97,12 +101,14 @@ export function mergeArtistPageContent(
     albums.length > 0
       ? albums.map((album) => ({
           title: String(album.title ?? ""),
+          id: Number(album.id ?? 0) || undefined,
           releaseDate: toDateLabel(typeof album.releaseDate === "string" ? album.releaseDate : null),
           description: typeof album.description === "string" ? album.description : null,
           coverArt: typeof album.coverArt === "string" ? album.coverArt : null,
           tracks: songs
             .filter((song) => Number(song.albumId ?? 0) === Number(album.id ?? 0))
             .map((song) => ({
+              id: Number(song.id ?? 0) || undefined,
               title: String(song.title ?? ""),
               audioUrl: typeof song.audioUrl === "string" ? song.audioUrl : null,
               enabled: song.enabled !== false
@@ -115,6 +121,7 @@ export function mergeArtistPageContent(
       ? songs
           .filter((song) => !song.albumId)
           .map((song) => ({
+            id: Number(song.id ?? 0) || undefined,
             title: String(song.title ?? ""),
             audioUrl: typeof song.audioUrl === "string" ? song.audioUrl : null,
             releaseDate: typeof song.createdAt === "string" ? song.createdAt : null,
@@ -144,6 +151,7 @@ export function mergeArtistPageContent(
     press:
       press.length > 0
         ? press.map((item) => ({
+            id: Number(item.id ?? 0) || undefined,
             title: String(item.title ?? ""),
             publication: String(item.publication ?? ""),
             date: typeof item.date === "string" ? item.date : null,
@@ -155,6 +163,7 @@ export function mergeArtistPageContent(
     gigs:
       gigs.length > 0
         ? gigs.map((gig) => ({
+            id: Number(gig.id ?? 0) || undefined,
             title: String(gig.title ?? ""),
             venue: typeof gig.venue === "string" ? gig.venue : null,
             city: typeof gig.city === "string" ? gig.city : null,

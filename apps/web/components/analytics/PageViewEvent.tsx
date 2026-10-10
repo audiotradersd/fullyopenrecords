@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect } from "react";
-import { trackEvent } from "../../lib/analytics";
+import { getShareAttribution, trackEvent } from "../../lib/analytics";
 
 export default function PageViewEvent({ eventName }: { eventName: string }) {
   useEffect(() => {
-    trackEvent(eventName);
+    trackEvent(eventName, getShareAttribution());
   }, [eventName]);
 
   return null;

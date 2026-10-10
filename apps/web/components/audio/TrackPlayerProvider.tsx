@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import { EyeOff, FastForward, Pause, Play, Rewind, X } from "lucide-react";
-import { trackEvent } from "../../lib/analytics";
+import { getShareAttribution, trackEvent } from "../../lib/analytics";
 
 export type PlayableTrack = { audioUrl: string; title: string; artistName?: string };
 type Context = { currentTrack: PlayableTrack | null; isPlaying: boolean; isLoading: boolean; currentTime: number; duration: number; queueIndex: number; queueLength: number; playTrack: (track: PlayableTrack) => void; playQueue: (tracks: PlayableTrack[]) => void; togglePlayback: () => void; closePlayer: () => void };
@@ -42,7 +42,7 @@ export function TrackPlayerProvider({ children }: { children: ReactNode }) {
     audio.addEventListener("pause", () => audioRef.current === audio && setIsPlaying(false));
     audio.addEventListener("error", () => { if (audioRef.current === audio) { setIsLoading(false); setIsPlaying(false); } });
     audio.addEventListener("ended", () => { if (audioRef.current !== audio) return; const nextIndex = queueIndexRef.current + 1; const next = queueRef.current[nextIndex]; if (next) void startPlayback(next, queueRef.current, nextIndex); else { setIsPlaying(false); setCurrentTime(0); queueIndexRef.current = 0; setQueueIndex(0); } });
-    try { await audio.play(); trackEvent("track_played", { track_title: track.title, artist_name: track.artistName }); } catch { if (audioRef.current === audio) { setIsLoading(false); setIsPlaying(false); } }
+    try { await audio.play(); trackEvent("track_played", { track_title: track.title, artist_name: track.artistName, ...getShareAttribution() }); } catch { if (audioRef.current === audio) { setIsLoading(false); setIsPlaying(false); } }
   }, []);
 
   const playTrack = useCallback((track: PlayableTrack) => void startPlayback(track, [track], 0), [startPlayback]);

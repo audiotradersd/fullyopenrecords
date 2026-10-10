@@ -260,6 +260,17 @@ export default function RadioPlayerBar() {
 
   const track = parseTrack(radio.nowPlaying ?? "Fully Open Radio", radio.host);
 
+  useEffect(() => {
+    if (typeof navigator === "undefined" || !("mediaSession" in navigator)) return;
+
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: track.title,
+      artist: track.artist,
+      album: "Fully Open Radio"
+    });
+    navigator.mediaSession.playbackState = isPlaying ? "playing" : "paused";
+  }, [track.title, track.artist, isPlaying]);
+
   return (
     <div className="fixed bottom-0 left-0 right-0 z-[70] border-t border-white/10 bg-[rgba(8,4,16,0.88)] backdrop-blur-xl">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 md:px-6">

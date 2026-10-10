@@ -10,6 +10,8 @@ import { getYouTubeThumbnail } from "../../lib/videoThumbnail";
 import { Card } from "../ui/card";
 import StreamButton from "../audio/StreamButton";
 import ShareFullyOpen from "../share/ShareFullyOpen";
+import { CreateShareButton } from "../share/CreateShare";
+import { siteConfig } from "../../lib/site";
 import {
   Bell,
   CalendarDays,
@@ -87,6 +89,7 @@ type ContentData = {
     audioUrl?: string | null;
     albumId?: number | null;
     description?: string | null;
+    createdAt?: string | null;
   }>;
   videos: Array<{
     id: number;
@@ -100,6 +103,7 @@ type ContentData = {
     title: string;
     venue?: string | null;
     city?: string | null;
+    time?: string | null;
     eventDate: string;
     ticketUrl?: string | null;
     description?: string | null;
@@ -146,6 +150,26 @@ const tabs: Array<{ key: DashboardTab; label: string }> = [
   { key: "press", label: "Press" },
   { key: "settings", label: "Settings" },
 ];
+
+const TRACK_GENRE_GROUPS = [
+  ["Alternative", "Alternative Rock", "Indie Rock", "Indie Pop", "Dream Pop", "Shoegaze", "Britpop", "Post-Rock", "Grunge", "Emo"],
+  ["Rock", "Classic Rock", "Hard Rock", "Blues Rock", "Psychedelic Rock", "Progressive Rock", "Garage Rock", "Folk Rock", "Stoner Rock"],
+  ["Metal", "Heavy Metal", "Groove Metal", "Thrash Metal", "Death Metal", "Black Metal", "Doom Metal", "Metalcore", "Deathcore", "Progressive Metal", "Djent", "Industrial Metal", "Power Metal", "Folk Metal"],
+  ["Punk", "Punk Rock", "Hardcore Punk", "Post-Punk", "Ska Punk", "Pop Punk"],
+  ["Pop", "Contemporary Pop", "Synth Pop", "Electropop", "Art Pop", "Hyperpop", "Dance Pop"],
+  ["Electronic", "Electronica", "IDM", "Downtempo", "Trip Hop", "Breakbeat", "Electro", "Glitch", "Synthwave", "Vaporwave"],
+  ["Dance", "House", "Deep House", "Tech House", "Progressive House", "Afro House", "Techno", "Minimal Techno", "Trance", "Drum & Bass", "Jungle", "UK Garage", "Dubstep"],
+  ["Ambient", "Ambient", "Dark Ambient", "Cinematic Ambient", "Drone", "Space Ambient", "Atmospheric"],
+  ["Experimental", "Experimental", "Avant-Garde", "Noise", "Industrial", "Minimalism"],
+  ["Hip Hop", "Hip Hop", "Boom Bap", "Trap", "Alternative Hip Hop", "Lo-Fi Hip Hop", "Jazz Rap", "UK Hip Hop", "Drill", "Instrumental Hip Hop"],
+  ["R&B / Soul", "Contemporary R&B", "Neo Soul", "Soul", "Funk", "Motown"],
+  ["Jazz", "Traditional Jazz", "Bebop", "Swing", "Big Band", "Fusion", "Smooth Jazz", "Latin Jazz"],
+  ["Blues", "Delta Blues", "Chicago Blues", "Electric Blues", "Acoustic Blues", "Contemporary Blues"],
+  ["Folk & Country", "Contemporary Folk", "Americana", "Singer-Songwriter", "Celtic Folk", "Bluegrass", "Country", "Alt Country", "Outlaw Country"],
+  ["Classical", "Orchestral", "Chamber", "Solo Piano", "Contemporary Classical", "Opera", "Choral"],
+  ["World", "African", "Afrobeat", "Amapiano", "Salsa", "Reggaeton", "Reggae", "Dub", "Dancehall", "Arabic", "Indian Classical", "Bhangra", "Celtic", "Nordic"],
+  ["Other", "Gospel", "Spoken Word", "Film Score", "Game Music", "Christmas", "Cross Genre", "Genre-Blending"],
+] as const;
 
 const initialProfile = {
   name: "",
@@ -568,20 +592,23 @@ export default function ArtistDashboard() {
       const audioFile = formData.get("audioFile");
       const coverFile = formData.get("coverFile");
 
-      let audioUrl = String(formData.get("audioUrl") ?? "");
-      let masterKey = "";
+      if (!(audioFile instanceof File) || audioFile.size === 0) {
+        throw new Error("Choose an MP3 file to add this track.");
+      }
+      if (!audioFile.name.toLowerCase().endsWith(".mp3")) {
+        throw new Error("Tracks must be uploaded as MP3 files.");
+      }
+
       let coverImage = String(formData.get("coverImage") ?? "");
 
-      if (audioFile instanceof File && audioFile.size > 0) {
-        const uploadedAudio = await uploadAsset(
-          audioFile,
-          "songs/audio",
-          title,
-          "Uploading audio…",
-        );
-        audioUrl = uploadedAudio.url ?? "";
-        masterKey = uploadedAudio.masterKey ?? "";
-      }
+      const uploadedAudio = await uploadAsset(
+        audioFile,
+        "songs/audio",
+        title,
+        "Uploading MP3 audio…",
+      );
+      const masterKey = uploadedAudio.masterKey ?? "";
+      if (!masterKey) throw new Error("The MP3 upload could not be verified.");
 
       if (coverFile instanceof File && coverFile.size > 0) {
         coverImage = (
@@ -605,8 +632,7 @@ export default function ArtistDashboard() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title,
-          audioUrl,
-          masterKey: masterKey || undefined,
+          masterKey,
           coverImage,
           albumId: albumIdValue ? Number(albumIdValue) : null,
           trackNumber:
@@ -851,6 +877,11 @@ export default function ArtistDashboard() {
       setMessage("Select at least one audio file.");
       return;
     }
+    const nonMp3 = files.find((file) => !file.name.toLowerCase().endsWith(".mp3"));
+    if (nonMp3) {
+      setMessage(`"${nonMp3.name}" is not an MP3 file. Tracks must be uploaded as MP3 files.`);
+      return;
+    }
 
     try {
       setUploading(`Uploading 0 of ${files.length} tracks…`);
@@ -884,7 +915,6 @@ export default function ArtistDashboard() {
           body: JSON.stringify({
             title: parsed.title,
             trackNumber: parsed.trackNumber,
-            audioUrl: uploadedAudio.url ?? "",
             masterKey: uploadedAudio.masterKey,
             coverImage: "",
             albumId: null,
@@ -1305,6 +1335,75 @@ export default function ArtistDashboard() {
     setAlbumTrackDraft(selectedAlbumTracks);
   }, [selectedAlbumId, content?.songs]);
 
+  const profileShareContent = {
+    contentType: "artist" as const,
+    artistName: dashboard?.artist.name || profile.name || "Artist",
+    title: dashboard?.artist.name || profile.name || "Discover this artist",
+    subtitle: dashboard?.artist.bio || profile.bio || [profile.genres, profile.location].filter(Boolean).join(" · "),
+    image: dashboard?.artist.profileImage || dashboard?.artist.heroImage || profile.profileImage || profile.heroImage || null,
+    cta: `DISCOVER ${dashboard?.artist.name || profile.name || "ARTIST"}`,
+    url: `${siteConfig.url}/artist/${dashboard?.artist.slug || profile.slug}`,
+  };
+
+  function trackShareContent(song: ContentData["songs"][number]) {
+    const album = (content?.albums ?? []).find((entry) => entry.id === song.albumId);
+    return {
+      contentType: "track" as const,
+      artistName: dashboard?.artist.name || profile.name || "Artist",
+      title: song.title,
+      subtitle: album ? `${album.title}${album.releaseDate ? ` · ${formatDate(album.releaseDate)}` : ""}` : "New single",
+      image: song.coverImage || album?.coverArt || dashboard?.artist.profileImage || null,
+      date: album?.releaseDate || song.createdAt || null,
+      details: song.description || null,
+      cta: "LISTEN ON FULLY OPEN RECORDS",
+      url: `${siteConfig.url}/artist/${dashboard?.artist.slug || profile.slug}#track-${song.id}`,
+    };
+  }
+
+  function releaseShareContent(album: ContentData["albums"][number]) {
+    return {
+      contentType: "release" as const,
+      artistName: dashboard?.artist.name || profile.name || "Artist",
+      title: album.title,
+      subtitle: album.releaseDate ? `OUT ${formatDate(album.releaseDate)}` : "New release",
+      image: album.coverArt || dashboard?.artist.profileImage || null,
+      date: album.releaseDate || null,
+      details: album.description || null,
+      cta: "LISTEN ON FULLY OPEN RECORDS",
+      url: `${siteConfig.url}/artist/${dashboard?.artist.slug || profile.slug}#album-${album.id}`,
+    };
+  }
+
+  function gigShareContent(gig: ContentData["gigs"][number]) {
+    return {
+      contentType: "gig" as const,
+      artistName: dashboard?.artist.name || profile.name || "Artist",
+      title: gig.title,
+      subtitle: [gig.venue, gig.city].filter(Boolean).join(" · "),
+      image: dashboard?.artist.heroImage || dashboard?.artist.profileImage || null,
+      date: gig.eventDate ? formatDate(gig.eventDate) : null,
+      venue: gig.venue || gig.title,
+      location: gig.city || null,
+      details: gig.description || null,
+      cta: "VIEW GIG DETAILS",
+      url: `${siteConfig.url}/artist/${dashboard?.artist.slug || profile.slug}#gig-${gig.id}`,
+    };
+  }
+
+  function pressShareContent(item: ContentData["press"][number]) {
+    return {
+      contentType: "press" as const,
+      artistName: dashboard?.artist.name || profile.name || "Artist",
+      title: item.title,
+      subtitle: item.publication,
+      image: item.featureImage || dashboard?.artist.profileImage || null,
+      date: item.date ? formatDate(item.date) : null,
+      details: item.excerpt || null,
+      cta: "READ ON FULLY OPEN RECORDS",
+      url: `${siteConfig.url}/artist/${dashboard?.artist.slug || profile.slug}#press-${item.id}`,
+    };
+  }
+
   if (loading) {
     return (
       <Container>
@@ -1457,6 +1556,7 @@ export default function ArtistDashboard() {
                             {song.enabled ? "Active" : "Inactive"}
                           </p>
                         </div>
+                        <CreateShareButton content={trackShareContent(song)} label="Share" compact />
                         <ChevronRight size={17} className="text-sky-200" />
                       </div>
                     )) || (
@@ -1485,6 +1585,7 @@ export default function ArtistDashboard() {
                         <p className="mt-1 text-xs text-sky-100/60">
                           {formatDate(album.releaseDate)}
                         </p>
+                        <div className="mt-3"><CreateShareButton content={releaseShareContent(album)} label="Create & Share" compact /></div>
                       </div>
                     )) || (
                       <p className="text-sm text-sky-100/60">
@@ -1513,6 +1614,7 @@ export default function ArtistDashboard() {
                           {formatDate(gig.eventDate)} ·{" "}
                           {gig.venue || gig.city || "Venue TBC"}
                         </p>
+                        <div className="mt-3"><CreateShareButton content={gigShareContent(gig)} label="Create & Share" compact /></div>
                       </div>
                     )) || (
                       <p className="text-sm text-sky-100/60">No gigs yet.</p>
@@ -2004,12 +2106,12 @@ export default function ArtistDashboard() {
                     Add your audio
                   </h2>
                   <p className="mt-2 text-sm text-sky-100/65">
-                    Upload your track. We support WAV, MP3, FLAC and more.
+                    Upload an MP3 file to add your track.
                   </p>
                   <input
                     ref={mobileAudioInput}
                     type="file"
-                    accept="audio/*"
+                    accept=".mp3,audio/mpeg"
                     className="sr-only"
                     onChange={async (e) => {
                       const file = e.target.files?.[0];
@@ -2061,7 +2163,7 @@ export default function ArtistDashboard() {
                       placeholder="Track title"
                       className="w-full rounded-xl border border-sky-100/20 bg-white/5 px-4 py-3"
                     />
-                    <input
+                    <select
                       value={mobileTrack.genre}
                       onChange={(e) =>
                         setMobileTrack({
@@ -2069,9 +2171,17 @@ export default function ArtistDashboard() {
                           genre: e.target.value,
                         })
                       }
-                      placeholder="Genre"
                       className="w-full rounded-xl border border-sky-100/20 bg-white/5 px-4 py-3"
-                    />
+                    >
+                      <option value="">Select genre</option>
+                      {TRACK_GENRE_GROUPS.map(([group, ...genres]) => (
+                        <optgroup key={group} label={group}>
+                          {genres.map((genre) => (
+                            <option key={genre} value={genre}>{genre}</option>
+                          ))}
+                        </optgroup>
+                      ))}
+                    </select>
                     <textarea
                       value={mobileTrack.description}
                       onChange={(e) =>
@@ -2232,6 +2342,7 @@ export default function ArtistDashboard() {
               <button
                 disabled={
                   (mobileUploadStep === 1 && !mobileAudioFile) ||
+                  (mobileUploadStep === 2 && !mobileTrack.genre) ||
                   (mobileUploadStep === 3 &&
                     mobileUploadMode === "version" &&
                     !mobileVersionSongId)
@@ -2481,11 +2592,6 @@ export default function ArtistDashboard() {
                       className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white"
                     />
                     <input
-                      name="audioUrl"
-                      placeholder="Audio URL fallback (optional)"
-                      className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white"
-                    />
-                    <input
                       name="coverImage"
                       placeholder="Cover art URL fallback (optional)"
                       className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-white"
@@ -2494,8 +2600,9 @@ export default function ArtistDashboard() {
                       Upload audio file
                       <input
                         name="audioFile"
+                        required
                         type="file"
-                        accept="audio/*"
+                        accept=".mp3,audio/mpeg"
                         onChange={(event) => {
                           const file = event.target.files?.[0];
                           if (file) void readTrackMetadata(file);
@@ -2676,7 +2783,7 @@ export default function ArtistDashboard() {
                       <input
                         name="audioFiles"
                         type="file"
-                        accept="audio/*"
+                        accept=".mp3,audio/mpeg"
                         multiple
                         className="mt-2 block w-full text-xs"
                         onChange={(event) =>
@@ -2958,7 +3065,7 @@ export default function ArtistDashboard() {
             {activeTab === "profile" ? (
               <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
                 <Card className="space-y-4 p-6">
-                  <h2 className="text-2xl font-semibold text-white">Profile</h2>
+                  <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-2xl font-semibold text-white">Profile</h2><CreateShareButton content={profileShareContent} label="Create profile post" /></div>
                   <div className="rounded-xl border border-pink/30 bg-pink/10 p-4">
                     <div className="flex items-center justify-between gap-4">
                       <p className="font-meta text-xs uppercase tracking-[0.2em] text-pink">
@@ -3387,20 +3494,23 @@ export default function ArtistDashboard() {
                                     tracks
                                   </p>
                                 </div>
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  onClick={(event) => {
-                                    event.stopPropagation();
-                                    setEditingAlbumId(album.id);
-                                    setAlbumDraft({
-                                      title: album.title,
-                                      description: album.description ?? "",
-                                    });
-                                  }}
-                                >
-                                  Edit
-                                </Button>
+                                <div className="flex shrink-0 flex-wrap gap-2" onClick={(event) => event.stopPropagation()}>
+                                  <CreateShareButton content={releaseShareContent(album)} label="Share" compact />
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      setEditingAlbumId(album.id);
+                                      setAlbumDraft({
+                                        title: album.title,
+                                        description: album.description ?? "",
+                                      });
+                                    }}
+                                  >
+                                    Edit
+                                  </Button>
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -3560,6 +3670,7 @@ export default function ArtistDashboard() {
                             </div>
 
                             <div className="flex flex-wrap gap-2 lg:justify-end">
+                              <CreateShareButton content={trackShareContent(song)} label="Share" compact />
                               <Button
                                 type="button"
                                 variant="outline"
@@ -3804,6 +3915,7 @@ export default function ArtistDashboard() {
                               {gig.description}
                             </p>
                           ) : null}
+                          <div className="mt-3"><CreateShareButton content={gigShareContent(gig)} label="Create & Share" compact /></div>
                         </div>
                       ))
                     ) : (
@@ -4055,6 +4167,7 @@ export default function ArtistDashboard() {
                               {item.excerpt}
                             </p>
                           ) : null}
+                          <div className="mt-3"><CreateShareButton content={pressShareContent(item)} label="Create & Share" compact /></div>
                           {item.articleLink ? (
                             <a
                               href={item.articleLink}

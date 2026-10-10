@@ -92,7 +92,7 @@ export default function PublicArtistPage({
               {artistUrl}
             </div>
             <div className="mt-8">
-              <ArtistHeroActions url={artistUrl} name={name} slug={slug} />
+              <ArtistHeroActions url={artistUrl} name={name} slug={slug} image={profileImage || heroImage} tagline={displayedBio} />
             </div>
             {socialLinks.length ? (
               <div className="mt-8 flex flex-wrap gap-3">
@@ -143,7 +143,7 @@ export default function PublicArtistPage({
               <div className="mt-6 space-y-6">
                 {content.albums.length ? (
                   content.albums.map((album) => (
-                    <div key={`${album.title}-${album.releaseDate}`} className="rounded-xl border border-white/10 bg-white/[0.03] p-5">
+                    <div id={album.id ? `album-${album.id}` : undefined} key={`${album.title}-${album.releaseDate}`} className="scroll-mt-8 rounded-xl border border-white/10 bg-white/[0.03] p-5">
                       <div className="grid gap-5 md:grid-cols-[120px_minmax(0,1fr)]">
                         <div className="relative aspect-square overflow-hidden rounded-xl border border-white/10 bg-white/[0.04]">
                           {album.coverArt ? (
@@ -176,8 +176,9 @@ export default function PublicArtistPage({
                 {visibleTracks.length ? (
                   visibleTracks.map((track) => (
                     <div
+                      id={track.id ? `track-${track.id}` : undefined}
                       key={`${track.title}-${track.releaseDate}`}
-                      className="grid gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-4 md:grid-cols-[auto_minmax(0,1fr)_120px_72px]"
+                      className="scroll-mt-8 grid gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-4 md:grid-cols-[auto_minmax(0,1fr)_120px_72px]"
                     >
                       <div>
                         {track.audioUrl && track.enabled !== false ? (
@@ -222,7 +223,7 @@ export default function PublicArtistPage({
               <div className="mt-6 space-y-4">
                 {content.press.length ? (
                   content.press.map((item) => (
-                    <div key={`${item.publication}-${item.title}`} className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                    <div id={item.id ? `press-${item.id}` : undefined} key={`${item.publication}-${item.title}`} className="scroll-mt-8 rounded-xl border border-white/10 bg-white/[0.03] p-4">
                       <p className="text-sm font-semibold text-white">{item.publication}</p>
                       <p className="mt-2 text-base text-white">{item.title}</p>
                       <p className="mt-2 text-sm text-fog">{formatDate(item.date)}</p>
@@ -254,7 +255,7 @@ export default function PublicArtistPage({
               <div className="mt-6 space-y-4">
                 {content.gigs.length ? (
                   content.gigs.map((gig) => (
-                    <div key={`${gig.title}-${gig.eventDate}`} className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                    <div id={gig.id ? `gig-${gig.id}` : undefined} key={`${gig.title}-${gig.eventDate}`} className="scroll-mt-8 rounded-xl border border-white/10 bg-white/[0.03] p-4">
                       <p className="text-sm text-fog">{gig.city || "TBA"}</p>
                       <p className="mt-1 text-lg font-semibold text-white">{gig.venue || gig.title}</p>
                       <p className="mt-2 text-sm text-pink">{formatDate(gig.eventDate)}</p>

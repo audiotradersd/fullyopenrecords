@@ -397,7 +397,8 @@ function storyDescription(
     selectedLines = selectedLines.slice(0, maxLines);
     selectedLines[maxLines - 1] = `${selectedLines[maxLines - 1].replace(/[.,;:!?-]*$/, "").trimEnd()}…`;
   }
-  return `<text x="${x}" y="${y}" fill="${fill}" font-family="Arial,sans-serif" font-size="${selectedSize}" font-weight="400" letter-spacing=".15">${selectedLines.map((line, index) => `<tspan x="${x}" dy="${index ? selectedSize * 1.38 : 0}">${xml(line)}</tspan>`).join("")}</text>`;
+  const centerX = x + width / 2;
+  return `<text x="${centerX}" y="${y}" text-anchor="middle" fill="${fill}" font-family="Arial,sans-serif" font-size="${selectedSize}" font-weight="400" letter-spacing=".15">${selectedLines.map((line, index) => `<tspan x="${centerX}" dy="${index ? selectedSize * 1.38 : 0}">${xml(line)}</tspan>`).join("")}</text>`;
 }
 
 export function buildShareSvg(

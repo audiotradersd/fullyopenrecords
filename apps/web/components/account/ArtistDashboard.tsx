@@ -11,6 +11,7 @@ import { Card } from "../ui/card";
 import StreamButton from "../audio/StreamButton";
 import ShareFullyOpen from "../share/ShareFullyOpen";
 import { CreateShareButton } from "../share/CreateShare";
+import { shareArtworkForRecord } from "../../lib/createShare";
 import { siteConfig } from "../../lib/site";
 import {
   Bell,
@@ -1142,6 +1143,28 @@ export default function ArtistDashboard() {
     }
   }
 
+  async function deleteGig(gigId: number) {
+    try {
+      const response = await fetch("/api/artist/me/gigs", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: gigId }),
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        setMessage(payload.error ?? "Gig deletion failed.");
+        return;
+      }
+      setContent((current) => current ? {
+        ...current,
+        gigs: current.gigs.filter((gig) => gig.id !== gigId),
+      } : current);
+      setMessage("Gig deleted.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Gig deletion failed.");
+    }
+  }
+
   async function uploadPhoto(formData: FormData) {
     try {
       const file = formData.get("photoFile");
@@ -1335,12 +1358,17 @@ export default function ArtistDashboard() {
     setAlbumTrackDraft(selectedAlbumTracks);
   }, [selectedAlbumId, content?.songs]);
 
+  const shareArtistImages = {
+    profileImage: dashboard?.artist.profileImage || profile.profileImage || null,
+    heroImage: dashboard?.artist.heroImage || profile.heroImage || null,
+  };
+
   const profileShareContent = {
     contentType: "artist" as const,
     artistName: dashboard?.artist.name || profile.name || "Artist",
     title: dashboard?.artist.name || profile.name || "Discover this artist",
     subtitle: dashboard?.artist.bio || profile.bio || [profile.genres, profile.location].filter(Boolean).join(" · "),
-    image: dashboard?.artist.profileImage || dashboard?.artist.heroImage || profile.profileImage || profile.heroImage || null,
+    image: shareArtworkForRecord("artist", {}, [], shareArtistImages),
     cta: `DISCOVER ${dashboard?.artist.name || profile.name || "ARTIST"}`,
     url: `${siteConfig.url}/artist/${dashboard?.artist.slug || profile.slug}`,
   };
@@ -1352,7 +1380,12 @@ export default function ArtistDashboard() {
       artistName: dashboard?.artist.name || profile.name || "Artist",
       title: song.title,
       subtitle: album ? `${album.title}${album.releaseDate ? ` · ${formatDate(album.releaseDate)}` : ""}` : "New single",
-      image: song.coverImage || album?.coverArt || dashboard?.artist.profileImage || null,
+      image: shareArtworkForRecord(
+        "track",
+        { ...song },
+        (content?.albums ?? []).map((entry) => ({ ...entry })),
+        shareArtistImages,
+      ),
       date: album?.releaseDate || song.createdAt || null,
       details: song.description || null,
       cta: "LISTEN ON FULLY OPEN RECORDS",
@@ -1366,7 +1399,8 @@ export default function ArtistDashboard() {
       artistName: dashboard?.artist.name || profile.name || "Artist",
       title: album.title,
       subtitle: album.releaseDate ? `OUT ${formatDate(album.releaseDate)}` : "New release",
-      image: album.coverArt || dashboard?.artist.profileImage || null,
+      id: album.id,
+      image: shareArtworkForRecord("release", { ...album }, [], shareArtistImages),
       date: album.releaseDate || null,
       details: album.description || null,
       cta: "LISTEN ON FULLY OPEN RECORDS",
@@ -1380,7 +1414,7 @@ export default function ArtistDashboard() {
       artistName: dashboard?.artist.name || profile.name || "Artist",
       title: gig.title,
       subtitle: [gig.venue, gig.city].filter(Boolean).join(" · "),
-      image: dashboard?.artist.heroImage || dashboard?.artist.profileImage || null,
+      image: shareArtworkForRecord("gig", { ...gig }, [], shareArtistImages),
       date: gig.eventDate ? formatDate(gig.eventDate) : null,
       venue: gig.venue || gig.title,
       location: gig.city || null,
@@ -1396,7 +1430,7 @@ export default function ArtistDashboard() {
       artistName: dashboard?.artist.name || profile.name || "Artist",
       title: item.title,
       subtitle: item.publication,
-      image: item.featureImage || dashboard?.artist.profileImage || null,
+      image: shareArtworkForRecord("press", { ...item }, [], shareArtistImages),
       date: item.date ? formatDate(item.date) : null,
       details: item.excerpt || null,
       cta: "READ ON FULLY OPEN RECORDS",
@@ -3915,7 +3949,20 @@ export default function ArtistDashboard() {
                               {gig.description}
                             </p>
                           ) : null}
-                          <div className="mt-3"><CreateShareButton content={gigShareContent(gig)} label="Create & Share" compact /></div>
+                          <div className="mt-3 flex items-center justify-between gap-3">
+                            <CreateShareButton content={gigShareContent(gig)} label="Create & Share" compact />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => {
+                                if (window.confirm(`Delete “${gig.title}”? This cannot be undone.`)) {
+                                  void deleteGig(gig.id);
+                                }
+                              }}
+                            >
+                              Delete gig
+                            </Button>
+                          </div>
                         </div>
                       ))
                     ) : (

@@ -3,8 +3,10 @@ import test from "node:test";
 import {
   buildShareSvg,
   createAttributedShareUrl,
+  loadShareArtwork,
   SHARE_DESIGNS,
   SHARE_FORMATS,
+  shareArtworkForRecord,
   type ShareContentType,
   type ShareDesign,
   type ShareFormat,
@@ -41,9 +43,49 @@ test("every visual template generates artwork at each social format", () => {
           /<image href="https:\/\/fullyopenrecords\.com\/media\/artwork\.jpg\?x=1&amp;y=2"/,
         );
       assert.match(svg, /Lhea Blueviolet &amp; The Long Names/);
-      assert.match(svg, /LISTEN ON FULLY OPEN RECORDS/);
+      assert.match(
+        svg,
+        template.id === "editorial"
+          ? /READ MORE/
+          : /LISTEN ON FULLY OPEN RECORDS/,
+      );
       assert.doesNotMatch(svg, /<script/i);
     }
+  }
+});
+
+test("share artwork follows the FOR release, track, event, press and profile records", () => {
+  const jackCover = "https://fully-open-records-api.sbdownes.workers.dev/media/artists/stone/albums/covers/jack.png";
+  const trackCover = "https://fully-open-records-api.sbdownes.workers.dev/media/artists/stone/songs/covers/kodiak.png";
+  const pressImage = "https://fully-open-records-api.sbdownes.workers.dev/media/artists/i-error/press/feature.png";
+  const profileImage = "https://fully-open-records-api.sbdownes.workers.dev/media/artists/stone/profile.png";
+  const albums = [{ id: 1, coverArt: jackCover }, { id: 2, coverArt: "other-release.png" }];
+  const artist = { profileImage, heroImage: "hero.png" };
+
+  assert.equal(shareArtworkForRecord("release", { id: 1, coverArt: jackCover }, [], artist), jackCover);
+  assert.equal(shareArtworkForRecord("track", { albumId: 1, coverImage: "" }, albums, artist), jackCover);
+  assert.equal(shareArtworkForRecord("track", { albumId: 1, coverImage: trackCover }, albums, artist), trackCover);
+  assert.equal(shareArtworkForRecord("release", { id: 3, coverArt: "" }, [], artist), profileImage);
+  assert.equal(shareArtworkForRecord("gig", { id: 4, title: "Live" }, [], artist), profileImage);
+  assert.equal(shareArtworkForRecord("press", { featureImage: pressImage }, [], artist), pressImage);
+  assert.equal(shareArtworkForRecord("press", { featureImage: "" }, [], artist), profileImage);
+  assert.equal(shareArtworkForRecord("artist", {}, [], artist), profileImage);
+});
+
+test("storage keys and failed image requests are rejected instead of exported as broken images", async () => {
+  await assert.rejects(
+    loadShareArtwork("artists/stone/albums/covers/jack-issues.png"),
+    /storage key, not a public URL/,
+  );
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response("missing", { status: 404 });
+  try {
+    await assert.rejects(
+      loadShareArtwork("https://media.example.test/jack-issues.png"),
+      /Artwork request failed \(404\)/,
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
   }
 });
 
@@ -79,10 +121,10 @@ test("missing artwork gets an intentional prompt composition", () => {
   };
   assert.match(
     buildShareSvg(content, "artwork-hero", "square"),
-    /UPLOAD ARTWORK/,
+    /ARTWORK REQUIRED/,
   );
   assert.doesNotMatch(
     buildShareSvg(content, "type-only", "square"),
-    /UPLOAD ARTWORK/,
+    /ARTWORK REQUIRED/,
   );
 });

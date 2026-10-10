@@ -1509,6 +1509,33 @@ publicRouter.post("/artist/me/gigs", requireArtist, zValidator("json", gigSchema
   return c.json({ gig: mapGigRecord(created[0]) }, 201);
 });
 
+publicRouter.delete("/artist/me/gigs/:id", requireArtist, async (c) => {
+  const db = getDb(c.env);
+  const user = c.get("user");
+  const gigId = Number(c.req.param("id"));
+  if (!Number.isInteger(gigId) || gigId <= 0) {
+    return c.json({ error: "Invalid gig id" }, 400);
+  }
+
+  const [artist] = await db.select().from(artists).where(eq(artists.userId, user.id)).limit(1);
+  if (!artist) return c.json({ error: "Artist profile not found" }, 404);
+
+  const [existingGig] = await db
+    .select()
+    .from(gigs)
+    .where(and(eq(gigs.id, gigId), eq(gigs.artistId, artist.id)))
+    .limit(1);
+  if (!existingGig) return c.json({ error: "Gig not found" }, 404);
+
+  await db.delete(gigs).where(and(eq(gigs.id, gigId), eq(gigs.artistId, artist.id)));
+  await logFlowEvent(c.env, c.req.raw, "artist.gig.deleted", {
+    user,
+    artistId: artist.id,
+    meta: { gigId, title: existingGig.title }
+  });
+  return c.json({ success: true, deletedId: gigId });
+});
+
 publicRouter.post("/artist/me/videos", requireArtist, zValidator("json", videoSchema), async (c) => {
   const db = getDb(c.env);
   const user = c.get("user");

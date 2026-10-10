@@ -20,6 +20,7 @@ import {
   buildShareSvg,
   createAttributedShareUrl,
   DEFAULT_DESIGN,
+  loadShareArtwork,
   renderSharePng,
   SHARE_DESIGNS,
   SHARE_FORMATS,
@@ -79,6 +80,10 @@ export function CreateShare({
   );
   const [format, setFormat] = useState<ShareFormat>("square");
   const [image, setImage] = useState(content.image ?? "");
+  const [resolvedImage, setResolvedImage] = useState("");
+  const [artworkLoading, setArtworkLoading] = useState(Boolean(content.image));
+  const [artworkError, setArtworkError] = useState("");
+  const [previewSrc, setPreviewSrc] = useState("");
   const [headline, setHeadline] = useState(content.title);
   const [supportingText, setSupportingText] = useState(
     content.subtitle || content.details || "",
@@ -99,18 +104,38 @@ export function CreateShare({
       buildShareSvg(content, design, format, {
         headline,
         supportingText,
-        image,
+        image: resolvedImage,
         palette: { accent },
       }),
-    [content, design, format, headline, supportingText, image, accent],
+    [content, design, format, headline, supportingText, resolvedImage, accent],
   );
   const previewRatio =
     SHARE_DIMENSIONS[format].width / SHARE_DIMENSIONS[format].height;
-  const previewSrc = useMemo(
-    () => `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`,
-    [svg],
-  );
-  const hasArtwork = Boolean(image);
+  const hasArtwork = Boolean(resolvedImage);
+
+  useEffect(() => {
+    let current = true;
+    setResolvedImage("");
+    setArtworkError("");
+    if (!image) {
+      setArtworkLoading(false);
+      return () => { current = false; };
+    }
+    setArtworkLoading(true);
+    loadShareArtwork(image)
+      .then((dataUrl) => { if (current) setResolvedImage(dataUrl); })
+      .catch((loadError) => {
+        if (current) setArtworkError(loadError instanceof Error ? loadError.message : "Artwork could not be loaded.");
+      })
+      .finally(() => { if (current) setArtworkLoading(false); });
+    return () => { current = false; };
+  }, [image]);
+
+  useEffect(() => {
+    const url = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml;charset=utf-8" }));
+    setPreviewSrc(url);
+    return () => URL.revokeObjectURL(url);
+  }, [svg]);
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -128,7 +153,7 @@ export function CreateShare({
   useEffect(() => {
     let current = true;
     setAccent("#ee5b48");
-    if (!image)
+    if (!resolvedImage)
       return () => {
         current = false;
       };
@@ -180,11 +205,11 @@ export function CreateShare({
         // External artwork may prohibit pixel sampling; templates retain the neutral FOR accent.
       }
     };
-    sourceImage.src = image;
+    sourceImage.src = resolvedImage;
     return () => {
       current = false;
     };
-  }, [image]);
+  }, [resolvedImage]);
 
   async function saveCustomImage(file: File) {
     if (
@@ -473,11 +498,17 @@ export function CreateShare({
               className="relative w-full max-w-[620px] overflow-hidden bg-[#111] shadow-2xl"
               style={{ aspectRatio: previewRatio, maxHeight: "68vh" }}
             >
-              <img
-                src={previewSrc}
-                alt={`${design.replaceAll("-", " ")} promotional preview`}
-                className="absolute inset-0 h-full w-full object-contain"
-              />
+              {previewSrc ? (
+                <img
+                  src={previewSrc}
+                  alt={`${design.replaceAll("-", " ")} promotional preview`}
+                  className="absolute inset-0 h-full w-full object-contain"
+                />
+              ) : (
+                <div className="absolute inset-0 grid place-items-center text-xs uppercase tracking-[.2em] text-white/60">
+                  Preparing poster preview…
+                </div>
+              )}
             </div>
           </div>
           <div className="space-y-5 p-4 sm:p-6">
@@ -527,8 +558,11 @@ export function CreateShare({
               </div>
               {!hasArtwork ? (
                 <p className="mt-2 text-xs leading-5 text-amber-200">
-                  Choose an image to create an artwork design, or switch to Type
-                  Only.
+                  {artworkLoading
+                    ? "Loading the selected artwork…"
+                    : artworkError
+                      ? `Artwork did not load: ${artworkError}`
+                      : "Choose an image to create an artwork design, or switch to Type Only."}
                 </p>
               ) : null}
             </div>

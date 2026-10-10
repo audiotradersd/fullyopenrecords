@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { trackEvent } from "../../lib/analytics";
 import { CreateShareButton } from "../share/CreateShare";
 import { useAuth } from "../auth/AuthProvider";
+import { shareArtworkForRecord } from "../../lib/createShare";
 
 export default function ArtistHeroActions({
   url,
@@ -38,7 +39,7 @@ export default function ArtistHeroActions({
         <Heart className={`h-4 w-4 ${following ? "fill-current" : ""}`} />
         {following ? "Following" : "Follow"}{count ? ` · ${count}` : ""}
       </button>
-      <CreateShareButton content={{ contentType: "artist", artistName: name, title: name, subtitle: tagline ?? undefined, image, cta: `DISCOVER ${name}`, url }} label="Share" />
+      <CreateShareButton content={{ contentType: "artist", artistName: name, title: name, subtitle: tagline ?? undefined, image: shareArtworkForRecord("artist", {}, [], { profileImage: image }), cta: `DISCOVER ${name}`, url }} label="Share" />
       {message ? <span className="text-sm text-fog">{message}</span> : null}
     </div>
   );

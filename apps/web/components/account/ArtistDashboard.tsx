@@ -1379,14 +1379,16 @@ export default function ArtistDashboard() {
       contentType: "track" as const,
       artistName: dashboard?.artist.name || profile.name || "Artist",
       title: song.title,
-      subtitle: album ? `${album.title}${album.releaseDate ? ` · ${formatDate(album.releaseDate)}` : ""}` : "New single",
+      subtitle: album ? `${album.title}${album.releaseDate ? ` · ${formatDate(album.releaseDate)}` : ""}` : "New track",
+      parentReleaseType: album ? "Album" : null,
+      parentReleaseTitle: album?.title || null,
       image: shareArtworkForRecord(
         "track",
         { ...song },
         (content?.albums ?? []).map((entry) => ({ ...entry })),
         shareArtistImages,
       ),
-      date: album?.releaseDate || song.createdAt || null,
+      date: album?.releaseDate || null,
       details: song.description || null,
       cta: "LISTEN ON FULLY OPEN RECORDS",
       url: `${siteConfig.url}/artist/${dashboard?.artist.slug || profile.slug}#track-${song.id}`,
@@ -1396,12 +1398,16 @@ export default function ArtistDashboard() {
   function releaseShareContent(album: ContentData["albums"][number]) {
     return {
       contentType: "release" as const,
+      // These rows come from FOR's `albums` entity. Catalog `releases` rows
+      // retain their own explicit `type` value when used as release content.
+      releaseType: "Album",
       artistName: dashboard?.artist.name || profile.name || "Artist",
       title: album.title,
       subtitle: album.releaseDate ? `OUT ${formatDate(album.releaseDate)}` : "New release",
       id: album.id,
       image: shareArtworkForRecord("release", { ...album }, [], shareArtistImages),
       date: album.releaseDate || null,
+      description: album.description || null,
       details: album.description || null,
       cta: "LISTEN ON FULLY OPEN RECORDS",
       url: `${siteConfig.url}/artist/${dashboard?.artist.slug || profile.slug}#album-${album.id}`,
@@ -1415,9 +1421,10 @@ export default function ArtistDashboard() {
       title: gig.title,
       subtitle: [gig.venue, gig.city].filter(Boolean).join(" · "),
       image: shareArtworkForRecord("gig", { ...gig }, [], shareArtistImages),
-      date: gig.eventDate ? formatDate(gig.eventDate) : null,
-      venue: gig.venue || gig.title,
+      date: gig.eventDate || null,
+      venue: gig.venue || null,
       location: gig.city || null,
+      time: gig.time || null,
       details: gig.description || null,
       cta: "VIEW GIG DETAILS",
       url: `${siteConfig.url}/artist/${dashboard?.artist.slug || profile.slug}#gig-${gig.id}`,
@@ -1431,7 +1438,7 @@ export default function ArtistDashboard() {
       title: item.title,
       subtitle: item.publication,
       image: shareArtworkForRecord("press", { ...item }, [], shareArtistImages),
-      date: item.date ? formatDate(item.date) : null,
+      date: item.date || null,
       details: item.excerpt || null,
       cta: "READ ON FULLY OPEN RECORDS",
       url: `${siteConfig.url}/artist/${dashboard?.artist.slug || profile.slug}#press-${item.id}`,
@@ -1619,7 +1626,7 @@ export default function ArtistDashboard() {
                         <p className="mt-1 text-xs text-sky-100/60">
                           {formatDate(album.releaseDate)}
                         </p>
-                        <div className="mt-3"><CreateShareButton content={releaseShareContent(album)} label="Create & Share" compact /></div>
+                        <div className="mt-3"><CreateShareButton content={releaseShareContent(album)} label="Share" compact /></div>
                       </div>
                     )) || (
                       <p className="text-sm text-sky-100/60">
@@ -1648,7 +1655,7 @@ export default function ArtistDashboard() {
                           {formatDate(gig.eventDate)} ·{" "}
                           {gig.venue || gig.city || "Venue TBC"}
                         </p>
-                        <div className="mt-3"><CreateShareButton content={gigShareContent(gig)} label="Create & Share" compact /></div>
+                        <div className="mt-3"><CreateShareButton content={gigShareContent(gig)} label="Share" compact /></div>
                       </div>
                     )) || (
                       <p className="text-sm text-sky-100/60">No gigs yet.</p>
@@ -3099,7 +3106,7 @@ export default function ArtistDashboard() {
             {activeTab === "profile" ? (
               <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
                 <Card className="space-y-4 p-6">
-                  <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-2xl font-semibold text-white">Profile</h2><CreateShareButton content={profileShareContent} label="Create profile post" /></div>
+                  <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-2xl font-semibold text-white">Profile</h2><CreateShareButton content={profileShareContent} label="Share" /></div>
                   <div className="rounded-xl border border-pink/30 bg-pink/10 p-4">
                     <div className="flex items-center justify-between gap-4">
                       <p className="font-meta text-xs uppercase tracking-[0.2em] text-pink">
@@ -3950,7 +3957,7 @@ export default function ArtistDashboard() {
                             </p>
                           ) : null}
                           <div className="mt-3 flex items-center justify-between gap-3">
-                            <CreateShareButton content={gigShareContent(gig)} label="Create & Share" compact />
+                            <CreateShareButton content={gigShareContent(gig)} label="Share" compact />
                             <Button
                               type="button"
                               variant="outline"
@@ -4214,7 +4221,7 @@ export default function ArtistDashboard() {
                               {item.excerpt}
                             </p>
                           ) : null}
-                          <div className="mt-3"><CreateShareButton content={pressShareContent(item)} label="Create & Share" compact /></div>
+                          <div className="mt-3"><CreateShareButton content={pressShareContent(item)} label="Share" compact /></div>
                           {item.articleLink ? (
                             <a
                               href={item.articleLink}

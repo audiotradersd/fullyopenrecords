@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   Check,
   ChevronLeft,
@@ -95,6 +96,9 @@ export function CreateShare({
   const [error, setError] = useState("");
   const [showEmail, setShowEmail] = useState(false);
   const [accent, setAccent] = useState("#ee5b48");
+  const [portalReady, setPortalReady] = useState(false);
+  const previewRegion = useRef<HTMLDivElement>(null);
+  const [previewRegionSize, setPreviewRegionSize] = useState({ width: 0, height: 0 });
   const shareUrl = useMemo(
     () => createAttributedShareUrl(content.url, content.contentType),
     [content.url, content.contentType],
@@ -111,6 +115,12 @@ export function CreateShare({
   );
   const previewRatio =
     SHARE_DIMENSIONS[format].width / SHARE_DIMENSIONS[format].height;
+  const previewScale = Math.min(
+    previewRegionSize.width / SHARE_DIMENSIONS[format].width || 0,
+    previewRegionSize.height / SHARE_DIMENSIONS[format].height || 0,
+  );
+  const previewWidth = SHARE_DIMENSIONS[format].width * previewScale;
+  const previewHeight = SHARE_DIMENSIONS[format].height * previewScale;
   const hasArtwork = Boolean(resolvedImage);
 
   useEffect(() => {
@@ -136,6 +146,24 @@ export function CreateShare({
     setPreviewSrc(url);
     return () => URL.revokeObjectURL(url);
   }, [svg]);
+
+  useEffect(() => {
+    setPortalReady(true);
+  }, []);
+
+  useEffect(() => {
+    const element = previewRegion.current;
+    if (!element) return;
+    const observer = new ResizeObserver(([entry]) => {
+      if (!entry) return;
+      setPreviewRegionSize({
+        width: entry.contentRect.width,
+        height: entry.contentRect.height,
+      });
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [portalReady]);
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -457,17 +485,20 @@ export function CreateShare({
     }
   }
 
-  return (
+  if (!portalReady) return null;
+
+  return createPortal((
     <div
       className="fixed inset-0 z-[120] flex items-end justify-center bg-black/80 p-0 backdrop-blur-sm sm:items-center sm:p-4"
       role="presentation"
       onMouseDown={onClose}
+      onClick={(event) => event.stopPropagation()}
     >
       <section
         role="dialog"
         aria-modal="true"
         aria-labelledby="create-share-title"
-        className="flex max-h-[96dvh] w-full max-w-6xl flex-col overflow-hidden border border-white/15 bg-[#090b10] text-white shadow-2xl sm:max-h-[92dvh]"
+        className="flex h-[96dvh] max-h-[96dvh] w-full max-w-7xl flex-col overflow-hidden border border-white/15 bg-[#090b10] text-white shadow-2xl sm:h-[92dvh] sm:max-h-[92dvh]"
         onMouseDown={(event) => event.stopPropagation()}
       >
         <header className="flex shrink-0 items-center justify-between border-b border-white/10 px-4 py-3 sm:px-6">
@@ -492,26 +523,37 @@ export function CreateShare({
             <X className="h-5 w-5" />
           </button>
         </header>
-        <div className="grid min-h-0 flex-1 overflow-y-auto lg:grid-cols-[minmax(0,1fr)_390px]">
-          <div className="flex min-h-[35vh] items-center justify-center bg-[#14151a] p-4 sm:p-8 lg:min-h-0">
+        <div className="grid min-h-0 flex-1 grid-cols-1 overflow-y-auto lg:grid-cols-[minmax(0,1.35fr)_minmax(390px,1fr)] lg:overflow-hidden">
+          <div className="flex min-h-[42vh] min-w-0 items-center justify-center bg-[#14151a] p-4 sm:p-8 lg:min-h-0">
             <div
-              className="relative w-full max-w-[620px] overflow-hidden bg-[#111] shadow-2xl"
-              style={{ aspectRatio: previewRatio, maxHeight: "68vh" }}
+              ref={previewRegion}
+              className="flex h-full min-h-0 w-full min-w-0 items-center justify-center"
             >
-              {previewSrc ? (
-                <img
-                  src={previewSrc}
-                  alt={`${design.replaceAll("-", " ")} promotional preview`}
-                  className="absolute inset-0 h-full w-full object-contain"
-                />
-              ) : (
-                <div className="absolute inset-0 grid place-items-center text-xs uppercase tracking-[.2em] text-white/60">
-                  Preparing poster preview…
-                </div>
-              )}
+              <div
+                className="relative max-w-full overflow-hidden bg-[#111] shadow-2xl"
+                style={{
+                  width: previewWidth || "100%",
+                  height: previewHeight || "100%",
+                  aspectRatio: previewRatio,
+                  maxWidth: "100%",
+                  maxHeight: "100%",
+                }}
+              >
+                {previewSrc ? (
+                  <img
+                    src={previewSrc}
+                    alt={`${design.replaceAll("-", " ")} promotional preview`}
+                    className="absolute inset-0 h-full w-full object-contain"
+                  />
+                ) : (
+                  <div className="absolute inset-0 grid place-items-center text-xs uppercase tracking-[.2em] text-white/60">
+                    Preparing poster preview…
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-          <div className="space-y-5 p-4 sm:p-6">
+          <div className="min-h-0 space-y-5 overflow-y-auto p-4 sm:p-6">
             <div>
               <div className="mb-2 flex items-center justify-between">
                 <h3 className="text-xs font-semibold uppercase tracking-[.2em] text-fog">
@@ -869,5 +911,5 @@ export function CreateShare({
         </div>
       ) : null}
     </div>
-  );
+  ), document.body);
 }

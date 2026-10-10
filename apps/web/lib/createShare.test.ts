@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   buildShareSvg,
   createAttributedShareUrl,
+  deriveShareCopy,
   loadShareArtwork,
   SHARE_DESIGNS,
   SHARE_FORMATS,
@@ -12,6 +13,7 @@ import {
   type ShareFormat,
   type ShareableContent,
 } from "./createShare";
+import { curatedReleaseFallbacks } from "./curatedReleaseFallbacks";
 
 test("every visual template generates artwork at each social format", () => {
   for (const template of SHARE_DESIGNS) {
@@ -47,9 +49,150 @@ test("every visual template generates artwork at each social format", () => {
         svg,
         template.id === "editorial"
           ? /READ MORE/
-          : /LISTEN ON FULLY OPEN RECORDS/,
+          : template.id === "gig-poster"
+            ? /GIG DETAILS/
+            : /LISTEN (?:NOW|ON FULLY OPEN RECORDS)/,
       );
       assert.doesNotMatch(svg, /<script/i);
+    }
+  }
+});
+
+test("poster copy follows FOR release types, track context and release dates", () => {
+  const jackIssues = curatedReleaseFallbacks["jack-issues"];
+  const jackCopy = deriveShareCopy({
+    contentType: "release",
+    releaseType: String(jackIssues.type),
+    artistName: String(jackIssues.artistName),
+    title: String(jackIssues.title),
+    date: String(jackIssues.releaseDate),
+    cta: "LISTEN ON FULLY OPEN RECORDS",
+    url: "https://fullyopenrecords.com/artist/stone#album-1",
+  });
+  assert.deepEqual(jackCopy, {
+    eyebrow: "NEW ALBUM",
+    releaseLabel: "ALBUM",
+    statusLabel: "OUT NOW",
+    ctaLabel: "LISTEN ON FULLY OPEN RECORDS",
+    supportingMetadata: "",
+  });
+
+  const jackPoster = buildShareSvg({
+    contentType: "release",
+    releaseType: String(jackIssues.type),
+    artistName: String(jackIssues.artistName),
+    title: String(jackIssues.title),
+    date: String(jackIssues.releaseDate),
+    cta: "LISTEN ON FULLY OPEN RECORDS",
+    url: "https://fullyopenrecords.com/artist/stone#album-1",
+  }, "artwork-hero", "square");
+  assert.match(jackPoster, /NEW ALBUM/);
+  assert.doesNotMatch(jackPoster, /NEW SINGLE/);
+  assert.ok(jackPoster.indexOf("JACK ISSUES") < jackPoster.indexOf("STONE!?") );
+  for (const design of SHARE_DESIGNS.filter((item) => item.types.includes("release"))) {
+    const poster = buildShareSvg({
+      contentType: "release", releaseType: String(jackIssues.type),
+      artistName: String(jackIssues.artistName), title: String(jackIssues.title),
+      date: String(jackIssues.releaseDate), cta: "LISTEN ON FULLY OPEN RECORDS",
+      url: "https://fullyopenrecords.com/artist/stone#album-1",
+    }, design.id, "square");
+    assert.match(poster, /NEW ALBUM/, `${design.id} should use the album label`);
+    assert.doesNotMatch(poster, /NEW SINGLE/, `${design.id} must not call Jack Issues a single`);
+  }
+
+  const epCopy = deriveShareCopy({
+    contentType: "release", releaseType: "EP", artistName: "Cinder Static",
+    title: "Night Index", date: "2025-11-14", cta: "LISTEN NOW", url: "https://fullyopenrecords.com/",
+  });
+  assert.equal(epCopy.eyebrow, "NEW EP");
+  assert.equal(epCopy.statusLabel, "OUT NOW");
+
+  const upcomingAlbum = deriveShareCopy({
+    contentType: "release", releaseType: "Album", artistName: "Artist",
+    title: "Upcoming", date: "2099-10-23", cta: "LISTEN NOW", url: "https://fullyopenrecords.com/",
+  });
+  assert.equal(upcomingAlbum.statusLabel, "OUT 23 OCT 2099");
+
+  const futureSingle = deriveShareCopy({
+    contentType: "release", releaseType: "Single", artistName: "Artist",
+    title: "Future", date: "2099-10-23", cta: "LISTEN NOW", url: "https://fullyopenrecords.com/",
+  });
+  assert.equal(futureSingle.eyebrow, "NEW SINGLE");
+  assert.equal(futureSingle.statusLabel, "OUT 23 OCT 2099");
+
+  const albumTrack = deriveShareCopy({
+    contentType: "track", parentReleaseType: "Album", parentReleaseTitle: "Jack Issues",
+    artistName: "Stone!?", title: "Kodiak", date: "2026-03-30", cta: "LISTEN NOW",
+    url: "https://fullyopenrecords.com/artist/stone#track-1",
+  });
+  assert.equal(albumTrack.eyebrow, "NOW PLAYING");
+  assert.equal(albumTrack.supportingMetadata, "FROM THE ALBUM JACK ISSUES");
+  assert.equal(albumTrack.statusLabel, "LISTEN NOW");
+
+  const actualGig = deriveShareCopy({
+    contentType: "gig", artistName: "Stone!?", title: "TEST", venue: "TEST",
+    location: "Chichester", date: "2026-10-23", cta: "VIEW GIG DETAILS",
+    url: "https://fullyopenrecords.com/artist/stone#gig-11",
+  });
+  assert.deepEqual(actualGig, {
+    eyebrow: "LIVE", releaseLabel: "GIG", statusLabel: "LIVE 23 OCT 2026",
+    ctaLabel: "GIG DETAILS", supportingMetadata: "TEST · Chichester",
+  });
+  const gigPoster = buildShareSvg({
+    contentType: "gig", artistName: "Stone!?", title: "TEST", venue: "TEST",
+    location: "Chichester", date: "2026-10-23", cta: "VIEW GIG DETAILS",
+    url: "https://fullyopenrecords.com/artist/stone#gig-11",
+  }, "gig-poster", "square");
+  assert.match(gigPoster, /23 OCT 2026/);
+  assert.doesNotMatch(gigPoster, /DOORS 7:30PM/);
+
+  const actualPress = deriveShareCopy({
+    contentType: "press", artistName: "I ERROR", title: "I ERROR – Making an Album with Hardware",
+    subtitle: "Polyend", cta: "READ ON FULLY OPEN RECORDS",
+    url: "https://fullyopenrecords.com/artist/i-error#press-1",
+  });
+  assert.equal(actualPress.eyebrow, "ARTIST NEWS");
+  assert.equal(actualPress.ctaLabel, "READ MORE");
+  assert.equal(actualPress.supportingMetadata, "Polyend");
+
+  const actualArtist = deriveShareCopy({
+    contentType: "artist", artistName: "Stone!?", title: "Stone!?", cta: "DISCOVER STONE!?",
+    url: "https://fullyopenrecords.com/artist/stone",
+  });
+  assert.equal(actualArtist.ctaLabel, "DISCOVER STONE!?");
+});
+
+test("release descriptions are editorial in Story only across release templates", () => {
+  const description = "Jack Issues is the 10-track debut album from groove metal trio Stone!?, delivering a punch of heavy riffs, locked-in rhythms, and raw, stripped-down aggression. Built on thick guitar tones, pounding drums, and bass lines that hit like concrete, the record leans into groove over flash, every track designed to lock into a riff and grind forward. The album moves between crushing mid-tempo stompers and sharp bursts of controlled chaos, with jagged riffs, stop-start rhythms, and hooks that hit hard without losing the grit. Lyrically and sonically, Jack Issues circles themes of pressure, frustration, and dark humour, channelled through blunt, no-nonsense songwriting. Across ten tracks, Stone!? carve out a sound rooted in groove metal and 90s alternative heaviness - tight, confrontational, and built for volume.";
+  const release: ShareableContent = {
+    contentType: "release",
+    releaseType: "Album",
+    artistName: "Stone!?",
+    title: "Jack Issues",
+    description,
+    date: "2026-03-09",
+    image: "https://fully-open-records-api.sbdownes.workers.dev/media/artists/stone/albums/covers/1773318736884-jack-issues-cover.png",
+    cta: "LISTEN ON FULLY OPEN RECORDS",
+    url: "https://fullyopenrecords.com/artist/stone#album-1",
+  };
+
+  const releaseDesigns = SHARE_DESIGNS.filter((item) => item.types.includes("release"));
+  for (const design of releaseDesigns) {
+    const story = buildShareSvg(release, design.id, "story");
+    assert.match(story, /NEW ALBUM/, `${design.id} uses the real release type`);
+    assert.match(story, /STONE!?/);
+    assert.match(story, /JACK/);
+    assert.match(story, /ISSUES/);
+    assert.match(story, /OUT NOW/);
+    assert.match(story, /FULLY OPEN RECORDS/);
+    assert.match(story, /built for volume/,
+      `${design.id} retains the end of the release description instead of truncating it`);
+    for (const format of ["square", "portrait", "landscape"] as const) {
+      assert.doesNotMatch(
+        buildShareSvg(release, design.id, format),
+        /10-track debut album from groove metal trio/,
+        `${design.id} keeps long description copy out of ${format}`,
+      );
     }
   }
 });
